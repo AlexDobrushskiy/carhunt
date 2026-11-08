@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "carhunt/agents/state.schema.json",
+  "title": "carhunt agent state.json",
+  "description": "One per agent role, in $CARHUNT_HOME/agents/<role>/state.json. The single source of truth for who is active and what a successor must pick up.",
+  "type": "object",
+  "required": ["role", "active_agent", "status"],
+  "properties": {
+    "role": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$"},
+    "name": {"type": "string"},
+    "active_agent": {"type": ["string", "null"], "description": "Session id of the live agent. Send guards refuse anyone else."},
+    "status": {"enum": ["starting", "running", "completed", "paused", "failed"]},
+    "cli": {"enum": ["claude", "codex"]},
+    "brief": {"type": "string"},
+    "started_at": {"type": "string"},
+    "updated_at": {"type": "string"},
+    "completed_at": {"type": "string"},
+    "closed_at": {"type": "string", "description": "Set by `carhunt state cleanup` once the session is closed."},
+    "summary": {"type": "string", "description": "One line for the digest: what the agent is doing now."},
+    "handover_from": {"type": ["string", "null"], "description": "Predecessor session id while a handover is in flight; cleared by takeover."},
+    "successor": {
+      "type": ["object", "null"],
+      "properties": {"id": {"type": "string"}, "spawned_at": {"type": "string"}},
+      "required": ["id"]
+    },
+    "previous_agents": {"type": "array", "items": {"type": "string"}},
+    "handover_notes": {
+      "type": "object",
+      "properties": {
+        "open_threads": {"type": "array"},
+        "unanswered_inbound": {"type": "array", "description": "Replies received but not answered yet. Required at handover, [] if none: one sat 31 h after a handover (EV run 11-06)."},
+        "pending_sends": {"type": "array"},
+        "scheduled": {"type": "array", "description": "Background chains, wakes and waits the successor must re-arm."},
+        "promises": {"type": "array"},
+        "cross_module": {"type": "array"},
+        "other": {"type": "string"}
+      }
+    },
+    "pending_owner": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "question"],
+        "properties": {
+          "id": {"type": "string"},
+          "question": {"type": "string"},
+          "options": {
+            "type": "array",
+            "items": {"type": "object", "required": ["key", "text"],
+                      "properties": {"key": {"type": "string"}, "text": {"type": "string"}}}
+          },
+          "rec": {"type": "string"},
+          "since": {"type": "string"},
+          "car": {"type": ["string", "integer"]}
+        }
+      }
+    },
+    "open_issues": {"type": "array"},
+    "advice": {"type": "array", "items": {"type": "string"}, "description": "Learning session: <=5 advice bullets for the owner's morning digest."},
+    "cursors": {"type": "object"}
+  },
+  "additionalProperties": true
+}
