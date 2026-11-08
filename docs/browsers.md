@@ -18,7 +18,7 @@ Code: `browsers/bin/` (shell tools), `browsers/` (MCP + launchd templates), `car
 ### `carhunt` groups
 | command | does |
 |---|---|
-| `carhunt browser mcp-config [--claude\|--json\|--codex\|--hooks] [--scope user]` | print `claude mcp add` lines (default) / JSON / Codex TOML / the identity-lease hooks for settings.json; bootstrap asks, then runs them |
+| `carhunt browser mcp-config [--claude\|--json\|--codex\|--hooks] [--scope user]` | print `claude mcp add` lines (default) / JSON / Codex TOML / a preview of the identity-lease hooks (`carhunt hooks install` merges them into `$CARHUNT_HOME/claude/settings.json`); bootstrap asks, then runs them |
 | `carhunt browser launchd render\|install\|uninstall [--out D] [--dry-run]` | the `<launchd_prefix>*` jobs (macOS) |
 | `carhunt browser site-table [--sites-dir D] [--write P] [--check P]` | render the skill's site table from `carhunt/sites/*/site.yaml`; `--check` exits 1 on drift (CI) |
 | `carhunt browser geo status\|release <CC> [--force]` | country-exit browser lease (held by `session.tab(..., country=CC)` / `geo.lease`) |
@@ -68,7 +68,7 @@ Python: `access.session.tab(route, country=, site=, fresh=)`, `access.pace.acqui
 1. **Identity master login:** `pw-identity login https://<site>` opens a visible window on the master profile; sign in to Google (if you'll use it) and any site you want agents to share. Agents can do site logins themselves later; only Google + phone-code steps need you.
 2. **Seed the pool:** `pw-identity seed --all` (APFS clones of the master minus Google cookies; a 6-hourly job reseeds stale idle copies).
 3. **Trust-cookie jar:** fills itself: every plain-chrome close and identity launch harvests bot-check cookies. To prime a DataDome site: `plain-chrome fetch --warm https://<site>/ https://<site>/<deep-link>`; if a captcha shows, `carhunt captcha solve` or `plain-chrome show` and solve once.
-4. **MCP:** `carhunt browser mcp-config` → review → run the lines (bootstrap asks first). `carhunt browser mcp-config --hooks` → merge into `~/.claude/settings.json` (identity leases).
+4. **MCP:** `carhunt browser mcp-config` → review → run the lines (bootstrap asks first). Identity-lease hooks: `carhunt hooks install` (agent-only `$CARHUNT_HOME/claude/settings.json`, passed by `carhunt agent launch` via `claude --settings`; your own `~/.claude/settings.json` is never touched).
 5. `carhunt doctor`.
 
 ## Coexistence with an existing personal browser stack
