@@ -98,6 +98,13 @@ func TestInitFileBackend(t *testing.T) {
 			t.Fatal("tokens file holds a plain token")
 		}
 	}
+	// Each composite line's token is the one the server accepts under that name (hash in the tokens file).
+	for _, line := range strings.Split(sec["cardb_web_tokens"], "\n") {
+		name, tok, _ := strings.Cut(line, ":")
+		if !strings.Contains(string(tokens), "\n"+name+":"+setup.HashToken(tok)+"\n") {
+			t.Errorf("cardb_web_tokens entry %s does not match the tokens file", name)
+		}
+	}
 	if strings.Count(out1, "created") != 3 || !strings.Contains(out1, "wrote   web tokens") || !strings.Contains(out1, "next: ") ||
 		strings.Contains(string(tokens), "\nweb:") {
 		t.Errorf("first run output:\n%s", out1)
