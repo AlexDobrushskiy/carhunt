@@ -1,0 +1,303 @@
+# Seller phrases (PT · ES · DE · NL · FR · IT · EN)
+
+Starting points, not scripts: adapt to the car, the chat and what the seller already said. One or two per message. `[ ]` = fill in. Register: informal-polite (PT você implied, ES usted, DE Sie, NL u, FR vous, IT Lei).
+
+**Persona slots** (`contact.persona.*` in the config) hold the owner's own wording, usually in English. Inside a non-English line, translate the slot into that language and keep its meaning; never paste English into a seller message.
+
+**Keys** · `who` identity · `open` opener (site chat/form/email; `WA:` = WhatsApp form) · `acc` accidents · `repair` repaired or repainted? (dealers, evasive answer only) · `parts` which part, replaced or filled? · `own` real owner · `bought-where` short ownership: where was it bought? · `why-soon` why sell so soon? · `orig` origin/import · `why` reason for sale · `photos` few photos in the ad · `svc` service · `warr` warranty · `batt` battery report (BEV) · `batt-cost` they say it costs (BEV) · `sample` car-app screenshot (BEV) · `spec` key options in one line · `vin` VIN/options · `vin-alt` after a refusal · `doc` registration doc · `coc` · `export` · `pay` payment answer · `defect` volunteered defect · `cut` channel cut the message · `sus` suspicion recovery · `price` holding line · `price-comps` owner-approved price message only · `best` dealer best price · `visit` viewing holding line · `intent` statement of intent (priority-1 cars) · `lang-call` before a call · `call-no` decline a call · `video-no` decline a video call · `pickup` decline remote purchase/delivery · `private-only` dealer posing as private · `thanks` closing · `drop` dropping · `nudge` follow-up · `nudge-long` follow-up after a long unanswered message
+
+`batt` / `batt-cost` / `sample` are the BEV worked example. Other powertrains: ask the same way for `{contact.persona.health_report}` (translated), same rules (seller's cost, never offer money).
+
+## PT
+- who: Sou particular, de {contact.persona.home}, à procura de um carro {contact.persona.family_line}.
+- open: Olá! O carro ainda está disponível? Teve algum acidente, reparado ou não? · WA: start "Olá, é sobre o seu [marca modelo] no [site].", then the same
+- acc: Teve algum acidente ou reparação de chapa/pintura?
+- repair: Foi reparado ou repintado?
+- parts: Que peça foi? Foi substituída ou reparada com massa?
+- own: O carro está em seu nome? Há quanto tempo o tem? · Comprou-o novo?
+- bought-where: Onde é que o comprou?
+- why-soon: Já agora, porque é que o vende tão pouco tempo depois de o comprar?
+- orig: O carro é nacional ou veio importado? De que país?
+- why: Já agora, porque é que o está a vender?
+- photos: Podia enviar-me mais umas fotos? Exterior de todos os lados, interior, o painel com os km e a % da bateria, os pneus e alguma marca que tenha. No anúncio há poucas.
+- svc: As revisões foram feitas na marca?
+- warr: Até quando tem garantia? Passa para o novo dono?
+- batt: Teria um relatório recente do estado da bateria (SoH)? É o que mais pesa num elétrico usado.
+- batt-cost: Normalmente é o vendedor que apresenta o certificado da bateria — ajuda também a vender o carro.
+- sample: Pode enviar uma captura da app do carro com a % de carga, a autonomia e eventuais avisos?
+- spec: {contact.persona.spec_line}
+- vin: Pode dizer-me o número de chassi (VIN)? É só para confirmar o equipamento de fábrica na marca.
+- vin-alt: Sem problema, compreendo. Se preferir, uma foto da lista de equipamento ou da fatura da última revisão também serve.
+- doc: Pode enviar-me uma foto do DUA? Pode tapar os dados pessoais, é só para ver as datas.
+- coc: Tem o certificado de conformidade (COC)? É pedido para o registar no meu país.
+- export: Levaria o carro com matrícula de exportação. Seria possível para si?
+- pay: {contact.persona.payment_line}
+- defect: Obrigado pela transparência. Tem a fatura ou umas fotos da reparação?
+- cut: Desculpe, a mensagem ficou cortada. O resto era: [1 pergunta]
+- sus: Peço desculpa se as perguntas pareceram demais. Sou só um particular de {contact.persona.home} à procura de um carro {contact.persona.family_line}, e {contact.persona.travel_line}. Não lhe peço dinheiro nem nada de estranho e não há pressa nenhuma. Se preferir continuar, ótimo; se não, compreendo perfeitamente.
+- price: Primeiro gostava de perceber bem o carro; depois falamos de valores.
+- price-comps: Vi [modelo igual, mesma versão] a [preço 1] e [preço 2]. Qual seria o seu melhor preço?
+- best: Qual seria o seu melhor preço para um particular que vem buscá-lo pessoalmente?
+- visit: Estou a organizar a agenda; entretanto vou juntando os documentos e já lhe digo algo.
+- intent: Se estiver tudo claro, tenho interesse em ir aí e fechar o negócio.
+- lang-call: Fala inglês?
+- call-no: Obrigado! Escrevo com um tradutor e não falo bem a língua, por isso por escrito funciona melhor.
+- video-no: Obrigado! Por agora prefiro umas boas fotos: numa videochamada perdem-se os detalhes. Podia enviar [vistas em falta]?
+- pickup: Obrigado, prefiro ir eu buscar o carro pessoalmente.
+- private-only: Obrigado, procuro só de particular.
+- thanks: Muito obrigado pelas respostas todas! Vou pensar com calma e depois digo-lhe algo.
+- drop: Obrigado, entretanto decidi por outra opção. Boa sorte com a venda!
+- nudge: Olá [nome], só mais uma dúvida quando puder: [1 pergunta fácil]
+- nudge-long: Olá, [nome], sei que a minha mensagem era longa 🙂 Só o mais importante: [1–2 perguntas]
+
+## ES
+- who: Soy un particular de {contact.persona.home} y busco un coche {contact.persona.family_line}.
+- open: Hola, ¿sigue disponible? ¿Ha tenido algún accidente, reparado o no? · WA: start "Hola, le escribo por su [marca modelo] en [site].", then the same
+- acc: ¿Ha tenido algún golpe o pieza repintada?
+- repair: ¿Fue reparado o repintado?
+- parts: ¿Qué pieza fue? ¿Se cambió o se reparó con masilla?
+- own: ¿El coche está a su nombre? ¿Desde cuándo lo tiene? · ¿Lo compró nuevo?
+- bought-where: ¿Dónde lo compró?
+- why-soon: Por cierto, ¿por qué lo vende tan poco tiempo después de comprarlo?
+- orig: ¿Se matriculó nuevo en España o viene de otro país?
+- why: Por cierto, ¿por qué lo vende?
+- photos: ¿Me podría enviar algunas fotos más? Exterior por todos los lados, interior, el cuadro con los km y el % de batería, los neumáticos y cualquier marca que tenga. En el anuncio hay pocas.
+- svc: ¿Las revisiones están hechas en el servicio oficial?
+- warr: ¿Hasta cuándo tiene garantía?
+- batt: ¿Tendría un informe reciente del estado de la batería (SoH)? Es lo que más cuenta en un eléctrico usado.
+- batt-cost: Normalmente es el vendedor quien aporta el certificado de batería; también le ayuda a vender el coche.
+- sample: ¿Podría enviarme una captura de la app del coche con el % de carga, la autonomía y si hay algún aviso?
+- spec: {contact.persona.spec_line}
+- vin: ¿Me podría pasar el número de bastidor (VIN)? Es solo para comprobar el equipamiento de fábrica en el concesionario oficial.
+- vin-alt: Sin problema, lo entiendo. Si lo prefiere, una foto de la ficha técnica (tapando sus datos) también me sirve.
+- doc: ¿Me podría enviar una foto del permiso de circulación o de la ficha técnica? Puede tapar sus datos personales; es solo para ver las fechas.
+- coc: ¿Tiene el certificado de conformidad (COC)? Lo piden para matricularlo en mi país.
+- export: Para llevármelo haría la baja por exportación con placas verdes a través de una gestoría. ¿Le parecería bien?
+- pay: {contact.persona.payment_line}
+- defect: Gracias por la transparencia. ¿Tiene la factura o fotos de la reparación?
+- cut: Perdone, el chat cortó mi mensaje. Solo quería añadir: [1 pregunta]
+- sus: Perdone si mis preguntas le parecieron demasiadas. No soy ningún estafador: soy un particular de {contact.persona.home}, busco un coche {contact.persona.family_line}, y {contact.persona.travel_line}. No le pido dinero ni nada raro, y no hay ninguna prisa. Si le parece bien seguimos, y si prefiere dejarlo lo entiendo perfectamente.
+- price: Primero quiero conocer bien el coche; de precio hablamos después.
+- price-comps: He visto [mismo modelo, misma versión] a [precio 1] y [precio 2]. ¿Cuál sería su mejor precio?
+- best: ¿Cuál sería su mejor precio para un particular que lo recoge él mismo?
+- visit: Estoy organizando la agenda; mientras tanto voy reuniendo la documentación y le digo algo.
+- intent: Si todo está claro, me interesa ir y cerrar la compra.
+- lang-call: ¿Habla inglés?
+- call-no: ¡Gracias! Escribo con un traductor y no hablo bien el idioma, así que por escrito funciona mejor.
+- video-no: ¡Gracias! Por ahora prefiero unas buenas fotos: en una videollamada se pierden los detalles. ¿Podría enviarme [vistas que faltan]?
+- pickup: Gracias, prefiero ir a recogerlo yo mismo.
+- private-only: Gracias, busco solo de particular.
+- thanks: ¡Muchas gracias por todas las respuestas! Lo pienso con calma y le digo algo.
+- drop: Gracias, al final me he decidido por otra opción. ¡Suerte con la venta!
+- nudge: Hola, una pregunta más cuando pueda: [1 pregunta fácil]
+- nudge-long: Hola, sé que mi mensaje era largo 🙂 Solo lo más importante: [1–2 preguntas]
+
+## DE
+- who: Ich bin Privatkäufer aus {contact.persona.home} und suche ein Auto {contact.persona.family_line}.
+- open: Guten Tag, ist das Auto noch verfügbar? Hatte es Unfälle, repariert oder nicht? · WA: start "Hallo, es geht um Ihren [Marke Modell] auf [Seite].", then the same
+- acc: Ist das Auto unfallfrei, gibt es nachlackierte Teile?
+- repair: Wurde es repariert oder nachlackiert?
+- parts: Welches Teil war es? Ersetzt oder gespachtelt?
+- own: Ist das Auto auf Sie zugelassen, und seit wann fahren Sie es? · Haben Sie es neu gekauft?
+- bought-where: Wo haben Sie es gekauft?
+- why-soon: Darf ich fragen, warum Sie es so kurz nach dem Kauf wieder verkaufen?
+- orig: War das Auto von Anfang an in Deutschland zugelassen?
+- why: Darf ich fragen, warum Sie es verkaufen?
+- photos: Könnten Sie mir noch ein paar Fotos schicken? Außen von allen Seiten, Innenraum, das Display mit km-Stand und Akku-%, die Reifen und eventuelle Macken. Im Inserat sind nur wenige.
+- svc: Wurden die Wartungen beim Vertragshändler gemacht (digitales Serviceheft)?
+- warr: Bis wann läuft die Garantie, und geht sie auf einen Käufer im Ausland über?
+- batt: Hätten Sie einen aktuellen Batteriebericht (SoH)? Das ist bei einem gebrauchten E-Auto für mich das Wichtigste.
+- batt-cost: Üblicherweise stellt der Verkäufer das Batteriezertifikat, es hilft ja auch beim Verkauf.
+- sample: Könnten Sie mir einen Screenshot aus der Fahrzeug-App schicken, mit Ladestand in %, Reichweite und eventuellen Warnmeldungen?
+- spec: {contact.persona.spec_line}
+- vin: Könnten Sie mir die FIN oder die Datenkarte schicken? Ich möchte nur die Werksausstattung beim Vertragshändler abgleichen.
+- vin-alt: Kein Problem, verstehe ich. Ein Foto der Ausstattungsliste oder des Serviceausdrucks würde mir auch schon helfen.
+- doc: Könnten Sie mir ein Foto der Zulassungsbescheinigung Teil I schicken? Persönliche Daten können Sie gern abdecken, es geht mir nur um die Daten.
+- coc: Liegt das COC-Papier vor? Das brauche ich für die Zulassung in meinem Land.
+- export: Ich würde das Auto mit Ausfuhrkennzeichen abholen. Wäre das für Sie in Ordnung?
+- pay: {contact.persona.payment_line}
+- defect: Danke für die Offenheit. Haben Sie die Rechnung oder Fotos der Reparatur?
+- cut: Entschuldigung, meine Nachricht wurde abgeschnitten. Es fehlte nur: [1 Frage]
+- sus: Entschuldigen Sie, wenn meine Fragen zu viel waren. Ich bin einfach ein Privatmann aus {contact.persona.home} und suche ein Auto {contact.persona.family_line}, und {contact.persona.travel_line}. Ich verlange kein Geld und nichts Ungewöhnliches, und es eilt nicht. Wenn es für Sie passt, machen wir gern weiter; wenn nicht, verstehe ich das völlig.
+- price: Ich möchte zuerst das Auto gut kennenlernen; über den Preis sprechen wir danach.
+- price-comps: Ich habe [gleiches Modell, gleiche Ausstattung] für [Preis 1] und [Preis 2] gesehen. Was wäre Ihr bester Preis?
+- best: Was wäre Ihr bester Preis für mich als Privatkäufer, der selbst abholt?
+- visit: Ich plane gerade meine Termine; bis dahin sammle ich die Unterlagen und melde mich.
+- intent: Wenn alles klar ist, komme ich gern vorbei und wir machen den Kauf fest.
+- lang-call: Sprechen Sie Englisch?
+- call-no: Danke! Ich schreibe mit einem Übersetzer und spreche die Sprache nicht gut, schriftlich klappt es am besten.
+- video-no: Danke! Vorerst lieber gute Fotos: im Videoanruf gehen die Details verloren. Könnten Sie mir [fehlende Ansichten] schicken?
+- pickup: Danke, ich hole das Auto lieber selbst ab.
+- private-only: Danke, ich suche nur von privat.
+- thanks: Vielen Dank für die ausführlichen Antworten! Ich überlege in Ruhe und melde mich.
+- drop: Vielen Dank, ich habe mich inzwischen für eine andere Option entschieden.
+- nudge: Guten Tag, noch eine kurze Frage, wenn Sie Zeit haben: [1 leichte Frage]
+- nudge-long: Guten Tag, meine Nachricht war etwas lang 🙂 Nur das Wichtigste: [1–2 Fragen]
+
+## NL
+- who: Ik ben een particuliere koper uit {contact.persona.home} en zoek een auto {contact.persona.family_line}.
+- open: Goedendag, is de auto nog beschikbaar? Heeft hij schade gehad, hersteld of niet? · WA: start "Goedendag, het gaat om uw [merk model] op [site].", then the same
+- acc: Is de auto schadevrij, zijn er delen overgespoten?
+- repair: Is hij hersteld of overgespoten?
+- parts: Welk onderdeel was het? Vervangen of geplamuurd?
+- own: Staat de auto op uw naam, en sinds wanneer heeft u hem? · Heeft u hem nieuw gekocht?
+- bought-where: Waar heeft u hem gekocht?
+- why-soon: Mag ik vragen waarom u hem zo kort na de aankoop weer verkoopt?
+- orig: Is de auto nieuw in Nederland/België geleverd, of geïmporteerd?
+- why: Mag ik vragen waarom u hem verkoopt?
+- photos: Zou u nog wat foto's kunnen sturen? Buitenkant van alle kanten, interieur, het dashboard met km-stand en accu-%, de banden en eventuele schadeplekjes. In de advertentie staan er maar weinig.
+- svc: Is het onderhoud bij de dealer gedaan (digitaal onderhoudsboekje)?
+- warr: Tot wanneer loopt de garantie?
+- batt: Heeft u een recent accurapport (SoH)? Dat is voor mij het belangrijkste bij een gebruikte EV.
+- batt-cost: Meestal levert de verkoper het accucertificaat; het helpt ook bij de verkoop.
+- sample: Kunt u een screenshot uit de app van de auto sturen, met laadniveau in %, actieradius en eventuele waarschuwingen?
+- spec: {contact.persona.spec_line}
+- vin: Zou u mij het chassisnummer (VIN) kunnen sturen? Alleen om de fabrieksopties bij de dealer na te kijken.
+- vin-alt: Geen probleem, begrijpelijk. Een uitdraai van de onderhoudshistorie of een accutest bij de dealer zou mij ook al helpen.
+- doc: Kunt u een foto van het kentekenbewijs sturen? Persoonlijke gegevens mag u afdekken, het gaat mij alleen om de data.
+- coc: Is het COC-document aanwezig? Dat heb ik nodig voor de registratie in mijn land.
+- export: Ik zou de auto met exportplaten ophalen. Is dat goed voor u?
+- pay: {contact.persona.payment_line}
+- defect: Bedankt voor de openheid. Heeft u de factuur of foto's van de reparatie?
+- cut: Excuses, mijn bericht werd afgekapt. Ik wilde alleen nog vragen: [1 vraag]
+- sus: Excuses als mijn vragen te veel waren. Ik ben gewoon een particulier uit {contact.persona.home} en zoek een auto {contact.persona.family_line}, en {contact.persona.travel_line}. Ik vraag geen geld en niets vreemds, en er is geen haast. Als het u schikt gaan we graag verder; zo niet, dan begrijp ik dat helemaal.
+- price: Ik wil eerst de auto goed leren kennen; over de prijs praten we daarna.
+- price-comps: Ik zag [zelfde model, zelfde uitvoering] voor [prijs 1] en [prijs 2]. Wat is uw beste prijs?
+- best: Wat is uw beste prijs als ik snel kom en bij de overdracht meteen betaal?
+- visit: Ik ben mijn agenda aan het plannen; intussen verzamel ik de documenten en laat ik het u weten.
+- intent: Als alles duidelijk is, kom ik graag langs om de koop rond te maken.
+- lang-call: Spreekt u Engels?
+- call-no: Dank u! Ik schrijf met een vertaler en spreek de taal niet goed, dus schriftelijk werkt het best.
+- video-no: Dank u! Voorlopig liever goede foto's: in een videogesprek gaan de details verloren. Kunt u [ontbrekende kanten] sturen?
+- pickup: Dank u, ik haal de auto liever zelf op.
+- private-only: Dank u, ik zoek alleen van particulieren.
+- thanks: Hartelijk dank voor alle antwoorden! Ik denk er rustig over na en laat het u weten.
+- drop: Dank u wel, ik heb inmiddels voor een andere optie gekozen.
+- nudge: Goedendag, nog één korte vraag als u tijd heeft: [1 makkelijke vraag]
+- nudge-long: Goedendag, mijn bericht was wat lang 🙂 Alleen het belangrijkste: [1–2 vragen]
+
+## FR
+- who: Je suis un particulier de {contact.persona.home} et je cherche une voiture {contact.persona.family_line}.
+- open: Bonjour, le véhicule est-il toujours disponible ? A-t-il eu un accident, réparé ou non ? · WA: start "Bonjour, c'est au sujet de votre [marque modèle] sur [site].", then the same
+- acc: Le véhicule a-t-il eu un accident ou des éléments repeints ?
+- repair: A-t-il été réparé ou repeint ?
+- parts: Quelle pièce ? Remplacée ou réparée au mastic ?
+- own: La voiture est-elle à votre nom, et depuis quand l'avez-vous ? · L'avez-vous achetée neuve ?
+- bought-where: Où l'avez-vous achetée ?
+- why-soon: Puis-je vous demander pourquoi vous la revendez si peu de temps après l'achat ?
+- orig: A-t-elle été immatriculée neuve en France, ou est-ce une importation ?
+- why: Puis-je vous demander pourquoi vous la vendez ?
+- photos: Pourriez-vous m'envoyer quelques photos de plus ? L'extérieur sous tous les angles, l'intérieur, le tableau de bord avec le kilométrage et le % de batterie, les pneus et les éventuels défauts. Il y en a peu dans l'annonce.
+- svc: Les entretiens ont-ils été faits dans le réseau de la marque ?
+- warr: Jusqu'à quand court la garantie ?
+- batt: Auriez-vous un rapport récent sur l'état de la batterie (SoH) ? C'est le point le plus important pour moi sur un électrique d'occasion.
+- batt-cost: En général c'est le vendeur qui fournit le certificat de batterie ; ça aide aussi à vendre.
+- sample: Pourriez-vous m'envoyer une capture de l'appli de la voiture avec le % de charge, l'autonomie et d'éventuelles alertes ?
+- spec: {contact.persona.spec_line}
+- vin: Pourriez-vous m'envoyer le numéro de série (VIN) ? C'est seulement pour vérifier l'équipement d'origine chez le concessionnaire.
+- vin-alt: Pas de souci, je comprends. Une photo de la liste d'équipements ou de la dernière facture d'entretien m'aiderait déjà.
+- doc: Pourriez-vous m'envoyer une photo de la carte grise ? Vous pouvez cacher vos données personnelles, c'est juste pour les dates.
+- coc: Avez-vous le certificat de conformité (COC) ? Il est demandé pour l'immatriculation dans mon pays.
+- export: Je repartirais avec des plaques WW / transit. Cela vous conviendrait-il ?
+- pay: {contact.persona.payment_line}
+- defect: Merci pour votre transparence. Avez-vous la facture ou des photos de la réparation ?
+- cut: Pardon, mon message a été coupé. Je voulais juste ajouter : [1 question]
+- sus: Excusez-moi si mes questions vous ont paru trop nombreuses. Je suis simplement un particulier de {contact.persona.home} qui cherche une voiture {contact.persona.family_line}, et {contact.persona.travel_line}. Je ne vous demande ni argent ni rien d'inhabituel, et rien ne presse. Si cela vous convient, continuons volontiers ; sinon, je comprends tout à fait.
+- price: J'aimerais d'abord bien connaître la voiture ; on parlera du prix ensuite.
+- price-comps: J'ai vu [même modèle, même finition] à [prix 1] et [prix 2]. Quel serait votre meilleur prix ?
+- best: Quel serait votre meilleur prix pour un particulier qui vient la chercher lui-même ?
+- visit: J'organise mon agenda ; en attendant je rassemble les documents et je reviens vers vous.
+- intent: Si tout est clair, je suis intéressé pour venir conclure la vente.
+- lang-call: Parlez-vous anglais ?
+- call-no: Merci ! J'écris avec un traducteur et je ne parle pas bien la langue, donc par écrit c'est le plus simple.
+- video-no: Merci ! Pour l'instant je préfère de bonnes photos : en visio on perd les détails. Pourriez-vous m'envoyer [vues manquantes] ?
+- pickup: Merci, je préfère venir la chercher moi-même.
+- private-only: Merci, je cherche uniquement auprès de particuliers.
+- thanks: Merci beaucoup pour toutes vos réponses ! J'y réfléchis et je reviens vers vous.
+- drop: Merci, j'ai entre-temps opté pour une autre solution.
+- nudge: Bonjour, une petite question encore quand vous aurez un moment : [1 question simple]
+- nudge-long: Bonjour, mon message était un peu long 🙂 Juste l'essentiel : [1–2 questions]
+
+## IT
+- who: Sono un privato di {contact.persona.home} e cerco un'auto {contact.persona.family_line}.
+- open: Buongiorno, è ancora disponibile? Ha avuto incidenti, riparati o no? · WA: start "Buongiorno, le scrivo per la sua [marca modello] su [sito].", then the same
+- acc: L'auto ha avuto incidenti o parti riverniciate?
+- repair: È stata riparata o riverniciata?
+- parts: Quale parte? Sostituita o riparata con lo stucco?
+- own: L'auto è intestata a lei, e da quando ce l'ha? · L'ha comprata nuova?
+- bought-where: Dove l'ha comprata?
+- why-soon: Posso chiederle perché la rivende così poco tempo dopo l'acquisto?
+- orig: È stata immatricolata nuova in Italia o è d'importazione?
+- why: Posso chiederle perché la vende?
+- photos: Potrebbe mandarmi qualche foto in più? Esterno da tutti i lati, interni, il cruscotto con km e % della batteria, gli pneumatici ed eventuali segni. Nell'annuncio ce ne sono poche.
+- svc: I tagliandi sono stati fatti presso la rete ufficiale?
+- warr: Fino a quando c'è la garanzia?
+- batt: Avrebbe un report recente sullo stato della batteria (SoH)? Per un'elettrica usata è la cosa più importante per me.
+- batt-cost: Di solito è il venditore a fornire il certificato della batteria; aiuta anche a vendere.
+- sample: Potrebbe mandarmi uno screenshot dell'app dell'auto con la % di carica, l'autonomia ed eventuali avvisi?
+- spec: {contact.persona.spec_line}
+- vin: Potrebbe mandarmi il numero di telaio (VIN)? È solo per verificare gli optional di fabbrica presso il concessionario.
+- vin-alt: Nessun problema, capisco. Anche una foto della lista optional o dell'ultima fattura del tagliando mi aiuterebbe.
+- doc: Potrebbe mandarmi una foto del libretto di circolazione? Può coprire i dati personali, mi servono solo le date.
+- coc: Ha il certificato di conformità (COC)? Serve per immatricolarla nel mio paese.
+- export: La porterei via con targa di esportazione (EE). Le andrebbe bene?
+- pay: {contact.persona.payment_line}
+- defect: Grazie per la trasparenza. Ha la fattura o delle foto della riparazione?
+- cut: Mi scusi, il messaggio è stato tagliato. Volevo solo aggiungere: [1 domanda]
+- sus: Mi scusi se le domande le sono sembrate troppe. Sono semplicemente un privato di {contact.persona.home} che cerca un'auto {contact.persona.family_line}, e {contact.persona.travel_line}. Non le chiedo soldi né niente di strano, e non c'è nessuna fretta. Se le va continuiamo volentieri; altrimenti capisco perfettamente.
+- price: Prima vorrei conoscere bene l'auto; del prezzo parliamo dopo.
+- price-comps: Ho visto [stesso modello, stesso allestimento] a [prezzo 1] e [prezzo 2]. Quale sarebbe il suo prezzo migliore?
+- best: Quale sarebbe il suo prezzo migliore per un privato che viene a ritirarla di persona?
+- visit: Sto organizzando l'agenda; nel frattempo raccolgo i documenti e le faccio sapere.
+- intent: Se è tutto chiaro, mi interessa venire a chiudere l'acquisto.
+- lang-call: Parla inglese?
+- call-no: Grazie! Scrivo con un traduttore e non parlo bene la lingua, quindi per iscritto funziona meglio.
+- video-no: Grazie! Per ora preferisco delle buone foto: in videochiamata si perdono i dettagli. Potrebbe mandarmi [viste mancanti]?
+- pickup: Grazie, preferisco venire a ritirarla di persona.
+- private-only: Grazie, cerco solo da privati.
+- thanks: Grazie mille per tutte le risposte! Ci penso con calma e le faccio sapere.
+- drop: Grazie, nel frattempo ho scelto un'altra soluzione. In bocca al lupo per la vendita!
+- nudge: Buongiorno, ancora una domanda quando ha un momento: [1 domanda semplice]
+- nudge-long: Buongiorno, il mio messaggio era un po' lungo 🙂 Solo la cosa più importante: [1–2 domande]
+
+## EN
+- who: I'm a private buyer from {contact.persona.home}, looking for a car {contact.persona.family_line}.
+- open: Hello, is the car still available? Has it had any accidents, repaired or not? · WA: start "Hello, I'm writing about your [make model] on [site].", then the same
+- acc: Has it had any accident or repainted panels?
+- repair: Was it repaired or repainted?
+- parts: Which part was it? Replaced or filled?
+- own: Is the car registered in your name, and since when have you had it? · Did you buy it new?
+- bought-where: Where did you buy it?
+- why-soon: May I ask why you're selling it so soon after buying it?
+- orig: Was it first registered here, or imported?
+- why: May I ask why you're selling it?
+- photos: Could you send me a few more photos? Exterior from all sides, interior, the dashboard with km and battery %, the tyres and any marks. The ad only has a few.
+- svc: Was it serviced at the brand dealer?
+- warr: Until when does the warranty run?
+- batt: Would you have a recent battery health report (SoH)? It's the main thing for me on a used EV.
+- batt-cost: Usually the seller provides the battery certificate; it helps the sale too.
+- sample: Could you send a screenshot from the car's app showing charge %, range and any warnings?
+- spec: {contact.persona.spec_line}
+- vin: Could you send me the VIN? Only to check the factory options at the official dealer.
+- vin-alt: No problem, I understand. A photo of the options list or the last service invoice would already help.
+- doc: Could you send a photo of the registration document? Feel free to cover personal details, I only need the dates.
+- coc: Do you have the COC (certificate of conformity)? It's needed to register the car in my country.
+- export: I'd take the car on export/transit plates. Would that be OK for you?
+- pay: {contact.persona.payment_line}
+- defect: Thanks for being upfront. Do you have the invoice or photos of the repair?
+- cut: Sorry, the chat cut my message. I only wanted to add: [1 question]
+- sus: Sorry if my questions felt like too much. I'm simply a private person from {contact.persona.home}, looking for a car {contact.persona.family_line}, and {contact.persona.travel_line}. I'm not asking for money or anything unusual, and there's no hurry. Happy to continue if it suits you; if not, I completely understand.
+- price: I'd like to know the car well first; we can talk price after that.
+- price-comps: I've seen [same model, same trim] at [price 1] and [price 2]. What would be your best price?
+- best: What would be your best price for a private buyer who picks it up in person?
+- visit: I'm organising my schedule; meanwhile I'm collecting the documents and will get back to you.
+- intent: If all the details are clear, I'm interested in coming over and closing the deal.
+- lang-call: Do you speak English?
+- call-no: Thank you! I write with a translator and don't speak the language well, so writing works best.
+- video-no: Thank you! For now I'd prefer good photos: a video call loses the details. Could you send [missing views]?
+- pickup: Thank you, I prefer to come and pick it up myself.
+- private-only: Thank you, I'm only looking at private sellers.
+- thanks: Thanks a lot for all the answers! I'll think it over and get back to you.
+- drop: Thank you, in the meantime I've decided on another option. Good luck with the sale!
+- nudge: Hello, one more quick question when you have a moment: [1 easy question]
+- nudge-long: Hello, I know my message was long 🙂 Just the main thing: [1–2 questions]
