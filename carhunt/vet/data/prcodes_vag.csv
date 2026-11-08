@@ -1,0 +1,202 @@
+code,family,option_key,meaning,confidence
+3FA,3F?,pano,none: no roof opening (no sunroof / panoramic roof),A
+3FA,3F?,pano_opening,none: no roof opening,A
+3FU,3F?,pano,"panoramic glass roof, electric, with lightproof electric blind (Audi ""Panoramadach""; seen outside as gloss-black roof panel)",V
+3FG,3F?,pano,"panoramic glass roof with electric blind (VW ""Panorama-Glasdach"")",V
+3FG,3F?,pano_opening,"none: VW 3FG is fixed glass (blind is electric, glass does not open)",V
+4E6,4E?,power_tailgate,"electric tailgate open/close with sensor-controlled release (hands-free kick; Skoda ""virtual pedal""; Audi needs keyless 4K5)",V
+4E7,4E?,power_tailgate,electric tailgate open/close (standard on Audi Q4 45 MY24+),V
+4E0,4E?,power_tailgate,none: manual tailgate,A
+4E2,4E?,power_tailgate,none: manual tailgate,A
+4E5,4E?,power_tailgate,none: manual tailgate,A
+5I6,5I?,power_tailgate,electric tailgate as standalone option (VW LU price list),V
+3L0,3L?,electric_seats,none: manual front seats,A
+3L1,3L?,electric_seats,none: manual front seats,A
+3L2,3L?,electric_seats,none: manual front seats,A
+3L3,3L?,electric_seats,none: manual front seats,A
+3L4,3L?,electric_seats,electric front seats with memory (exact meaning per model unverified),I
+3L4,3L?,memory_seats,memory included with 3L4 (unverified per model),I
+3L5,3L?,electric_seats,"front seats electrically adjustable (Audi ""Vordersitze elektrisch einstellbar""); 3L5 alone = no memory unless AI1/PV3 also present",V
+3L6,3L?,electric_seats,electric front seats with memory (exact meaning per model unverified),I
+3L6,3L?,memory_seats,memory included with 3L6 (unverified per model),I
+3L7,3L?,electric_seats,electric front seats with memory (exact meaning per model unverified),I
+3L7,3L?,memory_seats,memory included with 3L7 (unverified per model),I
+3L8,3L?,electric_seats,electric front seats with memory (exact meaning per model unverified),I
+3L8,3L?,memory_seats,memory included with 3L8 (unverified per model),I
+3PB,3P?,electric_seats,electric driver seat only (Audi NL option; needs Komfortpaket PYA),V
+AI1,AI?,memory_seats,memory for driver seat and exterior mirrors (Audi; comes with 3L5),V
+PV3,PV?,electric_seats,electric front seats with memory (Audi MY27 option; needs Tech package + 7P1),V
+PV3,PV?,memory_seats,"memory, part of PV3 (Audi MY27)",V
+PV6,PV?,memory_seats,seat memory on other Audi models,A
+1R3,1R?,memory_seats,ergoActive seat with memory (VW component code seen in DE dealer listings),A
+1R3,1R?,electric_seats,VW ergoActive memory seat is always electric in EU MY24+ (memory implies e-seat),I
+8I6,8I?,massage_seats,seat massage (VW component code seen in DE dealer listings; family 8I? otherwise holds headlight codes - check the printout text),A
+7P1,7P?,,4-way electric lumbar support (Audi); lumbar alone is NOT electric seats,V
+7P2,7P?,,electric lumbar support variant (unverified per model),I
+7P0,7P?,,none/manual lumbar support,A
+7P4,7P?,,none/manual lumbar support,A
+4D0,4D?,ventilated_seats,none: no seat ventilation/massage,A
+4D0,4D?,massage_seats,none: no seat ventilation/massage,A
+9VS,9V?,premium_audio,"branded premium sound package: Audi = SONOS (10 speakers, 580 W); on VW probably Harman Kardon, on Skoda probably Canton (unverified)",V
+9VD,9V?,premium_audio,none: basic Audi sound system (8 speakers),V
+9VG,9V?,premium_audio,branded sound system design 2: VW = Harman Kardon (DE dealer listings); Skoda possibly Canton,A
+9M3,9M?,heat_pump,"heat pump (""Waermepumpe""); confirmed on Audi Q4 and Skoda Enyaq, same platform on VW",V
+9M8,9M?,heat_pump,heat pump (Audi Q4 MY27 code),V
+9M0,9M?,heat_pump,none: no heat pump (or the 9M? family is missing entirely),A
+KK2,KK?,heat_pump,A/C refrigerant R744 (CO2) => heat pump fitted,V
+KK3,KK?,heat_pump,none: A/C refrigerant R1234yf => no heat pump,V
+WPU,WP?,heat_pump,"heat pump, VW price-list option code",V
+WPX,WP?,heat_pump,"heat pump, VW price-list option code",V
+PHC,PH?,heat_pump,"heat pump, Skoda sales package code (seen with 9M3 + KK2)",V
+KB2,KB?,,on-board AC charger up to 7.2 kW (Audi Q4 35 only),V
+KB3,KB?,,"on-board AC charger 11 kW (standard on ID.4/ID.5 Pro, Q4 40/45/50, Enyaq 85 in EU lists)",I
+8IV,8I?,matrix_led,Matrix LED headlights (VW IQ.Light),V
+8IR,8I?,matrix_led,none: plain LED headlights (VW),V
+PXC,PX?,matrix_led,"Audi Matrix LED package: digital DRL, dynamic indicators, headlight washers, rear LED light bar",V
+8X8,8X?,,headlight washers (Audi NL standalone option),V
+PA2,PA?,matrix_led,VW Design pack: Matrix + front LED light bar + 3D tail lights (+ privacy glass in most markets),V
+PA6,PA?,matrix_led,VW Design pack (later code): Matrix + front LED light bar + 3D tail lights (+ laminated glass),V
+PA5,PA?,pano,VW Design Plus pack (MY24 IT/FR/ES): Design pack + panoramic roof,V
+PA5,PA?,matrix_led,VW Design Plus pack includes Matrix,V
+KS3,KS?,hud,AR head-up display (VW component code in DE listings; Audi MY27 standalone),V
+RD3,RD?,premium_audio,VW Infotainment Plus MY24: Harman Kardon + AR-HUD + navigation,V
+RD3,RD?,hud,VW Infotainment Plus MY24: AR-HUD,V
+RD9,RD?,premium_audio,VW Infotainment Plus MY25+: Harman Kardon + AR-HUD + navigation,V
+RD9,RD?,hud,VW Infotainment Plus MY25+: AR-HUD,V
+RB2,RB?,premium_audio,VW Infotainment Plus NL MY27 (Harman Kardon + AR-HUD),V
+RB2,RB?,hud,VW Infotainment Plus NL MY27 (AR-HUD),V
+PYH,PY?,hud,"Audi MMI Navigation pro: AR-HUD + virtual cockpit plus (MY24-26 only; MY27 PYH = MMI experience pro incl. Sonos, AR-HUD separate KS3)",V
+PAD,PA?,electric_seats,VW Interior Style Plus: ergoActive electric front seats + memory + massage,V
+PAD,PA?,memory_seats,VW Interior Style Plus includes memory,V
+PAD,PA?,massage_seats,VW Interior Style Plus includes massage,V
+PAF,PA?,electric_seats,VW Interior Style Plus: ergoActive electric front seats + memory + massage,V
+PAF,PA?,memory_seats,VW Interior Style Plus includes memory,V
+PAF,PA?,massage_seats,VW Interior Style Plus includes massage,V
+PAJ,PA?,electric_seats,VW Interior Style Plus: ergoActive electric front seats + memory + massage,V
+PAJ,PA?,memory_seats,VW Interior Style Plus includes memory,V
+PAJ,PA?,massage_seats,VW Interior Style Plus includes massage,V
+WAJ,WA?,electric_seats,VW Interior Style Plus (MY26 code): ergoActive electric seats + memory + massage,V
+WAJ,WA?,memory_seats,VW Interior Style Plus (MY26) includes memory,V
+WAJ,WA?,massage_seats,VW Interior Style Plus (MY26) includes massage,V
+PAG,PA?,electric_seats,VW Top-Sport Plus: ergoActive electric sport seats + memory + massage,V
+PAG,PA?,memory_seats,VW Top-Sport Plus includes memory,V
+PAG,PA?,massage_seats,VW Top-Sport Plus includes massage,V
+PAH,PA?,electric_seats,VW Top-Sport Plus: ergoActive electric sport seats + memory + massage,V
+PAH,PA?,memory_seats,VW Top-Sport Plus includes memory,V
+PAH,PA?,massage_seats,VW Top-Sport Plus includes massage,V
+PAK,PA?,electric_seats,VW Top-Sport Plus: ergoActive electric sport seats + memory + massage,V
+PAK,PA?,memory_seats,VW Top-Sport Plus includes memory,V
+PAK,PA?,massage_seats,VW Top-Sport Plus includes massage,V
+WAK,WA?,electric_seats,VW Top-Sport Plus (MY26 code): ergoActive electric seats + memory + massage,V
+WAK,WA?,memory_seats,VW Top-Sport Plus (MY26) includes memory,V
+WAK,WA?,massage_seats,VW Top-Sport Plus (MY26) includes massage,V
+W62,W6?,electric_seats,VW IT MY26 Style Pack: Black pack + Top-Sport Plus + panoramic roof,V
+W62,W6?,memory_seats,VW IT MY26 Style Pack (Top-Sport Plus memory),V
+W62,W6?,pano,VW IT MY26 Style Pack includes panoramic roof,V
+WD5,WD?,power_tailgate,VW Assistance Plus / IQ.DRIVE (MY24-26): e-tailgate + Area View 360 + Travel Assist + memory parking (DE MY27 moved e-tailgate out),V
+WD5,WD?,camera_360,VW Assistance Plus / IQ.DRIVE: Area View 360,V
+WD5,WD?,travel_assist,VW Assistance Plus / IQ.DRIVE: Travel Assist,V
+WD6,WD?,power_tailgate,VW Assistance Plus / IQ.DRIVE (MY24-26): e-tailgate + Area View 360 + Travel Assist + memory parking (DE MY27 moved e-tailgate out),V
+WD6,WD?,camera_360,VW Assistance Plus / IQ.DRIVE: Area View 360,V
+WD6,WD?,travel_assist,VW Assistance Plus / IQ.DRIVE: Travel Assist,V
+WD9,WD?,power_tailgate,VW Assistance Plus / IQ.DRIVE (MY24-26): e-tailgate + Area View 360 + Travel Assist + memory parking (DE MY27 moved e-tailgate out),V
+WD9,WD?,camera_360,VW Assistance Plus / IQ.DRIVE: Area View 360,V
+WD9,WD?,travel_assist,VW Assistance Plus / IQ.DRIVE: Travel Assist,V
+PE9,PE?,power_tailgate,VW Assistance Plus / IQ.DRIVE (MY24-26): e-tailgate + Area View 360 + Travel Assist,V
+PE9,PE?,camera_360,VW Assistance Plus / IQ.DRIVE: Area View 360,V
+PE9,PE?,travel_assist,VW Assistance Plus / IQ.DRIVE: Travel Assist,V
+PE8,PE?,camera_360,VW Assistance Plus FR MY27 (contents assumed like IQ.DRIVE; e-tailgate not assumed),I
+PE8,PE?,travel_assist,VW Assistance Plus FR MY27 (contents assumed like IQ.DRIVE),I
+WM1,WM?,,"VW Exterior Style Silver: silver roof rails, black roof, silver C-pillar (cosmetic)",V
+WBS,WB?,,VW Black Style,V
+WBT,WB?,,VW Black Style,V
+PJ8,PJ?,,"VW wheel: Hamar 19""",V
+PJA,PJ?,,"VW wheel: Hamar 19""",V
+PJY,PJ?,,"VW wheel: Drammen 20""",V
+PJ3,PJ?,,"VW wheel: Drammen 20""",V
+PJ4,PJ?,,"VW wheel: Narvik 21""",V
+PJ9,PJ?,,"VW wheel: Narvik 21""",V
+PJZ,PJ?,,"VW wheel: Narvik 21""",V
+PJW,PJ?,,"VW wheel: Bergen 20"" silver",V
+PJX,PJ?,,"VW wheel: Bergen 20"" black",V
+PYY,PY?,electric_seats,Audi Komfortpaket plus: electric front seats + driver seat/mirror memory + electric lumbar + frameless auto-dim mirror (on sticker as 3L5 + 7P1 + 6XL),V
+PYY,PY?,memory_seats,Audi Komfortpaket plus includes driver seat memory,V
+PYA,PY?,,"Audi Komfortpaket: lumbar, mirrors, frameless auto-dim interior mirror, puddle lights - NO e-seats, NO memory (does not rule out 3PB)",V
+6XL,6X?,,appears on the sticker as part of Audi PYY with 3L5 + 7P1 (likely the mirror content),I
+PYL,PY?,adaptive_cruise,"Audi Assistenzpaket Fahren & Parken plus: ACC, front+rear parking sensors, rear camera",V
+PYL,PY?,rear_camera,Audi Fahren & Parken plus includes rear camera,V
+PZC,PZ?,camera_360,"Audi Fahren & Parken pro + Schutz- und Warnsysteme plus: 360 cameras, park assist plus, adaptive driving assistant",V
+PZB,PZ?,,Audi Assistenzpaket (contents not detailed in source),V
+PQ1,PQ?,rear_camera,"Audi MY27 Tech package: rear camera, keyless, ACC, kick tailgate",V
+PQ1,PQ?,keyless,Audi MY27 Tech package includes keyless,V
+PQ1,PQ?,adaptive_cruise,Audi MY27 Tech package includes ACC,V
+PQ2,PQ?,camera_360,Audi MY27 Tech plus: Tech + 360 camera + Matrix + LED tails pro,V
+PQ2,PQ?,matrix_led,Audi MY27 Tech plus includes Matrix,V
+PQ3,PQ?,,Audi MY27 Tech pro: Tech plus + OLED tail lights + remote park assist,V
+4K5,4K?,keyless,Audi keyless entry (needed for kick tailgate 4E6),V
+QL5,QL?,,privacy glass (Audi),V
+4ZD,4Z?,,Audi Optikpaket schwarz (black roof rails/trims),V
+4ZP,4Z?,,Audi Optikpaket schwarz plus,V
+PY1,PY?,,Audi advanced exterior (Manhattan-grey contrast bottom line) - says nothing about seats,V
+PY2,PY?,,"Audi S line exterior (20"", sport suspension) - says nothing about seats",V
+PFA,PF?,,"Audi edition S line (MY24-26 special: privacy glass, darkened Matrix, S line interior, 21"" bronze) - e-seats/pano/Sonos still optional",V
+PY8,PY?,,Audi Dynamikpaket,V
+PY9,PY?,,Audi Dynamikpaket plus,V
+PYX,PY?,,Audi Smartphone-Paket,V
+PWA,PW?,,Audi interior package (prerequisite for PYY in DE),V
+PWD,PW?,,Audi interior package (prerequisite for PYY in DE),V
+PWE,PW?,,Audi interior package (prerequisite for PYY in DE),V
+PWK,PW?,,Audi Interieur S line - not tied to e-seats,V
+PWL,PW?,,Audi Interieur S line - not tied to e-seats,V
+PWM,PW?,,Audi Interieur S line - not tied to e-seats,V
+PWN,PW?,,Audi Interieur S line - not tied to e-seats,V
+FB0,FB?,,Audi bottom line/arches anthracite grained plastic (base exterior),V
+FB4,FB?,,Audi full paint: body-colour bottom line/arches (with PY1/PY2 only),V
+FB5,FB?,,Audi Manhattan-grey contrast bottom line/arches,V
+Y4T,Y4?,,Audi MY27 black-on-black with Mythos black paint,V
+2FS,2F?,,Audi flat-top/bottom steering wheel (standard on Q4 MY24-26; no signal),V
+1XX,1X?,,Audi MY27 3-spoke flat steering wheel = S line,V
+WFC,WF?,,Audi FR MY27 trim Business Executive (Tech pack),V
+WFE,WF?,,Audi FR MY27 trim S line,V
+WK1,WK?,,Audi IT trim Business,A
+WK4,WK?,,Audi IT trim Business Advanced (contents unverified),A
+WKG,WK?,,"Audi IT trim S line edition (S line bumpers, Manhattan-grey contrast)",A
+F01,model-specific,,"Audi Q4 wheel: 19"" steel wheel with full hubcap (DE base)",V
+40S,model-specific,,"Audi Q4 wheel: 19"" 5-arm silver",V
+40Z,model-specific,,"Audi Q4 wheel: 19"" 5-W-spoke-aero graphite grey gloss-turned (advanced)",V
+49D,model-specific,,"Audi Q4 wheel: 19"" 5-V-spoke-aero black gloss-turned",V
+55J,model-specific,,"Audi Q4 wheel: 20"" 5-Y-spoke silver (S line)",V
+55K,model-specific,,"Audi Q4 wheel: 20"" 5-Y-spoke graphite gloss-turned",V
+44L,model-specific,,"Audi Q4 wheel: 20"" 5-V-spoke graphite (Sportback only)",V
+56H,model-specific,,"Audi Q4 wheel: 20"" Audi Sport 5-V-spoke polygon titanium matt",V
+56J,model-specific,,"Audi Q4 wheel: 20"" Audi Sport 10-spoke-star-aero black",V
+65S,model-specific,,"Audi Q4 wheel: 20"" Audi Sport 5-arm-aero (MY27)",V
+65R,model-specific,,"Audi Q4 wheel: 20"" Audi Sport 5-arm-aero (MY27)",V
+C5W,model-specific,,"Audi Q4 wheel: 21"" Audi Sport 5-W-spoke-star (bronze matt = edition S line)",V
+55L,model-specific,,"Audi Q4 wheel: 21"" 5-arm-rotor-evo titanium",V
+C1P,model-specific,,"Audi Q4 wheel: 21"" 5-arm-rotor-aero black",V
+66A,model-specific,,"Audi Q4 wheel: 21"" 6-twin-spoke (MY27)",V
+C7A,model-specific,,"Audi Q4 wheel: 21"" wheel (Audi Q4)",V
+WHR,WH?,power_tailgate,"Skoda Enyaq Plus package (pre-FL CH list): e-tailgate with Virtual Pedal, driver e-seat with memory, Matrix, travel assist",V
+WHR,WH?,electric_seats,Skoda Plus: driver e-seat with memory + e-lumbar,V
+WHR,WH?,memory_seats,Skoda Plus: driver seat + mirror memory,V
+WHR,WH?,matrix_led,Skoda Plus: Matrix LED + dynamic rear indicators + headlamp washers,V
+WHR,WH?,travel_assist,Skoda Plus: Travel/adaptive lane assist,V
+WHS,WH?,power_tailgate,Skoda Advanced includes Plus content (e-tailgate),V
+WHS,WH?,electric_seats,Skoda Advanced includes Plus (driver e-seat with memory),V
+WHS,WH?,memory_seats,Skoda Advanced includes Plus memory,V
+WHS,WH?,matrix_led,Skoda Advanced includes Plus Matrix,V
+WHS,WH?,hud,"Skoda Advanced package: AR HUD, Crystal Face lit grille, Canton, heated windscreen, heated front+rear seats",V
+WHS,WH?,premium_audio,Skoda Advanced: Canton sound,V
+WHS,WH?,heated_seats,Skoda Advanced: heated front + rear seats,V
+WHT,WH?,electric_seats,"Skoda Maxx package: both front e-seats with memory, driver massage, DCC, Area View 360, Park Assist (+ Advanced/Plus content)",V
+WHT,WH?,memory_seats,Skoda Maxx: both front seats memory,V
+WHT,WH?,massage_seats,Skoda Maxx: driver seat massage,V
+WHT,WH?,adaptive_dampers,Skoda Maxx: DCC adaptive dampers,V
+WHT,WH?,camera_360,Skoda Maxx: Area View 360,V
+WHT,WH?,power_tailgate,Skoda Maxx includes Plus (e-tailgate),V
+WHT,WH?,hud,Skoda Maxx includes Advanced (AR HUD),V
+WHT,WH?,premium_audio,Skoda Maxx includes Advanced (Canton),V
+WHT,WH?,matrix_led,Skoda Maxx includes Plus (Matrix),V
+WHT,WH?,heated_seats,Skoda Maxx includes Advanced (heated seats),V
+6EG,6E?,,Skoda body-colour side skirts option,I
