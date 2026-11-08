@@ -32,13 +32,15 @@ Health: `GET /healthz` (server root) and `GET /api/v1/health` — same handler, 
 `cardb init` creates `$CARHUNT_HOME/cardb/`, generates the tokens, writes their hashes to `$CARHUNT_HOME/cardb/tokens`
 (`name:sha256:<hex>`, 0600) and stores the plain values through the secrets backend (`secrets.backend` in config). It
 prints only the next step, never a token. Re-running keeps existing tokens.
-<!-- TODO(lead): exact init flags (--force/--rotate?) and token set after merging mod/db-users -->
 
-| token (name) | secret name | env override | used by |
+| token name | secret name | env override | used by |
 |---|---|---|---|
-| `owner` <!-- TODO(lead): owner token name = owner.name? --> | `cardb_owner_token` <!-- TODO(lead) --> | `CARHUNT_SECRET_CARDB_OWNER_TOKEN` | the owner's own CLI |
 | `agents` | `cardb_token` | `CARHUNT_SECRET_CARDB_TOKEN` | agents' CLI (author = `CARDB_AUTHOR` per session) |
-| `web` + viewers | `cardb_web_token` | `CARHUNT_SECRET_CARDB_WEB_TOKEN` | web server (compose secret) |
+| `owner.name` | `cardb_owner_token` | `CARHUNT_SECRET_CARDB_OWNER_TOKEN` | the owner's own CLI |
+| each viewer (`cardb.users`) | `cardb_token_<viewer>` | `CARHUNT_SECRET_CARDB_TOKEN_<VIEWER>` | that viewer's CLI (read-only + own verdict) |
+| — (composite) | `cardb_web_tokens` | `CARHUNT_SECRET_CARDB_WEB_TOKENS` | web server: newline-separated `name:token` lines (owner + viewers), compose secret → `/run/secrets/cardb_web_tokens` |
+
+The web acts with one cardb token per user, so a viewer's web writes carry the viewer's rights and name.
 
 Lookup order (client and `carhunt secret`): env `CARHUNT_SECRET_<NAME>` → Keychain service `carhunt` account `<name>` →
 `$CARHUNT_HOME/secrets/<name>` (0600), per `secrets.backend`. No command prints a value; pass one to a process with

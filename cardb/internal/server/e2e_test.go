@@ -1510,8 +1510,8 @@ func TestDeleteMessage(t *testing.T) {
 	before := c.car(car).UpdatedAt
 
 	var del api.Message
-	c.as("ev-listings-db-fix").call("DELETE", fmt.Sprintf("/api/v1/messages/%d?reason=%s", dup.ID, "double-logged+(dup+of+%23"+fmt.Sprint(keep.ID)+")"), nil, 200, &del)
-	if del.DeletedAt == nil || deref(del.DeletedBy) != "ev-listings-db-fix" || deref(del.DeletedReason) != "double-logged (dup of #"+fmt.Sprint(keep.ID)+")" {
+	c.as("cardb-db-fix").call("DELETE", fmt.Sprintf("/api/v1/messages/%d?reason=%s", dup.ID, "double-logged+(dup+of+%23"+fmt.Sprint(keep.ID)+")"), nil, 200, &del)
+	if del.DeletedAt == nil || deref(del.DeletedBy) != "cardb-db-fix" || deref(del.DeletedReason) != "double-logged (dup of #"+fmt.Sprint(keep.ID)+")" {
 		t.Fatalf("deleted = %+v", del)
 	}
 	// Gone from the car, the message list, the list summary, stats and activity.
@@ -1549,7 +1549,7 @@ func TestDeleteMessage(t *testing.T) {
 		}
 	}
 	evs := eventsOfType(c.events(car), "message_deleted")
-	if !sawEvent || len(evs) != 1 || evs[0].Author != "ev-listings-db-fix" || !strings.Contains(evs[0].Summary, "double-logged") {
+	if !sawEvent || len(evs) != 1 || evs[0].Author != "cardb-db-fix" || !strings.Contains(evs[0].Summary, "double-logged") {
 		t.Fatalf("message_deleted events = %+v (in activity: %v)", evs, sawEvent)
 	}
 	// Re-posting the deleted row's own key returns it (still deleted), not a new row.

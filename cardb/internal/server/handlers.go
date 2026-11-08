@@ -127,7 +127,7 @@ func (h *handler) auth(next http.Handler) http.Handler {
 			}
 		}
 		if name == "" {
-			w.Header().Set("WWW-Authenticate", `Bearer realm="ev-listings"`)
+			w.Header().Set("WWW-Authenticate", `Bearer realm="cardb"`)
 			writeJSON(w, http.StatusUnauthorized, api.Error{Error: "missing or invalid bearer token"})
 			return
 		}

@@ -2,7 +2,7 @@
 # Usage and remote access: deploy/README.md, docs/db.md.
 #   export CARHUNT_HOME=~/.carhunt     # after `cardb init` (creates $CARHUNT_HOME/cardb/ with the tokens file)
 #   docker compose -f deploy/compose.yaml up -d --build cardb
-#   carhunt secret exec cardb_web_token=CARHUNT_SECRET_CARDB_WEB_TOKEN -- docker compose -f deploy/compose.yaml up -d --build
+#   carhunt secret exec cardb_web_tokens=CARHUNT_SECRET_CARDB_WEB_TOKENS -- docker compose -f deploy/compose.yaml up -d --build
 name: carhunt
 
 x-hardened: &hardened
@@ -60,9 +60,9 @@ services:
       PORT: "4321"
       NODE_ENV: production
       CARDB_URL: http://cardb:8484
-      CARDB_WEB_TOKENS_FILE: /run/secrets/cardb_web_token   # name:token lines (owner + viewers); never sent to the browser
+      CARDB_WEB_TOKENS_FILE: /run/secrets/cardb_web_tokens   # name:token lines (owner + viewers); never sent to the browser
     secrets:
-      - cardb_web_token
+      - cardb_web_tokens
     ports:
       - "127.0.0.1:4321:4321"
     healthcheck:
@@ -73,5 +73,5 @@ services:
       retries: 3
 
 secrets:
-  cardb_web_token:
-    environment: CARHUNT_SECRET_CARDB_WEB_TOKEN   # inject with `carhunt secret exec` — never write it into a file here
+  cardb_web_tokens:
+    environment: CARHUNT_SECRET_CARDB_WEB_TOKENS   # inject with `carhunt secret exec` — never write it into a file here

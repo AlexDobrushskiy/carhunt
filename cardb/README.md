@@ -43,7 +43,6 @@ Or in Docker: `docker compose -f deploy/compose.yaml up -d --build cardb` (see [
 
 Precedence: flag > env > `~/.config/cardb/config.json` (`$CARDB_CONFIG` overrides the path). With no author the server
 uses the token name. `carhunt agent launch` sets `CARDB_AUTHOR=<role>` so every write is attributable.
-<!-- TODO(lead): token lookup order exactly as implemented in mod/db-users -->
 
 ## Conventions (for agents)
 
