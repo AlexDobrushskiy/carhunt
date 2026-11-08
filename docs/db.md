@@ -56,7 +56,7 @@ Health: `GET /healthz` (server root) and `GET /api/v1/health` — same handler, 
 ## Config (cardb + search sections)
 
 Read at server start (restart after editing; an invalid profile refuses to start with the key path in the error, unknown
-keys only warn). `cardb profile` / `GET /api/v1/profile` show the effective profile with defaults. `owner` and `secrets`
+keys only warn). `cardb profile` / `GET /api/v1/profile` show the effective profile with defaults; `cardb profile check FILE` validates a config offline (exit 1 on errors, warnings printed). `search.max_distance_km` and `search.models[].match` are discover's keys: known to cardb, not used by it. `owner` and `secrets`
 are shared with core; `search.private_sellers_abroad` and `search.price.gross` are read by discover, not cardb.
 
 ```yaml

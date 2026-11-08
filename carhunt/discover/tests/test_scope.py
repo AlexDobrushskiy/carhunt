@@ -68,3 +68,35 @@ def test_distance_limit(cfg):
     x = lst()
     x.distance_est_km = 900
     assert scope.check(x, cfg).startswith("distance")
+
+
+def test_config_example_hard_filters_use_cardb_grammar(cfg):
+    """The shipped example's rules (same grammar as cardb's queue) must drop what they say."""
+    from pathlib import Path
+
+    import yaml
+
+    ex = yaml.safe_load((Path(__file__).resolve().parents[3] / "config.example.yaml").read_text())
+    cfg["search"]["hard_filters"] = ex["search"]["hard_filters"]
+    assert reason(cfg) is None
+    assert reason(cfg, title="Volkswagen ID.4 Pure 52 kWh") == "hard_filter"          # powertrain.battery_net_kwh
+    assert reason(cfg, description="Hagelschaden") in ("flag", "hard_filter")           # flag: damaged / deal_flag
+    x = lst()
+    x.flags.add("damaged")
+    assert scope.check(x, cfg) == "flag: damaged"
+    y = lst()
+    y.fact("deal_flag", "suspect: price far below market")
+    assert scope.check(y, cfg).startswith("hard_filter: suspect ad")                     # fact + words
+    z = lst()
+    z.fact("origin", "imported from PL")                                                 # mentions_country: cardb's
+    assert scope.check(z, cfg) is None
+
+
+def test_hard_filter_rule_shapes():
+    x = lst()
+    x.fact("accident", "no")
+    x.fact("owners", "3 owners")
+    assert scope._hard_filter(x, {"fact": "accident"}) is None                           # falsy value
+    assert scope._hard_filter(x, {"facts": ["owners"], "max": 2})
+    assert scope._hard_filter(x, {"field": "km", "max": 10000})
+    assert scope._hard_filter(x, {"field": "powertrain.battery_gross_kwh", "min": 90}) is None   # missing passes

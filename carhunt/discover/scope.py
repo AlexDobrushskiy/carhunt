@@ -64,33 +64,60 @@ def match_model(lst: Listing, mods: list[Model]) -> Model | None:
     return None
 
 
-def _value(lst: Listing, key: str) -> Any:
-    if hasattr(lst, key):
-        return getattr(lst, key)
-    v = lst.facts.get(key)
-    if v is None:
-        return None
-    try:
-        return float(re.sub(r"[^0-9.]", "", v[0]))
-    except ValueError:
-        return v[0]
+_FALSY = {"no", "none", "false", "0", "n", "nao", "nein", "non", "nessuno", "ninguno", "nenhum", "keine", "kein",
+          "aucun", "unknown"}
+_NUM = re.compile(r"-?\d+(?:[.,]\d+)?")
+
+
+def _words(v: Any) -> str:
+    return " ".join(re.sub(r"[^a-z0-9]+", " ", fold(v)).split())
+
+
+def _truthy(v: Any) -> bool:
+    w = _words(v).split()
+    return bool(w) and w[0] not in _FALSY
+
+
+def _number(v: Any) -> float | None:
+    if isinstance(v, (int, float)) and not isinstance(v, bool):
+        return float(v)
+    m = _NUM.search(str(v or ""))
+    return float(m.group().replace(",", ".")) if m else None
+
+
+def _out(v: float | None, rule: dict) -> bool:
+    return v is not None and (("min" in rule and v < rule["min"]) or ("max" in rule and v > rule["max"]))
 
 
 def _hard_filter(lst: Listing, rule: dict) -> str | None:
-    if "flag" in rule:
-        if rule.get("exclude") and rule["flag"] in lst.flags:
-            return f"flag: {rule['flag']}"
-        return None
-    key = rule.get("fact") or rule.get("field")
-    v = _value(lst, key)
-    if v is None:
-        return None
-    if "min" in rule and isinstance(v, (int, float)) and v < rule["min"]:
-        return f"hard_filter: {key} {v:g} < {rule['min']}"
-    if "max" in rule and isinstance(v, (int, float)) and v > rule["max"]:
-        return f"hard_filter: {key} {v:g} > {rule['max']}"
-    if "equals" in rule and str(v) != str(rule["equals"]):
-        return f"hard_filter: {key} {v} != {rule['equals']}"
+    """cardb's search.hard_filters grammar (cardb/internal/store/rank.go hardFilterHit), so discover drops what the
+    queue would exclude anyway. Exactly one of: field + min/max (missing passes) · fact(s) + min/max | words | truthy ·
+    flag (discover flag or truthy fact). `mentions_country` is left to cardb's queue (country names in EU languages)."""
+    label = rule.get("label")
+    if rule.get("field"):
+        key = rule["field"]
+        v = _number(getattr(lst, key.removeprefix("powertrain."), None))
+        return f"hard_filter: {label or key} ({v:g})" if _out(v, rule) else None
+    if rule.get("flag"):
+        f = rule["flag"]
+        hit = f in lst.flags or (f in lst.facts and _truthy(lst.facts[f][0]))
+        return f"flag: {f}" if hit else None
+    keys = ([rule["fact"]] if rule.get("fact") else []) + list(rule.get("facts") or [])
+    for k in keys:
+        if k not in lst.facts:
+            continue
+        v = lst.facts[k][0]
+        if "min" in rule or "max" in rule:
+            hit = _out(_number(v), rule)
+        elif rule.get("words"):
+            text = f" {_words(v)} "
+            hit = any(f" {_words(w)} " in text for w in rule["words"])
+        elif rule.get("mentions_country"):
+            hit = False
+        else:
+            hit = _truthy(v)
+        if hit:
+            return f"hard_filter: {label or k} ({str(v)[:60]})"
     return None
 
 
