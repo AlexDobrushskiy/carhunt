@@ -184,10 +184,13 @@ def test_identity_route_leases_and_always_releases(env, monkeypatch):
         log.append(("open", str(profile)))
         yield object(), FakePage()
     monkeypatch.setattr(pc, "open_tab", open_tab)
+    monkeypatch.setattr(pc, "close", lambda profile=None, **kw: log.append(("close", str(profile))))
     with pytest.raises(KeyError), session.tab("identity") as t:
         t.goto("https://example.invalid/")
         raise KeyError("fail mid-step")
-    assert log == [("acquire", True), ("open", "/tmp/fake-identity-b"), ("release", "identity-b")]
+    # browser closed cleanly (cookies flush) before the lease is released
+    assert log == [("acquire", True), ("open", "/tmp/fake-identity-b"), ("close", "/tmp/fake-identity-b"),
+                   ("release", "identity-b")]
 
 
 def test_identity_with_country_is_refused(env):
