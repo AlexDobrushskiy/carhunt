@@ -6,7 +6,7 @@ from carhunt.orchestrate import launch
 
 from .conftest import REPO
 
-TEMPLATES = sorted((REPO / "agents" / "templates").glob("*.md"))
+TEMPLATES = sorted(p for p in (REPO / "agents" / "templates").glob("*.md") if p.name != "README.md")
 ROLES = sorted(p.parent.name for p in (REPO / "agents" / "roles").glob("*/brief.md"))
 SECRETISH = re.compile(r"(secret|token|password|api_key|credential|oauth)", re.I)
 
