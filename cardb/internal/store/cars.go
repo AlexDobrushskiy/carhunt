@@ -123,11 +123,13 @@ func specsMap(s api.CarSpecs) (map[string]any, error) {
 	if s.Km != nil {
 		put("km", *s.Km)
 	}
-	if s.BatteryNetKwh != nil {
-		put("battery_net_kwh", *s.BatteryNetKwh)
-	}
-	if s.BatteryGrossKwh != nil {
-		put("battery_gross_kwh", *s.BatteryGrossKwh)
+	if pt := s.Powertrain; pt != nil {
+		if pt.BatteryNetKwh != nil {
+			put("battery_net_kwh", *pt.BatteryNetKwh)
+		}
+		if pt.BatteryGrossKwh != nil {
+			put("battery_gross_kwh", *pt.BatteryGrossKwh)
+		}
 	}
 	if s.PowerKw != nil {
 		put("power_kw", *s.PowerKw)
@@ -200,11 +202,13 @@ func specsStruct(m map[string]any) api.CarSpecs {
 	}
 	s := api.CarSpecs{
 		Make: str("make"), Model: str("model"), Variant: str("variant"), Body: str("body"),
-		RegDate: str("reg_date"), Km: in("km"), BatteryNetKwh: fl("battery_net_kwh"),
-		BatteryGrossKwh: fl("battery_gross_kwh"), PowerKw: fl("power_kw"), Drive: str("drive"),
+		RegDate: str("reg_date"), Km: in("km"), PowerKw: fl("power_kw"), Drive: str("drive"),
 		Seats: in("seats"), Colour: str("colour"), Interior: str("interior"), InteriorTone: str("interior_tone"),
 		WheelsIn: in("wheels_in"), VIN: str("vin"), Plate: str("plate"), Country: str("country"),
 		City: str("city"), DistanceKm: in("distance_km"),
+	}
+	if pt := (&api.Powertrain{BatteryNetKwh: fl("battery_net_kwh"), BatteryGrossKwh: fl("battery_gross_kwh")}); !pt.Empty() {
+		s.Powertrain = pt
 	}
 	s.Year = yearOf(s.RegDate)
 	s.Market = marketOf(s.Country)

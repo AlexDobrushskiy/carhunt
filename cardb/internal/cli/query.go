@@ -312,15 +312,15 @@ func printCard(w io.Writer, c api.CarDetail, ref string) {
 	if s.Km != nil {
 		l1 = append(l1, fmtKm(s.Km))
 	}
-	if s.BatteryNetKwh != nil || s.BatteryGrossKwh != nil {
+	if pt := s.Powertrain; pt != nil && (pt.BatteryNetKwh != nil || pt.BatteryGrossKwh != nil) {
 		b := "battery "
-		if s.BatteryNetKwh != nil {
-			b += fmtFloat(*s.BatteryNetKwh)
+		if pt.BatteryNetKwh != nil {
+			b += fmtFloat(*pt.BatteryNetKwh)
 		} else {
 			b += "?"
 		}
-		if s.BatteryGrossKwh != nil {
-			b += "/" + fmtFloat(*s.BatteryGrossKwh)
+		if pt.BatteryGrossKwh != nil {
+			b += "/" + fmtFloat(*pt.BatteryGrossKwh)
 		}
 		l1 = append(l1, b+" kWh")
 	}

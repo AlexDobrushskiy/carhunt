@@ -102,7 +102,7 @@ func summary(c tc) *api.CarSummary {
 		s.Drive = &c.drive
 	}
 	if c.battery != 0 {
-		s.BatteryNetKwh = &c.battery
+		s.Powertrain = &api.Powertrain{BatteryNetKwh: &c.battery}
 	}
 	return s
 }

@@ -343,7 +343,7 @@ func buildSummaries(tx *sql.Tx) ([]*summaryRow, error) {
 		specs := specsStruct(c.Specs)
 		cs := api.CarSummary{
 			ID: c.ID, Slug: strPtr(c.Slug), Title: c.title(), Make: specs.Make, Model: specs.Model, Variant: specs.Variant,
-			Year: specs.Year, RegDate: specs.RegDate, Km: specs.Km, BatteryNetKwh: specs.BatteryNetKwh, PowerKw: specs.PowerKw, Drive: specs.Drive,
+			Year: specs.Year, RegDate: specs.RegDate, Km: specs.Km, Powertrain: specs.Powertrain, PowerKw: specs.PowerKw, Drive: specs.Drive,
 			Country: specs.Country, City: specs.City, DistanceKm: specs.DistanceKm, Market: specs.Market, Interior: specs.Interior,
 			InteriorTone: specs.InteriorTone, WheelsIn: specs.WheelsIn, SellerType: "unknown", Status: c.Status,
 			StatusReason: strPtr(c.StatusReason), NeedsOwner: c.NeedsOwner, NeedsOwnerReason: strPtr(c.NeedsOwnerReason),

@@ -274,8 +274,8 @@ func carTier(c *api.CarSummary) int {
 			return 1
 		}
 	case "Hyundai Ioniq 5":
-		if c.BatteryNetKwh != nil {
-			if *c.BatteryNetKwh >= 74 && *c.BatteryNetKwh <= 85 {
+		if c.Powertrain != nil && c.Powertrain.BatteryNetKwh != nil {
+			if b := *c.Powertrain.BatteryNetKwh; b >= 74 && b <= 85 {
 				return 2
 			}
 		} else if reIoniqLongRange.MatchString(text) {

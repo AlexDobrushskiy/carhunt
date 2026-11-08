@@ -39,29 +39,46 @@ type Stats struct {
 }
 
 // CarSpecs are the canonical vehicle fields. Pointers: nil = unknown / not sent.
-type CarSpecs struct {
-	Make            *string  `json:"make,omitempty"`
-	Model           *string  `json:"model,omitempty"`
-	Variant         *string  `json:"variant,omitempty"`
-	Body            *string  `json:"body,omitempty"`
-	RegDate         *string  `json:"reg_date,omitempty"`
-	Year            *int     `json:"year,omitempty"` // read-only, derived from reg_date
-	Km              *int     `json:"km,omitempty"`
+// Powertrain: fuel/drive-train facts, every field optional (nil = unknown). Stored as flat car columns.
+type Powertrain struct {
+	Fuel            *string  `json:"fuel,omitempty"` // bev phev hev mhev petrol diesel lpg cng hydrogen unknown
 	BatteryNetKwh   *float64 `json:"battery_net_kwh,omitempty"`
 	BatteryGrossKwh *float64 `json:"battery_gross_kwh,omitempty"`
-	PowerKw         *float64 `json:"power_kw,omitempty"`
-	Drive           *string  `json:"drive,omitempty"`
-	Seats           *int     `json:"seats,omitempty"`
-	Colour          *string  `json:"colour,omitempty"`
-	Interior        *string  `json:"interior,omitempty"`
-	InteriorTone    *string  `json:"interior_tone,omitempty"`
-	WheelsIn        *int     `json:"wheels_in,omitempty"`
-	VIN             *string  `json:"vin,omitempty"`
-	Plate           *string  `json:"plate,omitempty"`
-	Country         *string  `json:"country,omitempty"`
-	City            *string  `json:"city,omitempty"`
-	DistanceKm      *int     `json:"distance_km,omitempty"`
-	Market          *string  `json:"market,omitempty"` // read-only
+	EngineCc        *int     `json:"engine_cc,omitempty"`
+	Gearbox         *string  `json:"gearbox,omitempty"` // manual automatic unknown
+	WltpRangeKm     *int     `json:"wltp_range_km,omitempty"`
+	WltpConsumption *float64 `json:"wltp_consumption,omitempty"`
+	Co2GKm          *int     `json:"co2_g_km,omitempty"`
+}
+
+// Empty reports whether no field is set.
+func (p *Powertrain) Empty() bool {
+	return p == nil || (p.Fuel == nil && p.BatteryNetKwh == nil && p.BatteryGrossKwh == nil && p.EngineCc == nil &&
+		p.Gearbox == nil && p.WltpRangeKm == nil && p.WltpConsumption == nil && p.Co2GKm == nil)
+}
+
+type CarSpecs struct {
+	Make         *string     `json:"make,omitempty"`
+	Model        *string     `json:"model,omitempty"`
+	Variant      *string     `json:"variant,omitempty"`
+	Body         *string     `json:"body,omitempty"`
+	RegDate      *string     `json:"reg_date,omitempty"`
+	Year         *int        `json:"year,omitempty"` // read-only, derived from reg_date
+	Km           *int        `json:"km,omitempty"`
+	Powertrain   *Powertrain `json:"powertrain,omitempty"`
+	PowerKw      *float64    `json:"power_kw,omitempty"`
+	Drive        *string     `json:"drive,omitempty"`
+	Seats        *int        `json:"seats,omitempty"`
+	Colour       *string     `json:"colour,omitempty"`
+	Interior     *string     `json:"interior,omitempty"`
+	InteriorTone *string     `json:"interior_tone,omitempty"`
+	WheelsIn     *int        `json:"wheels_in,omitempty"`
+	VIN          *string     `json:"vin,omitempty"`
+	Plate        *string     `json:"plate,omitempty"`
+	Country      *string     `json:"country,omitempty"`
+	City         *string     `json:"city,omitempty"`
+	DistanceKm   *int        `json:"distance_km,omitempty"`
+	Market       *string     `json:"market,omitempty"` // read-only
 }
 
 type CarInput struct {
@@ -98,7 +115,7 @@ type CarSummary struct {
 	Year                    *int              `json:"year"`
 	RegDate                 *string           `json:"reg_date"`
 	Km                      *int              `json:"km"`
-	BatteryNetKwh           *float64          `json:"battery_net_kwh"`
+	Powertrain              *Powertrain       `json:"powertrain,omitempty"`
 	PowerKw                 *float64          `json:"power_kw"`
 	Drive                   *string           `json:"drive"`
 	Country                 *string           `json:"country"`
