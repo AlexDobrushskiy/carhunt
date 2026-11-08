@@ -1,0 +1,29 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Chat | Wallapop</title></head><body>
+<main>
+  <div class="chat-thread">
+    <div class="message message--other"><p class="message__text">Hola, sí, sigue disponible.</p><time class="message__time" datetime="2026-11-01T10:00:00Z">10:00</time></div>
+    <div class="message message--own"><p class="message__text">Gracias. ¿Tiene más fotos del interior?</p><time class="message__time" datetime="2026-11-01T10:05:00Z">10:05</time></div>
+    <div class="message message--other"><p class="message__text">Mañana le envío fotos.</p><time class="message__time" datetime="2026-11-01T11:00:00Z">11:00</time></div>
+  </div>
+  <div id="dlg" hidden><p>¿Enviar datos personales?</p><button id="anyway">Enviar de todas formas</button></div>
+  <textarea placeholder="Empieza a chatear" maxlength="300"></textarea>
+</main>
+<script>
+const ta = document.querySelector('textarea');
+let pending = null;
+async function deliver(text) {
+  await fetch('/__submit', {method: 'POST', body: text});
+  if ('__MODE__' !== 'ok') return;  // silent: the site took the click but shows nothing
+  const d = document.createElement('div'); d.className = 'message message--own';
+  d.innerHTML = '<p class="message__text"></p>'; d.firstChild.textContent = text;
+  document.querySelector('.chat-thread').appendChild(d); ta.value = '';
+}
+ta.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  if (/\+\d+ \d{3}/.test(ta.value)) { pending = ta.value; document.getElementById('dlg').hidden = false; return; }
+  deliver(ta.value);
+});
+document.getElementById('anyway').onclick = () => { document.getElementById('dlg').hidden = true; deliver(pending); };
+</script>
+</body></html>

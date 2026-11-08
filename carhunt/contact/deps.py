@@ -3,9 +3,10 @@ and the cardb client with the few helpers contact needs."""
 from __future__ import annotations
 
 import contextlib
+from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 from zoneinfo import ZoneInfo
 
 from carhunt.core import clock, config, lock, paths, secrets
@@ -76,7 +77,7 @@ class Cardb(_db.Client):
     """core's cardb client + list-normalising helpers used by contact."""
 
     @classmethod
-    def from_config(cls, cfg: Any = None, **kw: Any) -> "Cardb":
+    def from_config(cls, cfg: Any = None, **kw: Any) -> Cardb:
         import os
 
         c = (cfg or {}).get("cardb") or {} if isinstance(cfg, dict) else {}

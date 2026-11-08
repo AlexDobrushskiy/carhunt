@@ -9,14 +9,16 @@ message is logged (EV: a reply was skipped as "our own send" when the cursor mov
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import stat
 import sys
 import time
-from datetime import datetime, timedelta, timezone
+from collections.abc import Callable
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from carhunt.core import notify
 
@@ -54,7 +56,11 @@ class Cursors:
 
 
 def _key(channel: str, cp: str, m: Msg) -> str:
-    return m.id or f"{channel}|{cp}|{m.at.isoformat()}|{m.text[:40]}"
+    if m.id:
+        return m.id
+    if m.raw.get("at_parsed") is False:  # site showed no time: `at` is the poll time, so key on text only
+        return f"{channel}|{cp}|{hashlib.sha1(m.text.encode()).hexdigest()[:16]}"
+    return f"{channel}|{cp}|{m.at.isoformat()}|{m.text[:40]}"
 
 
 def inbox_path(agent: str) -> Path:
@@ -122,7 +128,7 @@ def run(args: Any) -> int:
     cursors = Cursors()
     out = lambda s: print(s, flush=True)  # noqa: E731
     while True:
-        new = pass_once(chans, db=db, agent=agent, cursors=cursors, now=datetime.now(timezone.utc), out=out)
+        new = pass_once(chans, db=db, agent=agent, cursors=cursors, now=datetime.now(UTC), out=out)
         if args.once or (args.until_new and new):
             return 0
         time.sleep(args.interval)

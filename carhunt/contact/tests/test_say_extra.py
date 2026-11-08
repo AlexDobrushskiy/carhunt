@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from .conftest import AB_ME, AB_ROLE, ES_NUM, NOW, PT_NUM, REPO, car, msg, sent
 
@@ -50,7 +50,7 @@ def test_opener_too_many_questions(tree):
 
 
 def test_opener_window_is_seller_local(tree):
-    early = datetime(2026, 11, 10, 8, 50, tzinfo=timezone.utc)  # 08:50 Lisbon, 09:50 Madrid
+    early = datetime(2026, 11, 10, 8, 50, tzinfo=UTC)  # 08:50 Lisbon, 09:50 Madrid
     code, out = tree.run(*OPEN, now=early)
     assert code == 10 and "seller-local" in out, out
     code, out = tree.run("--channel", "whatsapp", "--car", "77", "--to", ES_NUM, "--text", "Hola, ¿sigue disponible?",
@@ -69,7 +69,7 @@ def test_daily_opener_cap_and_home_reserve(tree):
     assert code == 10 and "outreach-home's until 15:00" in out, out
     code, out = tree.run(*OPEN)  # the home agent may take them
     assert code == 0, out
-    late = datetime(2026, 11, 10, 15, 30, tzinfo=timezone.utc)
+    late = datetime(2026, 11, 10, 15, 30, tzinfo=UTC)
     assert tree.run(*es, me=AB_ME, role=AB_ROLE, now=late)[0] == 0
     tree.ledger = _openers(20)
     code, out = tree.run(*OPEN)
@@ -155,3 +155,10 @@ def test_stale_agent_after_handover(tree):
 def test_owner_run_without_role(tree):
     code, out = tree.run(*OPEN, role="", CARDB_AUTHOR="")
     assert code == 0, out
+
+
+def test_settings_accept_channel_list_from_example_config():
+    from carhunt.contact.settings import contact_settings
+
+    s = contact_settings({"contact": {"channels": ["whatsapp", "email", "site"]}})
+    assert s["enabled"] == ["whatsapp", "email", "site"] and s["channels"]["whatsapp"]["max_len"] == 500

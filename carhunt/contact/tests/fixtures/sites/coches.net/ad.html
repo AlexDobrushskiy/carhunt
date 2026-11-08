@@ -1,0 +1,14 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Coche sintético | coches.net</title></head><body>
+<button>Contactar</button>
+<form aria-label="contact form" onsubmit="return false">
+  <textarea></textarea>
+  <input placeholder="Nombre" value="Buyer"><input type="email" value="buyer@example.com">
+  <button type="button" id="send">Contactar</button>
+</form>
+<script>
+document.getElementById('send').onclick = () => {
+  const x = new XMLHttpRequest();
+  x.open('POST', '/v2/vehicles/1000001/contact-mail'); x.send(JSON.stringify({message: document.querySelector('form textarea').value}));
+};
+</script>
+</body></html>

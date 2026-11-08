@@ -9,10 +9,10 @@ from __future__ import annotations
 import json
 import os
 import uuid
+from collections.abc import Iterator
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Iterator
 
 from . import deps
 
@@ -45,7 +45,7 @@ class Entry:
 
     @property
     def at(self) -> datetime:
-        return datetime.fromtimestamp(self.t, timezone.utc)
+        return datetime.fromtimestamp(self.t, UTC)
 
 
 def default_path() -> Path:
@@ -84,7 +84,7 @@ class Ledger:
         return e
 
 
-def reconcile(ledger: Ledger, db: "deps.Cardb", *, since: float = 0.0) -> dict[str, int]:
+def reconcile(ledger: Ledger, db: deps.Cardb, *, since: float = 0.0) -> dict[str, int]:
     """Post every ledger row to cardb (dedupe key = row id, so re-runs write nothing new)."""
     out = {"posted": 0, "skipped": 0, "errors": 0}
     for e in ledger.iter():
@@ -99,7 +99,7 @@ def reconcile(ledger: Ledger, db: "deps.Cardb", *, since: float = 0.0) -> dict[s
     return out
 
 
-def log_to_db(db: "deps.Cardb", e: Entry) -> dict:
+def log_to_db(db: deps.Cardb, e: Entry) -> dict:
     return db.msg(
         car=e.car,
         counterpart=e.to,

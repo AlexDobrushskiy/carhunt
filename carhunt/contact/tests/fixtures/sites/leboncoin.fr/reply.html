@@ -1,0 +1,18 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Envoyer un message - leboncoin</title></head><body>
+<div id="consent"><button onclick="document.getElementById('consent').remove()">Accepter &amp; Fermer</button></div>
+<h1>Contacter le vendeur</h1>
+<form onsubmit="return false">
+  <textarea name="body" maxlength="2500"></textarea>
+  <button type="button" id="offer">Faire une offre</button>
+  <button type="button" id="send">Envoyer</button>
+</form>
+<script>
+document.getElementById('offer').onclick = () => fetch('/__offer', {method: 'POST'});
+document.getElementById('send').onclick = async () => {
+  await fetch('/__submit', {method: 'POST', body: document.querySelector('textarea').value});
+  if ('__MODE__' !== 'ok') return;
+  history.pushState({}, '', '/messages/id/c0000001');
+  document.body.innerHTML = '<p>Votre message a bien été envoyé au vendeur.</p>';
+};
+</script>
+</body></html>

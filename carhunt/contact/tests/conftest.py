@@ -6,7 +6,7 @@ import json
 import os
 import subprocess
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -21,7 +21,7 @@ FAKE_WACLI = Path(__file__).parent / "fakes" / "fake_wacli.py"
 HOME_ME, AB_ME = "HOME-SESSION", "ABROAD-SESSION"
 HOME_ROLE, AB_ROLE = "outreach-home", "outreach-abroad"
 PT_NUM, ES_NUM = "351555111111", "34555222222"
-NOW = datetime(2026, 11, 10, 11, 0, tzinfo=timezone.utc)  # Tue 11:00 Lisbon, 12:00 Madrid
+NOW = datetime(2026, 11, 10, 11, 0, tzinfo=UTC)  # Tue 11:00 Lisbon, 12:00 Madrid
 VAG = ["VW ID.4", "VW ID.5", "Audi Q4", "Skoda Enyaq"]
 
 TEST_CONFIG: dict[str, Any] = {
@@ -40,7 +40,7 @@ TEST_CONFIG: dict[str, Any] = {
 
 
 def iso(dt: datetime) -> str:
-    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return dt.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def msg(dt: datetime, me: bool, text: str, **kw: Any) -> dict[str, Any]:

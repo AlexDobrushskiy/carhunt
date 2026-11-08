@@ -43,7 +43,6 @@ def _watch(a: argparse.Namespace) -> int:
 
 def _mailroute(a: argparse.Namespace) -> int:
     from . import deps, mailroute
-
     from .gmail import Gmail
     from .ledger import Ledger
 

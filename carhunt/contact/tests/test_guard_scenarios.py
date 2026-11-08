@@ -2,7 +2,7 @@
 End to end via the CLI: fake wacli, cardb stub over HTTP, frozen clock. Nothing is ever sent."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -52,7 +52,7 @@ def test_opener_on_chat_with_our_message(tree):
 
 
 def test_quiet_hours(tree):
-    refused(tree.run(*N, now=datetime(2026, 11, 10, 3, 0, tzinfo=timezone.utc)), "quiet hours")
+    refused(tree.run(*N, now=datetime(2026, 11, 10, 3, 0, tzinfo=UTC)), "quiet hours")
 
 
 def test_global_180s_spacing(tree):
@@ -219,15 +219,15 @@ def test_nudge_followup_cap_whatsapp_nudges(tree):
 
 
 def test_nudge_saturday_afternoon(tree):
-    refused(nudge_tree(tree).run(*NG, now=datetime(2026, 11, 14, 14, 0, tzinfo=timezone.utc)), "outside 08:30-13:00")
+    refused(nudge_tree(tree).run(*NG, now=datetime(2026, 11, 14, 14, 0, tzinfo=UTC)), "outside 08:30-13:00")
 
 
 def test_nudge_sunday_early(tree):
-    refused(nudge_tree(tree).run(*NG, now=datetime(2026, 11, 15, 9, 30, tzinfo=timezone.utc)), "outside 10:00-19:00")
+    refused(nudge_tree(tree).run(*NG, now=datetime(2026, 11, 15, 9, 30, tzinfo=UTC)), "outside 10:00-19:00")
 
 
 def test_nudge_sunday_11(tree):
-    ok(nudge_tree(tree).run(*NG, now=datetime(2026, 11, 15, 11, 0, tzinfo=timezone.utc)), "DRY-RUN OK")
+    ok(nudge_tree(tree).run(*NG, now=datetime(2026, 11, 15, 11, 0, tzinfo=UTC)), "DRY-RUN OK")
 
 
 def _es(tree):
@@ -239,7 +239,7 @@ def test_nudge_abroad_agent_madrid_noon(tree):
 
 
 def test_nudge_abroad_madrid_1910(tree):
-    refused(_es(tree).run(*EG, me=AB_ME, role=AB_ROLE, now=datetime(2026, 11, 10, 18, 10, tzinfo=timezone.utc)),
+    refused(_es(tree).run(*EG, me=AB_ME, role=AB_ROLE, now=datetime(2026, 11, 10, 18, 10, tzinfo=UTC)),
             "outside 08:30-19:00")
 
 

@@ -18,11 +18,12 @@ from __future__ import annotations
 import mimetypes
 import re
 import time
-from datetime import datetime, timedelta, timezone
+from collections.abc import Callable
+from datetime import UTC, datetime, timedelta
 from email.message import EmailMessage
 from email.utils import formataddr, getaddresses, make_msgid, parseaddr
 from pathlib import Path
-from typing import Any, Callable, ClassVar
+from typing import Any, ClassVar
 
 from .. import deps
 from ..gmail import Gmail, GmailError, GmailHTTPError, GmailNetworkError, body_text, headers_of
@@ -254,7 +255,7 @@ class Email(Channel):
         mine = self.is_me(frm) or "SENT" in m.get("labelIds", [])
         text, files = body_text(m)
         sender = "" if mine else (parseaddr(h.get("reply-to", ""))[1] or frm).lower()
-        return Msg(at=datetime.fromtimestamp(int(m.get("internalDate", 0)) / 1000, timezone.utc), from_me=mine,
+        return Msg(at=datetime.fromtimestamp(int(m.get("internalDate", 0)) / 1000, UTC), from_me=mine,
                    text=text, id=m["id"], media=", ".join(files), sender=sender,
                    raw={"thread": m.get("threadId"), "subject": h.get("subject", ""),
                         "message_id": h.get("message-id", ""), "labels": m.get("labelIds", [])})

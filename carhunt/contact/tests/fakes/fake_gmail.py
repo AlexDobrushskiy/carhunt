@@ -11,7 +11,7 @@ import re
 import socket
 import threading
 import urllib.error
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from email import message_from_bytes, policy
 from email.message import EmailMessage
 from email.utils import getaddresses, make_msgid
@@ -19,7 +19,7 @@ from typing import Any
 
 from carhunt.contact.gmail import Gmail
 
-NOW = datetime(2026, 11, 6, 12, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 11, 6, 12, 0, tzinfo=UTC)
 SYSTEM = {"INBOX", "SENT", "UNREAD", "TRASH", "SPAM", "DRAFT", "IMPORTANT", "STARRED"}
 
 

@@ -13,7 +13,8 @@ Rules every sender keeps (EV run):
 from __future__ import annotations
 
 import contextlib
-from typing import Any, Callable, ClassVar, ContextManager
+from collections.abc import Callable
+from typing import Any, ClassVar, ContextManager
 
 from ..base import Channel, ChannelError, Msg, SendResult
 

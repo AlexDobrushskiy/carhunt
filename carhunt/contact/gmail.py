@@ -27,7 +27,8 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from typing import Any, Callable, Iterable
+from collections.abc import Callable, Iterable
+from typing import Any
 
 from . import deps
 
@@ -84,7 +85,7 @@ class Gmail:
         self._access_exp = 0.0
 
     @classmethod
-    def from_config(cls, cfg: dict[str, Any], **kw: Any) -> "Gmail":
+    def from_config(cls, cfg: dict[str, Any], **kw: Any) -> Gmail:
         e = ((cfg.get("contact") or {}).get("email") or {})
         name = lambda v, d: (v or d).removeprefix("secret:")  # noqa: E731
         return cls(client_secret=name(e.get("oauth_client"), "gmail_oauth_client"),

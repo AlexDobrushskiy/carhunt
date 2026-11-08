@@ -1,0 +1,23 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Nachrichten | mobile.de</title></head><body>
+<div class="conversation">
+  <div class="message message--own"><p class="message__text">Guten Tag, ist das Auto noch verfügbar? Gab es Unfälle?</p><time datetime="2026-11-01T09:00:00Z">09:00</time></div>
+  <div class="message message--partner"><p class="message__text">Ja, noch da. Unfallfrei.</p><time datetime="2026-11-01T10:30:00Z">10:30</time></div>
+</div>
+<div id="warn" hidden><p>Kontaktdaten in der Nachricht</p><button id="anyway">Trotzdem senden</button></div>
+<textarea maxlength="2000"></textarea><button id="send">Senden</button>
+<script>
+const ta = document.querySelector('textarea');
+let pending = null;
+async function deliver(text) {
+  await fetch('/__submit', {method: 'POST', body: text});
+  const d = document.createElement('div'); d.className = 'message message--own';
+  d.innerHTML = '<p class="message__text"></p>'; d.firstChild.textContent = text;
+  document.querySelector('.conversation').appendChild(d); ta.value = '';
+}
+document.getElementById('send').onclick = () => {
+  if (/\d{3} \d{3}/.test(ta.value)) { pending = ta.value; document.getElementById('warn').hidden = false; return; }
+  deliver(ta.value);
+};
+document.getElementById('anyway').onclick = () => { document.getElementById('warn').hidden = true; deliver(pending); };
+</script>
+</body></html>

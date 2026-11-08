@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from carhunt.contact import deps
 from carhunt.contact.channels.base import Channel, Msg, SendResult
@@ -84,7 +84,7 @@ def test_whatsapp_poll_via_fake_wacli(tmp_path, monkeypatch):
 def test_cli_once_writes_stdout_line(tmp_path, stub):
     root = tmp_path / "wacli"
     (root / "chats").mkdir(parents=True)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     (root / "chats" / f"{PT_NUM}.json").write_text(json.dumps([
         msg(now - timedelta(minutes=10), False, "Tem interesse ainda?", ChatJID=f"{PT_NUM}@s.whatsapp.net")]))
     stub.cars["A9"] = car(PT_NUM)
@@ -96,3 +96,13 @@ def test_cli_once_writes_stdout_line(tmp_path, stub):
     assert r.returncode == 0, r.stderr
     item = json.loads(r.stdout.splitlines()[0])
     assert item["text"] == "Tem interesse ainda?" and item["car"] == "A9"
+
+
+def test_site_poll_without_timestamps_dedupes(tmp_path, stub, monkeypatch):
+    monkeypatch.setenv("CARHUNT_HOME", str(tmp_path / "h"))
+    cur = Cursors(tmp_path / "cursors.json")
+    for i in range(2):  # each poll stamps `at` with the poll time
+        m = Msg(NOW + timedelta(minutes=i), False, "Bonjour, oui", raw={"at_parsed": False})
+        new = pass_once([FakeChannel([("https://example.invalid/conv/1", m)])], db=None, agent="outreach",
+                        cursors=cur, now=NOW, out=lambda s: None)
+        assert len(new) == (1 if i == 0 else 0)

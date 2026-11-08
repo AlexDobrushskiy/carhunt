@@ -93,4 +93,7 @@ def merge(base: dict[str, Any], over: dict[str, Any]) -> dict[str, Any]:
 
 
 def contact_settings(cfg: dict[str, Any]) -> dict[str, Any]:
-    return merge(DEFAULTS, (cfg or {}).get("contact") or {})
+    user = dict((cfg or {}).get("contact") or {})
+    if isinstance(user.get("channels"), list):  # `channels: [whatsapp, email, …]` = enabled list, not settings
+        user["enabled"] = user.pop("channels")
+    return merge(DEFAULTS, user)

@@ -14,7 +14,8 @@ from typing import Any
 from . import deps, guard
 from .channels import get as get_channel
 from .channels.base import DELIVERED, FAILED, Channel, ChannelError, Msg
-from .ledger import FAILED as L_FAILED, SENT, UNKNOWN, Entry, Ledger, log_to_db
+from .ledger import FAILED as L_FAILED
+from .ledger import SENT, UNKNOWN, Entry, Ledger, log_to_db
 from .settings import contact_settings
 
 EXIT_SENT, EXIT_REFUSED, EXIT_FAILED, EXIT_UNKNOWN = 0, 10, 11, 12
@@ -172,6 +173,9 @@ def run(*, channel: str, text: str, car: str | None = None, to: str | None = Non
             v = ch.verify(to, text, res)
         except Exception:  # verification trouble ≠ failed send
             v = "unknown"
+        flags = [k for k in ("blocked", "login", "gone", "no_form", "already_contacted", "refused") if res.raw.get(k)]
+        if flags:  # site signals: blocked → stop this site; gone/no_form → other channel
+            res.error = (res.error + f" [{','.join(flags)}]").strip()
         status = SENT if v == DELIVERED else L_FAILED if v == FAILED else UNKNOWN
         e = ledger.append(Entry(channel=ch.name, to=to, text=text, status=status, t=deps.now(cfg).timestamp(),
                                 car=str(car_d["id"]) if car_d else None, kind=mode, by=role,

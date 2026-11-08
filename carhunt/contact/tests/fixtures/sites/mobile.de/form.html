@@ -1,0 +1,18 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Anfrage | mobile.de</title></head><body>
+<form id="f" onsubmit="return false">
+  <label>Deine Nachricht <textarea name="message"></textarea></label>
+  <input type="text" name="name" value="Buyer Example">
+  <input type="email" name="email" value="buyer@example.com">
+  <input type="tel" name="phone" value="+351 555 000 111">
+  <label><input type="checkbox" name="newsletter" checked> Newsletter</label>
+  <button type="button" id="send">E-Mail senden</button>
+</form>
+<script>
+document.getElementById('send').onclick = async () => {
+  const f = document.getElementById('f');
+  const data = {message: f.message.value, phone: f.phone.value, newsletter: f.newsletter.checked};
+  await fetch('/__submit', {method: 'POST', body: JSON.stringify(data)});
+  if ('__MODE__' === 'ok') document.body.innerHTML = '<h1>Anfrage erfolgreich gesendet</h1><p>Der Anbieter meldet sich.</p>';
+};
+</script>
+</body></html>

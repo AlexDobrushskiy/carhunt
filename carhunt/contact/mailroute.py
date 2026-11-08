@@ -24,9 +24,10 @@ import re
 import shutil
 import sys
 import time
+from collections.abc import Callable, Iterable
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, Callable, Iterable
+from typing import Any
 from xml.sax.saxutils import escape, quoteattr
 
 from . import deps
