@@ -191,15 +191,16 @@ step_home() {
 BOOT_FLAGS=(--yes --skip-mcp --skip-browsers-launchd --skip-compose --skip-schedule)
 
 home_tree() {  # HOME minus tool caches (brew refreshes its API cache on `brew list`)
-  (cd "$HOME" && find . -path ./Library/Caches -prune -o -path ./.cache -prune -o -path ./.npm -prune -o -print | sort | shasum)
+  (cd "$HOME" && find . -path ./Library/Caches -prune -o -path ./.cache -prune -o -path ./.npm -prune -o -print | sort)
 }
+BOOT_FLAGS=(--yes --skip-mcp --skip-browsers-launchd --skip-compose --skip-schedule)
+
 step_bootstrap_dry() {  # --dry-run must print the plan and change nothing
-  local before after
-  before=$(home_tree)
+  home_tree >"$W/state/home.before"
   "$CLONE/scripts/bootstrap" --dry-run "${BOOT_FLAGS[@]}" >"$LOGS/bootstrap-dry.log" 2>&1 \
     || { tail -30 "$LOGS/bootstrap-dry.log"; die "bootstrap --dry-run failed"; }
-  after=$(home_tree)
-  [ "$before" = "$after" ] || die "bootstrap --dry-run changed files under HOME"
+  home_tree | diff "$W/state/home.before" - | head -20 || true
+  home_tree | cmp -s "$W/state/home.before" - || die "bootstrap --dry-run changed files under HOME (diff above)"
   [ ! -e "$CLONE/.venv" ] || die "bootstrap --dry-run created .venv"
   info "$(grep -c 'would ' "$LOGS/bootstrap-dry.log") planned actions, nothing changed"
 }
