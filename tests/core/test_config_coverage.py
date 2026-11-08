@@ -141,7 +141,7 @@ def test_module_defaults_fit_the_schema():
     from carhunt.access import settings
     from carhunt.access.captcha.config import CaptchaConfig
     from carhunt.contact.settings import DEFAULTS as CONTACT
-    from carhunt.orchestrate._core import DEFAULTS as ORCH
+    from carhunt.orchestrate.settings import DEFAULTS as ORCH
 
     browsers = {}
     for f in dataclasses.fields(settings.Settings):
