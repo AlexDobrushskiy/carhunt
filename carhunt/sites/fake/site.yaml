@@ -1,0 +1,18 @@
+# Synthetic marketplace for tests (discover + integrator e2e). Registered only with CARHUNT_FAKE_SITES=1. No network.
+site: fake
+name: Fake Motors (synthetic)
+kind: marketplace
+countries: [PT, ES]
+hosts: ['^fake\.example\.invalid$']
+ad_id: ['/ad/(\w+)$']
+wall: none
+route: http
+country_ip: null
+pace: {min_gap_s: 0, max_loads_per_run: 1000}
+caps: {phone_per_day: 100}
+account: {needed_for: []}
+phone: page
+messaging: none (synthetic)
+liveness: {evidence: "fixture field `state`: live | removed | soft | blocked"}
+measured: 2026-11-08
+notes: ["Fixture cards/ads in fixtures/*.json; edit them to shape e2e scenarios."]
