@@ -15,7 +15,7 @@ export function km(v: number | null | undefined): string {
   return v >= 1000 ? `${int.format(Math.round(v / 1000))}k km` : `${int.format(v)} km`;
 }
 
-/** "120 km to Porto"; an estimate (great-circle × road factor) gets "≈". */
+/** "120 km to Lisbon"; an estimate (great-circle × road factor) gets "≈". */
 export function distance(d: number | null | undefined, source: string | null | undefined, to?: string): string | null {
   if (d == null) return null;
   return `${source === "estimate" ? "≈" : ""}${int.format(d)} km${to ? ` to ${to}` : ""}`;

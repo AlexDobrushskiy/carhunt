@@ -90,8 +90,8 @@ func TestQueueCLI(t *testing.T) {
 func TestProfileCLI(t *testing.T) {
 	e := newE2E(t)
 	out := e.ok("profile")
-	for _, want := range []string{"owner: owner · home Porto PT", "tiers (queue default 1,2):", "T1 VAG 286 hp RWD",
-		"VW ID.4 · 280–290 hp (unknown: pro)", "T3 everything else", "hard filters:", "  - km ≤ 50 000",
+	for _, want := range []string{"owner: owner · home Lisbon PT", "tiers (queue default 1,2):", "T1 VAG 286 hp RWD",
+		"VW ID.4 · 280–290 hp (unknown: pro)", "T3 everything else", "hard filters:", "  - km ≤ 80 000",
 		"options wanted: electric_seats 5, power_tailgate 5, pano 1.67", "must have: electric_seats, power_tailgate", "weights: value 1 · fit 1 · risk 1"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("profile output lacks %q", want)

@@ -13,7 +13,7 @@ describe("format", () => {
     expect(flag("JP")).toBe("🇯🇵");
     expect(flag("Wales")).toBe("Wales");
     expect(ago("2026-11-01T10:00:00Z", "UTC", new Date("2026-11-01T12:30:00Z"))).toBe("2h");
-    expect(distance(120, "stored", "Porto")).toBe("120 km to Porto");
+    expect(distance(120, "stored", "Lisbon")).toBe("120 km to Lisbon");
     expect(distance(1450, "estimate")).toBe("≈1,450 km");
     expect(distance(null, "stored")).toBeNull();
   });

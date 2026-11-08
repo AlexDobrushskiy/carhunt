@@ -88,14 +88,14 @@ func TestQueueEligibility(t *testing.T) {
 	c.upsert(map[string]any{"url": "https://example.invalid/q/removed-live-2", "car": fmt.Sprint(in["removed + live"]), "price": 34000})
 
 	// Hard filters; limits inclusive; unknown passes.
-	out["year 2022"] = c.qcar("y22", map[string]any{"reg_date": "2022-12"})
-	in["year 2023"] = c.qcar("y23", map[string]any{"reg_date": "2023-01"})
+	out["year 2020"] = c.qcar("y20", map[string]any{"reg_date": "2020-12"})
+	in["year 2021"] = c.qcar("y21", map[string]any{"reg_date": "2021-01"})
 	in["year unknown"] = c.qcar("y-unknown", map[string]any{"reg_date": nil})
-	out["price 42001"] = c.qcar("p-over", map[string]any{"price": 42001})
-	in["price 42000"] = c.qcar("p-max", map[string]any{"price": 42000})
+	out["price 40001"] = c.qcar("p-over", map[string]any{"price": 40001})
+	in["price 40000"] = c.qcar("p-max", map[string]any{"price": 40000})
 	in["price unknown"] = c.qcar("p-unknown", map[string]any{"price": nil})
-	out["km 50001"] = c.qcar("km-over", map[string]any{"km": 50001})
-	in["km 50000"] = c.qcar("km-max", map[string]any{"km": 50000})
+	out["km 80001"] = c.qcar("km-over", map[string]any{"km": 80001})
+	in["km 80000"] = c.qcar("km-max", map[string]any{"km": 80000})
 	in["km unknown"] = c.qcar("km-unknown", map[string]any{"km": nil})
 	for _, cc := range []string{"ES", "DE", "FR", "BE", "NL", "LU", "IT"} {
 		in["country "+cc] = c.qcar("c-"+cc, map[string]any{"country": cc, "city": nil})
