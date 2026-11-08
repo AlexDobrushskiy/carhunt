@@ -104,45 +104,14 @@ Ports and labels are chosen not to collide with a typical personal setup on 8931
 5. Record any quirk (no SMS recovery, IP-bound, app-only fields) in the site's `site.yaml` notes.
 
 ## Config section
-Merge into `config.example.yaml` (replaces the current `browsers` / `net` / `accounts` stubs; adds `sites.overrides`):
-```yaml
-browsers:
-  chrome_app: /Applications/Google Chrome.app
-  lanes: 4                    # named lane registrations ch-lane-a… (one isolated server)
-  identity_pool: 4            # logged-in profile copies ch-identity-a…
-  headless: true              # MCP servers; plain-chrome is always headed (off-screen)
-  ports: {mcp_base: 18931, debug_base: 19331, plain_debug: 19341}   # clear of a personal stack on 8931/9331
-  launchd_prefix: carhunt.
-  mcp_name_prefix: ch-        # MCP names ch-lane, ch-lane-a…, ch-identity, ch-identity-a… (identity hooks match these)
-  idle_release_s: 180         # identity lease released + browser closed after this idle
-  reaper_max_age_h: 6         # throwaway browsers older than this count as leaked
-  identity_reseed_hours: 24   # pool copies older than this get re-seeded from the master
-  captcha:
-    enabled: false            # image grids need Ollama + a VLM (GBs); sliders need only OpenCV
-    model: qwen3.5:4b
-    ollama_url: http://127.0.0.1:11434
-    owlv2: false              # 4x4 grids: OWLv2 detector (PyTorch, GBs) instead of VLM per square
-    max_attempts: 2           # per run
-    site_budget: 6            # per site per site_window_h
-    site_window_h: 6
-
-net:
-  proxy:
-    provider: none            # decodo | none
-    credentials: secret:proxy_credentials
-    sticky_minutes: 30        # one sticky exit per run
-    # gateway: gate.decodo.com:7000   echo_url: <IP-echo endpoint used for the fail-closed exit check>
-  geo: {}                     # per country {tz, locale} overrides for geo browsers, e.g. fr: {tz: Europe/Paris, locale: fr-FR}
-
-accounts:
-  email: you@example.com      # site signups; codes are read from this mailbox
-  sms: {provider: none, api_key: secret:sms_api_key}   # smspool | none; each rental needs the owner's OK
-  gmail: {oauth_client: secret:gmail_oauth_client, token: secret:gmail_token, plus_address: cars}
-
-sites:
-  overrides:                  # per-site tweaks on top of carhunt/sites/<site>/site.yaml
-    mobile.de: {pace: {min_gap_s: 15}}
-```
+Keys live in `config.example.yaml` (`browsers`, `net`, `accounts`, `sites.overrides`); schema `carhunt/core/config.schema.json` is strict (unknown key = error).
+| key | read by | note |
+|---|---|---|
+| `browsers.*` (ports, prefixes, pool sizes, captcha) | `access.settings`, `mcp`, `captcha` | ports clear of a personal stack on 8931/9331 |
+| `net.proxy.{provider, credentials, gateway, echo_url}` | `access.proxy` | sticky session = 30 min (Decodo's max); per site: `sites.overrides.<site>.proxy.sticky_minutes` or site.yaml `proxy.sticky_minutes` |
+| `net.geo.<cc>.{tz, locale}` | `access.geo` | geo browser TZ/locale |
+| `accounts.{email, sms, gmail}` | `accounts.*` | Gmail: read-only OAuth |
+| `sites.overrides.<site>.{pace, caps, account, proxy, …}` | `access.pace`, sites | one level deep per section; key names as in site.yaml (`pace.max_loads_per_hour`, …) |
 
 ## macOS-only bits
 APFS clones (`cp -c`) for Agent Chrome + pool seeding · `codesign` ad-hoc re-sign · launchd jobs · `open -g` + window positioning for plain-chrome · Keychain secrets backend · `--use-mock-keychain`. Linux would need systemd units, a non-clone Chrome path and plain copies.
