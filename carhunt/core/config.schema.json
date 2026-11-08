@@ -1690,7 +1690,7 @@
           "$ref": "#/$defs/strings"
         },
         "channels": {
-          "description": "channel name (whatsapp, email, sites, or a site id) -> settings; a plain list is accepted but enforces nothing",
+          "description": "channel name (whatsapp, email, sites, or a site id) -> settings; a plain list = the enabled channels (say refuses others, watch polls them)",
           "oneOf": [
             {
               "$ref": "#/$defs/strings"
