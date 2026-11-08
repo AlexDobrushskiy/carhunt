@@ -1,3 +1,3 @@
 # carhunt/core
 
-core — config, secrets, clock, locks, paths, notifier, cardb client, CLI dispatcher, doctor. Owner: core. See docs/design.md.
+Config, secrets, clock/quiet hours, locks, paths, notifier (Telegram/stdout/none + agent inboxes), cardb REST client, CLI dispatcher, doctor framework. Docs: [docs/core.md](../../docs/core.md), [docs/notify.md](../../docs/notify.md), [docs/secrets.md](../../docs/secrets.md). Tests: `tests/core/`.
