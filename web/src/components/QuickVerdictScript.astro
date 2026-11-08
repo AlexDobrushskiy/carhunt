@@ -1,0 +1,71 @@
+<script>
+  import { send } from "@/lib/client";
+
+  const OFF = ["border-line", "bg-surface-2", "opacity-70"];
+
+  function paint(box: HTMLElement, value: string | null) {
+    box.dataset.verdict = value ?? "none";
+    box.querySelectorAll<HTMLButtonElement>("button[data-v]").forEach((b) => {
+      const on = b.dataset.v === value;
+      const tone = (b.dataset.tone ?? "").split(" ");
+      b.setAttribute("aria-pressed", String(on));
+      b.classList.remove(...(on ? OFF : tone));
+      b.classList.add(...(on ? tone : OFF));
+    });
+  }
+
+  async function save(box: HTMLElement, value: string | null, note: string) {
+    const status = box.querySelector<HTMLElement>("[data-status]")!;
+    status.textContent = "saving…";
+    status.classList.remove("text-bad");
+    try {
+      if (value) await send("PUT", `cars/${box.dataset.car}/verdict`, { value, note: note || undefined });
+      else await send("DELETE", `cars/${box.dataset.car}/verdict`);
+      status.textContent = "";
+      return true;
+    } catch (e) {
+      status.textContent = (e as Error).message;
+      status.classList.add("text-bad");
+      return false;
+    }
+  }
+
+  document.addEventListener("click", async (ev) => {
+    const btn = (ev.target as HTMLElement).closest<HTMLButtonElement>(".qv button");
+    if (!btn) return;
+    const box = btn.closest<HTMLElement>(".qv")!;
+    const input = box.querySelector<HTMLInputElement>("[data-note]")!;
+    if (btn.hasAttribute("data-note-toggle")) {
+      btn.classList.add("hidden");
+      input.classList.remove("hidden");
+      input.focus();
+      return;
+    }
+    const prev = box.dataset.verdict === "none" ? null : box.dataset.verdict!;
+    const next = btn.dataset.v === prev ? null : btn.dataset.v!;
+    paint(box, next);
+    if (!(await save(box, next, input.value))) paint(box, prev);
+    else input.dataset.saved = next ? input.value : "";
+  });
+
+  async function saveNote(input: HTMLInputElement) {
+    const box = input.closest<HTMLElement>(".qv")!;
+    if (input.value === input.dataset.saved) return;
+    const value = box.dataset.verdict === "none" ? null : box.dataset.verdict!;
+    if (!value) {
+      const s = box.querySelector<HTMLElement>("[data-status]")!;
+      s.textContent = "Pick 👍 🤔 👎 first";
+      return;
+    }
+    if (await save(box, value, input.value)) input.dataset.saved = input.value;
+  }
+
+  document.addEventListener("focusout", (ev) => {
+    const t = ev.target as HTMLElement;
+    if (t.matches?.(".qv [data-note]")) saveNote(t as HTMLInputElement);
+  });
+  document.addEventListener("keydown", (ev) => {
+    const t = ev.target as HTMLElement;
+    if (ev.key === "Enter" && t.matches?.(".qv [data-note]")) (t as HTMLInputElement).blur();
+  });
+</script>

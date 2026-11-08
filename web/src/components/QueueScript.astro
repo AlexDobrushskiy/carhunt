@@ -1,0 +1,120 @@
+---
+// Delegated handler for every QueueRow: rate → collapse the row, count −1, offer undo.
+---
+<div data-testid="queue-undo" role="status" hidden
+  class="fixed inset-x-0 bottom-0 z-30 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pointer-events-none">
+  <div class="max-w-3xl mx-auto flex items-center gap-3 rounded-xl border border-line bg-surface-2 shadow-lg px-3 py-2 pointer-events-auto">
+    <span data-undo-text class="flex-1 min-w-0 text-sm truncate"></span>
+    <button type="button" data-undo class="shrink-0 h-10 px-4 rounded-lg bg-accent text-bg text-sm font-medium">Undo</button>
+  </div>
+</div>
+<script>
+  import { send } from "@/lib/client";
+
+  const EMOJI: Record<string, string> = { up: "👍", maybe: "🤔", down: "👎" };
+  const toast = document.querySelector<HTMLElement>('[data-testid="queue-undo"]')!;
+  const toastText = toast.querySelector<HTMLElement>("[data-undo-text]")!;
+  let last: { row: HTMLElement; parent: HTMLElement; next: Node | null } | null = null;
+  let timer: number | undefined;
+
+  // Shown count, per-tier count, and the "To rate" tab count when the tier is one of the default tiers.
+  function bump(tier: string, d: number) {
+    const els = [...document.querySelectorAll<HTMLElement>(`[data-testid="queue-count"], [data-tier-count="${tier}"]`)];
+    if (document.querySelector(`[data-tier-count="${tier}"][data-default-tier]`)) els.push(...document.querySelectorAll<HTMLElement>("[data-queue-tab-count]"));
+    for (const el of els) el.textContent = String(Math.max(0, Number(el.textContent) + d));
+    const empty = document.querySelector<HTMLElement>("[data-queue-empty]");
+    if (empty) empty.hidden = document.querySelector(".rq") != null;
+  }
+
+  function setBusy(row: HTMLElement, busy: boolean) {
+    row.querySelectorAll<HTMLButtonElement>("button[data-v]").forEach((b) => (b.disabled = busy));
+  }
+
+  function showError(row: HTMLElement, msg: string) {
+    const s = row.querySelector<HTMLElement>("[data-status]")!;
+    s.textContent = msg;
+    s.classList.toggle("hidden", !msg);
+  }
+
+  function collapse(row: HTMLElement): Promise<void> {
+    row.style.height = `${row.offsetHeight}px`;
+    row.style.overflow = "hidden";
+    row.style.transition = "height 220ms ease, opacity 220ms ease, margin 220ms ease";
+    row.dataset.collapsing = "";
+    void row.offsetHeight; // commit the start height before animating
+    row.style.height = "0px";
+    row.style.opacity = "0";
+    row.style.marginTop = "-0.75rem"; // eat the list's gap-3 so neighbours close up
+    return new Promise((done) => {
+      const end = () => { row.removeEventListener("transitionend", end); done(); };
+      row.addEventListener("transitionend", end);
+      setTimeout(end, 400);
+    });
+  }
+
+  function hideToast() {
+    toast.hidden = true;
+    last = null;
+  }
+
+  async function rate(row: HTMLElement, value: string) {
+    const note = row.querySelector<HTMLInputElement>("[data-note]")?.value.trim() ?? "";
+    setBusy(row, true);
+    showError(row, "");
+    try {
+      await send("PUT", `cars/${row.dataset.carId}/verdict`, { value, note: note || undefined });
+    } catch (e) {
+      setBusy(row, false);
+      showError(row, `Not saved: ${(e as Error).message}`);
+      return;
+    }
+    const parent = row.parentElement!;
+    const next = row.nextSibling;
+    await collapse(row);
+    row.remove();
+    bump(row.dataset.tier ?? "", -1);
+    last = { row, parent, next };
+    const title = row.querySelector('[data-testid="queue-car-link"]')?.textContent ?? `#${row.dataset.carId}`;
+    toastText.textContent = `${EMOJI[value]} ${title}`;
+    toastText.classList.remove("text-bad");
+    toast.hidden = false;
+    clearTimeout(timer);
+    timer = window.setTimeout(hideToast, 10_000);
+  }
+
+  async function undo() {
+    const u = last;
+    if (!u) return;
+    clearTimeout(timer);
+    try {
+      await send("DELETE", `cars/${u.row.dataset.carId}/verdict`);
+    } catch (e) {
+      toastText.textContent = `Undo failed: ${(e as Error).message}`;
+      toastText.classList.add("text-bad");
+      return;
+    }
+    const r = u.row;
+    for (const p of ["height", "overflow", "transition", "opacity", "margin-top"]) r.style.removeProperty(p);
+    delete r.dataset.collapsing;
+    setBusy(r, false);
+    u.parent.insertBefore(r, u.next && u.next.parentNode === u.parent ? u.next : null);
+    bump(r.dataset.tier ?? "", 1);
+    hideToast();
+  }
+
+  document.addEventListener("click", (ev) => {
+    const t = ev.target as HTMLElement;
+    if (t.closest("[data-undo]")) return void undo();
+    const btn = t.closest<HTMLButtonElement>(".rq button");
+    if (!btn) return;
+    const row = btn.closest<HTMLElement>(".rq")!;
+    if (btn.hasAttribute("data-note-toggle")) {
+      const input = row.querySelector<HTMLInputElement>("[data-note]")!;
+      const open = input.classList.toggle("hidden") === false;
+      btn.setAttribute("aria-expanded", String(open));
+      if (open) input.focus();
+      return;
+    }
+    if (btn.dataset.v) rate(row, btn.dataset.v);
+  });
+</script>

@@ -1,0 +1,19 @@
+---
+// List-card verdict: plain HTML + one delegated script (no React per card).
+import { VERDICTS } from "@/lib/vocab";
+interface Props { car: number; value?: string | null; note?: string | null }
+const { car, value = null, note = "" } = Astro.props;
+const TONE: Record<string, string> = { up: "border-good bg-good-bg", maybe: "border-warn bg-warn-bg", down: "border-bad bg-bad-bg" };
+---
+<div class="qv flex flex-col gap-2" data-car={car} data-verdict={value ?? "none"}>
+  <div class="flex items-center gap-2">
+    {VERDICTS.map((v) => (
+      <button type="button" data-v={v.value} data-tone={TONE[v.value]} aria-pressed={value === v.value ? "true" : "false"} aria-label={v.label}
+        class={`h-9 min-w-11 px-2 text-lg rounded-lg border transition ${value === v.value ? TONE[v.value] : "border-line bg-surface-2 opacity-70"}`}>{v.emoji}</button>
+    ))}
+    <button type="button" data-note-toggle class={`h-9 px-3 rounded-lg border border-line bg-surface-2 text-sm text-muted ${note ? "hidden" : ""}`}>✎ note</button>
+    <span data-status class="text-xs text-muted"></span>
+  </div>
+  <input type="text" data-note value={note ?? ""} data-saved={note ?? ""} placeholder="verdict note (optional)" aria-label="Verdict note"
+    class={`h-9 px-3 rounded-lg border border-line bg-surface-2 text-sm placeholder:text-muted ${note ? "" : "hidden"}`} />
+</div>

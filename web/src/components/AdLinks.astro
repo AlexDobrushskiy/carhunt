@@ -1,0 +1,21 @@
+---
+import type { Listing } from "@/lib/cardb";
+import { price } from "@/lib/format";
+import { adChips } from "@/lib/queue";
+interface Props { listings: Listing[] }
+const chips = adChips(Astro.props.listings, price);
+---
+{chips.length ? (
+  <ul class="flex flex-wrap gap-2 -mt-1" data-testid="ad-links" aria-label="Original ads">
+    {chips.map((c) => (
+      <li class="min-w-0 max-w-full">
+        <a href={c.url} target="_blank" rel="noopener" data-testid="ad-link" data-status={c.status}
+          class={`inline-flex items-center gap-1.5 h-10 max-w-full px-3 rounded-lg border text-sm no-underline hover:no-underline ${c.live ? "border-line bg-surface-2 text-fg font-medium" : "border-bad/40 bg-bad-bg text-bad"}`}>
+          <span class={`truncate ${c.live ? "" : "line-through"}`}>{c.label}</span>
+          {c.note ? <span class="text-xs whitespace-nowrap">{c.note}</span> : null}
+          <span aria-hidden="true">↗</span>
+        </a>
+      </li>
+    ))}
+  </ul>
+) : null}

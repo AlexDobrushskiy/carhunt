@@ -1,0 +1,79 @@
+---
+// One "To rate" row: compact card + inline verdict (driven by QueueScript, no React).
+import type { QueueItem } from "@/lib/cardb";
+import { price, power, km, flag, regDate, distance } from "@/lib/format";
+import { powertrainShort } from "@/lib/vocab";
+import { VERDICTS } from "@/lib/vocab";
+import { gapChip, tierTone } from "@/lib/queue";
+import GoodDealBadge from "./GoodDealBadge.astro";
+import OptionIcons from "./OptionIcons.astro";
+
+interface Props { item: QueueItem }
+const { item } = Astro.props;
+const car = item.car;
+const href = `/cars/${car.id}`;
+const specs = [
+  regDate(car.reg_date) || car.year,
+  car.km != null ? km(car.km) : null,
+  powertrainShort(car.powertrain),
+  car.power_kw != null ? power(car.power_kw) : null,
+  car.drive && car.drive !== "unknown" ? car.drive.toUpperCase() : null,
+].filter(Boolean).join(" · ");
+const place = [
+  `${flag(car.country)} ${car.city ?? ""}`.trim(),
+  distance(car.distance_km, car.distance_source),
+  car.seller_type && car.seller_type !== "unknown" ? car.seller_type : null,
+].filter(Boolean).join(" · ");
+const gap = gapChip(item.price_gap_pct, item.fair_basis);
+const gapTitle = item.fair_landed != null
+  ? `landed ${price(item.landed)} vs fair ${price(item.fair_landed)} (asking ${price(item.fair_price)}), ${item.fair_n} peers: ${item.fair_basis}`
+  : undefined;
+const scoreTitle = [`value ${item.value ?? "—"} · fit ${item.fit} · risk ${item.risk}`, ...(item.risk_reasons ?? [])].join("\n");
+// The why line already is the good-deal note; don't repeat it in the badge.
+const dealNote = car.good_deal_note && car.good_deal_note !== item.why ? car.good_deal_note : null;
+const TONE: Record<string, string> = { up: "hover:border-good", maybe: "hover:border-warn", down: "hover:border-bad" };
+const chip = "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap";
+---
+<article class="rq rounded-xl border border-line bg-surface overflow-hidden" data-testid="queue-row"
+  data-car-id={car.id} data-position={item.position} data-tier={item.tier}>
+  <div class="flex gap-3 p-3 pb-2">
+    <a href={href} class="shrink-0 w-20 h-15 rounded-lg bg-surface-2 overflow-hidden grid place-items-center text-2xl text-muted" tabindex="-1" aria-hidden="true">
+      {car.cover_photo_id
+        ? <img src={`/photos/${car.cover_photo_id}?size=thumb`} alt="" loading="lazy" decoding="async" width="80" height="60" class="w-full h-full object-cover" />
+        : <span>🚗</span>}
+    </a>
+    <div class="min-w-0 flex-1">
+      <div class="flex items-start gap-2">
+        <a href={href} class="flex-1 min-w-0 font-semibold leading-snug line-clamp-2 text-fg no-underline" data-testid="queue-car-link">{car.title}</a>
+        <div class="shrink-0 font-semibold tabular">{price(car.price)}</div>
+      </div>
+      {specs ? <p class="text-sm text-muted tabular mt-0.5">{specs}</p> : null}
+      {place ? <p class="text-sm text-muted truncate">{place}</p> : null}
+      <OptionIcons values={car.options} sources={car.option_sources} class="mt-1 -ml-1.5" />
+    </div>
+  </div>
+  <div class="px-3 pb-3 flex flex-col gap-2">
+    <div class="flex flex-wrap items-center gap-1.5">
+      <span class={`${chip} ${tierTone(item.tier)}`} data-testid="tier-chip">T{item.tier}</span>
+      {car.good_deal ? <GoodDealBadge note={dealNote} rank={car.deal_rank} /> : null}
+      {gap ? <span class={`${chip} ${gap.tone} tabular`} data-testid="gap-chip" title={gapTitle}>{gap.text}</span> : null}
+      {item.score != null ? <span class={`${chip} bg-surface-2 text-muted tabular`} data-testid="score-chip" title={scoreTitle}>score {Math.round(item.score)}</span> : null}
+    </div>
+    {item.why ? <p class="text-sm break-words" data-testid="queue-why">{item.why}</p> : null}
+    <div class="flex items-center gap-2">
+      {VERDICTS.map((v) => (
+        <button type="button" data-v={v.value} aria-label={v.label} data-testid={`queue-rate-${v.value}`}
+          class={`h-10 min-w-11 px-2 text-lg rounded-lg border border-line bg-surface-2 transition ${TONE[v.value]} disabled:opacity-50 disabled:cursor-wait`}>{v.emoji}</button>
+      ))}
+      <button type="button" data-note-toggle aria-label="Add a note" aria-expanded="false"
+        class="h-10 min-w-11 px-2 rounded-lg border border-line bg-surface-2 text-sm text-muted">✎</button>
+      {car.primary_url ? (
+        <a href={car.primary_url} target="_blank" rel="noopener" data-testid="queue-ad-link"
+          class="ml-auto inline-flex items-center h-10 px-3 rounded-lg border border-line bg-surface-2 text-sm text-fg no-underline hover:no-underline whitespace-nowrap">Ad ↗</a>
+      ) : null}
+    </div>
+    <input type="text" data-note data-testid="queue-note" placeholder="note, then tap 👍 🤔 👎" aria-label="Verdict note" maxlength="500"
+      class="hidden h-10 px-3 rounded-lg border border-line bg-surface-2 text-sm placeholder:text-muted" />
+    <p data-status data-testid="queue-error" role="status" class="hidden text-xs text-bad break-words"></p>
+  </div>
+</article>

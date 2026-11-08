@@ -1,0 +1,12 @@
+---
+// Other users' verdicts on this car (owner + viewers rate separately).
+import { VERDICT_EMOJI } from "@/lib/vocab";
+import type { Verdict } from "@/lib/cardb";
+interface Props { verdicts: [string, Verdict][] }
+const { verdicts } = Astro.props;
+---
+<p class="text-xs text-muted flex flex-wrap gap-x-3 gap-y-1" data-testid="other-verdicts">
+  {verdicts.map(([user, v]) => (
+    <span data-user={user} data-verdict={v.value} title={v.note ?? undefined}>{user} {VERDICT_EMOJI[v.value ?? ""] ?? "·"}{v.note ? ` · ${v.note}` : ""}</span>
+  ))}
+</p>

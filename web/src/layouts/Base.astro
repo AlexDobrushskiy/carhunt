@@ -1,0 +1,49 @@
+---
+import "@/styles/global.css";
+interface Props { title?: string; back?: string }
+const { title = "carhunt", back } = Astro.props;
+const { viewer, profile } = Astro.locals;
+const here = Astro.url.pathname + Astro.url.search;
+const roleOf = (n: string) => profile.users.find((u) => u.name === n)?.role;
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark light" />
+  <meta name="theme-color" content="#0b0d10" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#f5f6f8" media="(prefers-color-scheme: light)" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>" />
+  <title>{title}</title>
+</head>
+<body>
+  <header class="sticky top-0 z-20 bg-bg/90 backdrop-blur border-b border-line">
+    <div class="max-w-3xl mx-auto px-4 h-12 flex items-center gap-3">
+      {back ? <a href={back} class="text-fg no-underline text-lg -ml-1 px-1" aria-label="Back">←</a> : null}
+      <a href="/" class="font-semibold text-fg no-underline">🚗 carhunt</a>
+      <slot name="header-right" />
+      {viewer.choices.length ? (
+        <form method="post" action="/identity" class="ml-auto" data-testid="identity-picker">
+          <input type="hidden" name="back" value={here} />
+          <label class="text-xs text-muted">as
+            <select name="user" aria-label="Viewing as" class="ml-1 h-8 px-2 rounded-lg border border-line bg-surface-2 text-sm text-fg">
+              {viewer.choices.map((n) => <option value={n} selected={n === viewer.name}>{n}{roleOf(n) === "viewer" ? " (viewer)" : ""}</option>)}
+            </select>
+          </label>
+          <noscript><button type="submit" class="h-8 px-2 text-sm">Go</button></noscript>
+        </form>
+      ) : viewer.name ? <span class="ml-auto text-xs text-muted" data-testid="viewer-name">{viewer.name}</span> : null}
+    </div>
+    <slot name="subheader" />
+  </header>
+  <main class="max-w-3xl mx-auto px-4 pb-24">
+    <slot />
+  </main>
+  <script>
+    document.querySelectorAll<HTMLFormElement>('[data-testid="identity-picker"]').forEach((f) =>
+      f.querySelector("select")?.addEventListener("change", () => f.submit()),
+    );
+  </script>
+</body>
+</html>

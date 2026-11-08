@@ -1,0 +1,29 @@
+---
+import type { Photo } from "@/lib/cardb";
+interface Props { photos: Photo[] }
+const { photos } = Astro.props;
+const SOURCE: Record<string, string> = { ad: "Ad photo", seller: "From seller", inspection: "Inspection" };
+const lightboxCaption = (p: Photo) => [SOURCE[p.source ?? ""] ?? (p.source ? `From ${p.source}` : null), p.caption].filter(Boolean).join(" · ");
+---
+{photos.length ? (
+  <div class="-mx-4 scroll-x snap-x snap-mandatory" data-testid="gallery">
+    <ul class="flex gap-2 px-4 w-max">
+      {photos.map((p, i) => (
+        <li class="snap-start shrink-0">
+          <a href={`/photos/${p.id}?size=full`} target="_blank" rel="noopener" class="block no-underline"
+             data-lightbox={p.id} data-lightbox-caption={lightboxCaption(p)} data-testid="gallery-photo">
+            <img src={`/photos/${p.id}?size=medium`} alt={p.caption ?? `Photo ${i + 1}`}
+                 loading={i < 2 ? "eager" : "lazy"} decoding="async"
+                 width={p.width ?? 1000} height={p.height ?? 750}
+                 class="h-56 sm:h-72 w-auto max-w-[85vw] rounded-xl object-cover bg-surface-2" />
+          </a>
+          <p class="text-xs text-muted mt-1 max-w-[85vw] sm:max-w-96 line-clamp-2 min-h-4">
+            <span class="tabular">{i + 1}/{photos.length}</span>{p.source && p.source !== "ad" ? ` · from ${p.source}` : ""}{p.caption ? ` · ${p.caption}` : ""}
+          </p>
+        </li>
+      ))}
+    </ul>
+  </div>
+) : (
+  <div class="h-32 rounded-xl bg-surface-2 grid place-items-center text-muted text-sm">No photos yet</div>
+)}

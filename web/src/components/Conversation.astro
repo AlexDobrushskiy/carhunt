@@ -1,0 +1,50 @@
+---
+import type { Message } from "@/lib/cardb";
+import { when, toDate, dayLong } from "@/lib/format";
+interface Props { messages: Message[] }
+const { messages } = Astro.props;
+const { profile } = Astro.locals;
+const CH: Record<string, string> = { whatsapp: "WhatsApp", email: "Email", standvirtual: "StandVirtual", olx: "OLX", custojusto: "CustoJusto", "mobile.de": "mobile.de", autoscout24: "AutoScout24", phone: "Phone", sms: "SMS" };
+const dayKey = (m: Message) => dayLong(m.at, profile.tz);
+let lastDay = "";
+let lastKey = "";
+let lastAt = 0;
+---
+{messages.length === 0 ? <p class="text-sm text-muted">No messages yet.</p> : (
+  <ol class="flex flex-col gap-2" data-testid="chat">
+    {messages.map((m) => {
+      const out = m.direction === "out";
+      const d = dayKey(m);
+      const sep = d !== lastDay;
+      lastDay = d;
+      const who = out ? (m.sender_kind === "owner" ? profile.ownerName : m.sender_kind === "agent" ? "agent" : (m.sender ?? "us")) : (m.sender || "seller");
+      const failed = m.delivery === "failed";
+      // Consecutive bubbles from the same sender/channel within 10 min share one header.
+      const at = toDate(m.at)?.getTime() ?? 0;
+      const key = `${m.direction}|${who}|${m.channel}`;
+      const showHead = sep || key !== lastKey || at - lastAt > 10 * 60_000;
+      lastKey = key;
+      lastAt = at;
+      return (
+        <>
+          {sep ? <li class="text-center text-xs text-muted pt-2">{d}</li> : null}
+          <li class={`flex ${out ? "justify-end" : "justify-start"} ${showHead ? "" : "-mt-1.5"}`}>
+            <div class={`max-w-[85%] rounded-2xl px-3 py-2 ${out ? "bg-accent-bg rounded-br-md" : "bg-surface-2 rounded-bl-md"} ${failed ? "border border-bad" : ""}`}>
+              {showHead ? <p class="text-[11px] text-muted mb-0.5">{who} · {CH[m.channel ?? ""] ?? m.channel} · {when(m.at, profile.tz).split(" ").pop()}</p> : null}
+              {m.text ? <p class="text-sm whitespace-pre-wrap break-words">{m.text}</p> : null}
+              {(m.attachments ?? []).length ? (
+                <div class="flex flex-wrap gap-1.5 mt-1.5">
+                  {(m.attachments ?? []).map((a) => a.photo_id
+                    ? <a href={`/photos/${a.photo_id}?size=full`} target="_blank" rel="noopener" data-lightbox={a.photo_id} data-lightbox-caption={`From chat${a.name ? ` · ${a.name}` : ""}`} data-testid="chat-photo"><img src={`/photos/${a.photo_id}?size=thumb`} alt={a.name ?? "attachment"} loading="lazy" class="h-24 rounded-lg object-cover" /></a>
+                    : a.url ? <a href={a.url} target="_blank" rel="noopener" class="text-xs">📎 {a.name ?? a.kind}</a>
+                    : <span class="text-xs text-muted">📎 {a.name ?? a.kind}</span>)}
+                </div>
+              ) : null}
+              {failed ? <p class="text-xs text-bad mt-1">✗ not delivered{m.error ? `: ${m.error}` : ""}</p> : null}
+            </div>
+          </li>
+        </>
+      );
+    })}
+  </ol>
+)}
