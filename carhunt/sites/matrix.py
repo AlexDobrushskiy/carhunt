@@ -21,8 +21,9 @@ def _cell(v) -> str:
 
 
 def render() -> str:
-    rows = ["| site | countries | wall | read route | country IP | account needed for | phone | messaging | measured |",
-            "|---|---|---|---|---|---|---|---|---|"]
+    cols = ["site", "countries", "wall", "read route", "country IP", "account needed for", "phone", "cursor",
+            "messaging", "measured"]
+    rows = ["| " + " | ".join(cols) + " |", "|" + "---|" * len(cols)]
     for p in sorted(base.ROOT.glob("*/site.yaml")):
         if p.parent.name == "fake":
             continue
@@ -30,7 +31,7 @@ def render() -> str:
         acc = (m.get("account") or {}).get("needed_for") or []
         rows.append("| " + " | ".join(_cell(x) for x in (
             m["site"], m.get("countries"), m.get("wall"), m.get("route"), m.get("country_ip"), acc or "none",
-            m.get("phone"), m.get("messaging"), m.get("measured"))) + " |")
+            m.get("phone"), (m.get("cursor") or {}).get("strategy"), m.get("messaging"), m.get("measured"))) + " |")
     return "\n".join(rows)
 
 

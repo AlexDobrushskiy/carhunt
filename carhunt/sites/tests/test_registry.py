@@ -69,3 +69,9 @@ def test_wall_signatures():
         with pytest.raises(base.Blocked) as e:
             raise_for("t", Response(200, "https://t.example.invalid/", text))
         assert e.value.signature == sig
+
+
+def test_docs_matrix_current():
+    from carhunt.sites import matrix
+    doc = base.ROOT.parents[1] / "docs" / "sites.md"
+    assert matrix.main(["--check", str(doc)]) == 0, "run: python -m carhunt.sites.matrix --write docs/sites.md"
