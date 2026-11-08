@@ -139,13 +139,17 @@ def render_codex(regs: list[Registration]) -> str:
 def render_hooks(prefix: str | None = None, repo: Path = REPO,
                  template: Path | None = None) -> dict:
     """Claude Code settings `hooks` block: identity lease bookkeeping around every identity tool call."""
-    text = (template or BROWSERS / "hooks" / "claude-settings-hooks.json").read_text()
-    data = json.loads(text.replace("__REPO__", str(repo)))
+    data = json.loads((template or BROWSERS / "hooks" / "claude-settings-hooks.json").read_text())
     data.pop("_comment", None)
     want = identity_tool_matcher(prefix)
     for groups in data["hooks"].values():
         for g in groups:
             g["matcher"] = want
+            for h in g.get("hooks", []):
+                # the command runs through a shell: quote the path (a repo under "My Projects" must still work)
+                exe, _, rest = h["command"].partition(" ")
+                exe = shlex.quote(exe.replace("__REPO__", str(repo)))
+                h["command"] = f"{exe} {rest}".rstrip()
     return data
 
 
