@@ -24,7 +24,7 @@ CONFIG = {
         "powertrain": ["bev"],
         "models": [{"make": "Volkswagen", "model": "ID.4", "tier": 1}, {"make": "Skoda", "model": "Enyaq", "tier": 1},
                    {"make": "Audi", "model": "Q4 e-tron", "tier": 2}],
-        "hard_filters": [{"fact": "battery_net_kwh", "min": 70}, {"flag": "damaged", "exclude": True}],
+        "hard_filters": [{"field": "powertrain.battery_net_kwh", "min": 70}, {"flag": "damaged"}],
         "options_wanted": {"heat_pump": 3, "pano": 2},
     },
     "sites": {"enabled": ["fake"]},

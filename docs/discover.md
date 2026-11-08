@@ -49,7 +49,7 @@ search:                           # shared with cardb (ranking); discover reads:
   road_factor: 1.3
   models:                         # make/model (+ optional `match:` regex override) + tier
     - {make: Volkswagen, model: "ID.4", tier: 1}
-  hard_filters:                   # {fact|field: key, min|max|equals} · {flag: name, exclude: true}
+  hard_filters:                   # cardb's grammar: {field: powertrain.battery_net_kwh, min} · {fact(s), min|max|words} · {flag: damaged}; mentions_country left to cardb's queue
     - {fact: battery_net_kwh, min: 70}
     - {flag: damaged, exclude: true}
   options_wanted: {heat_pump: 3, pano: 2}  # keys drive the ask list (weights are cardb's)

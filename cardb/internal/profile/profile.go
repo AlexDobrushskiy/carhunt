@@ -81,7 +81,9 @@ type Search struct {
 	Penalties            []Penalty          `yaml:"penalties" json:"penalties,omitempty"`
 	Weights              map[string]float64 `yaml:"weights" json:"weights,omitempty"` // value, fit, risk
 	RoadFactor           float64            `yaml:"road_factor" json:"road_factor,omitempty"`
-	Ranking              Ranking            `yaml:"ranking" json:"ranking"`
+	// MaxDistanceKm: discover drops cars farther (road km, else road_factor × great-circle); cardb only validates it.
+	MaxDistanceKm int     `yaml:"max_distance_km" json:"max_distance_km,omitempty"`
+	Ranking       Ranking `yaml:"ranking" json:"ranking"`
 }
 
 // Price: max_eur = queue hard filter; min_eur / cap_eur = write-time price sanity bounds (integer units, gross).
@@ -103,6 +105,9 @@ type Model struct {
 	BaseFit *float64 `yaml:"base_fit" json:"base_fit,omitempty"` // default ranking.fit.base_default
 	Risk    float64  `yaml:"risk" json:"risk,omitempty"`         // model-specific risk (known weak points)
 	When    *When    `yaml:"when" json:"when,omitempty"`
+	// Match: discover's own regex (Python) on folded make/model/variant/title. cardb ignores it: it maps the entry
+	// to a family via model (+ search.families).
+	Match string `yaml:"match" json:"match,omitempty"`
 }
 
 // When: every set condition must hold; an unknown car value passes, except as below.
