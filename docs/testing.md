@@ -78,7 +78,7 @@ Any other warn, or any fail, fails the step.
 ### Design choices
 
 - **cardb runs with `cardb serve`, not compose.** It needs no Docker daemon and no image build (~1 s against ~20 s), and it gets a free port, so it never clashes with a stack already on 8484/4321. Compose is still covered by `E2E_COMPOSE=1`, with its own project, port and image names, which are removed afterwards.
-- **The env is scrubbed (`env -i` plus an allow-list).** This dev machine sets `CLAUDE_CONFIG_DIR`, `AGTERM_SESSION_ID` and similar variables, and a stranger doesn't have them.
+- **The env is scrubbed (`env -i` plus an allow-list).** A developer machine may set `CLAUDE_CONFIG_DIR`, `AGTERM_SESSION_ID` and similar variables that a fresh install lacks.
 - **Guard stubs come first on `PATH`.** The `security` stub, and the `launchctl` stub for writes, log the call and fail, so a regression that reaches the real Keychain or launchd fails the run instead of silently succeeding.
 - **agterm is real.** The real agterm socket is linked into the temp `HOME` (`agtermctl` reads it only from `$HOME/Library/Application Support/agterm/`). The agent CLI is a stub, so no Claude session starts.
 - **Cleanup.** An `EXIT` trap closes the agterm session, stops cardb and the web, brings down the compose project and deletes the work dir (unless `KEEP=1`), on failure too.
