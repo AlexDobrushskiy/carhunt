@@ -1,0 +1,13 @@
+# Regions that `search.exclude_regions` can name (ISO 3166-2). Matched on the ad's postcode first, then on place
+# names in the location fields only (never the description: dealer prose names other places).
+# Why postcode: a Tenerife car slipped through a city-name-only check (2026-11-04).
+PT-20: {country: PT, name: Azores, postcode: ['^9[5-9]\d\d'], places: [azores, acores, sao miguel, ponta delgada, terceira, angra do heroismo, horta, pico]}
+PT-30: {country: PT, name: Madeira, postcode: ['^9[0-4]\d\d'], places: [madeira, funchal, porto santo, camara de lobos, santa cruz da madeira]}
+ES-CN: {country: ES, name: Canary Islands, postcode: ['^3[58]\d{3}'], places: [canarias, canary, tenerife, las palmas, gran canaria, lanzarote, fuerteventura, la laguna, santa cruz de tenerife, la gomera, el hierro]}
+ES-IB: {country: ES, name: Balearic Islands, postcode: ['^07\d{3}'], places: [baleares, balears, mallorca, menorca, ibiza, eivissa, formentera, palma de mallorca]}
+ES-CE: {country: ES, name: Ceuta, postcode: ['^51\d{3}'], places: [ceuta]}
+ES-ML: {country: ES, name: Melilla, postcode: ['^52\d{3}'], places: [melilla]}
+FR-20R: {country: FR, name: Corsica, postcode: ['^20\d{3}', '^2[AB]\d{3}'], places: [corse, corsica, ajaccio, bastia]}
+FR-DOM: {country: FR, name: Overseas departments, postcode: ['^97\d{3}', '^98\d{3}'], places: [guadeloupe, martinique, reunion, guyane, mayotte]}
+IT-82: {country: IT, name: Sicily, postcode: ['^9[0-8]\d{3}'], places: [sicilia, sicily, palermo, catania, messina, siracusa, trapani, agrigento, ragusa]}
+IT-88: {country: IT, name: Sardinia, postcode: ['^0[789]\d{3}'], places: [sardegna, sardinia, cagliari, sassari, olbia, nuoro, oristano]}

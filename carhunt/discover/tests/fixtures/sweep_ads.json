@@ -1,0 +1,261 @@
+[
+ {
+  "site_ref": "e2e101",
+  "state": "live",
+  "make": "Volkswagen",
+  "model": "ID.4",
+  "title": "Volkswagen ID.4 Pro 77 kWh 210 kW",
+  "version": "Pro 77 kWh 210 kW",
+  "price": 33900,
+  "km": 18000,
+  "first_registration": "2024-03",
+  "fuel": "bev",
+  "country": "PT",
+  "location": "Testville",
+  "seller": {
+   "type": "private",
+   "name": "Synthetic Seller 01",
+   "city": "Testville",
+   "country": "PT"
+  },
+  "photos": [
+   "https://fake.example.invalid/img/e2e101-0.jpg",
+   "https://fake.example.invalid/img/e2e101-1.jpg",
+   "https://fake.example.invalid/img/e2e101-2.jpg",
+   "https://fake.example.invalid/img/e2e101-3.jpg",
+   "https://fake.example.invalid/img/e2e101-4.jpg",
+   "https://fake.example.invalid/img/e2e101-5.jpg",
+   "https://fake.example.invalid/img/e2e101-6.jpg",
+   "https://fake.example.invalid/img/e2e101-7.jpg",
+   "https://fake.example.invalid/img/e2e101-8.jpg"
+  ],
+  "phones": [
+   "+351 555 100 101"
+  ],
+  "description": "Synthetic. Bomba de calor, teto panorâmico. Primeiro dono, revisões em dia.",
+  "created": "2026-11-08T07:00:00+00:00",
+  "vin": "SYN00000000E2e101"
+ },
+ {
+  "site_ref": "e2e102",
+  "state": "live",
+  "make": "Volkswagen",
+  "model": "ID.4",
+  "title": "Volkswagen ID.4 Pro Performance 150 kW",
+  "version": "Pro Performance 150 kW",
+  "price": 28500,
+  "km": 52000,
+  "first_registration": "2022-05",
+  "fuel": "bev",
+  "country": "PT",
+  "location": "Testville",
+  "seller": {
+   "type": "dealer",
+   "name": "Synthetic Seller 02",
+   "city": "Testville",
+   "country": "PT"
+  },
+  "photos": [
+   "https://fake.example.invalid/img/e2e102-0.jpg",
+   "https://fake.example.invalid/img/e2e102-1.jpg",
+   "https://fake.example.invalid/img/e2e102-2.jpg",
+   "https://fake.example.invalid/img/e2e102-3.jpg",
+   "https://fake.example.invalid/img/e2e102-4.jpg",
+   "https://fake.example.invalid/img/e2e102-5.jpg",
+   "https://fake.example.invalid/img/e2e102-6.jpg",
+   "https://fake.example.invalid/img/e2e102-7.jpg",
+   "https://fake.example.invalid/img/e2e102-8.jpg"
+  ],
+  "phones": [
+   "+351 555 100 102"
+  ],
+  "description": "Synthetic. Sem acidentes.",
+  "created": "2026-11-08T06:00:00+00:00",
+  "vin": "SYN00000000E2e102"
+ },
+ {
+  "site_ref": "e2e103",
+  "state": "live",
+  "make": "Volkswagen",
+  "model": "ID.4",
+  "title": "Volkswagen ID.4 Pro 77 kWh",
+  "version": "Pro 77 kWh",
+  "price": 31000,
+  "km": 30000,
+  "first_registration": "2023-02",
+  "fuel": "bev",
+  "country": "ES",
+  "location": "Testciudad",
+  "seller": {
+   "type": "dealer",
+   "name": "Synthetic Seller 03",
+   "city": "Testciudad",
+   "country": "ES"
+  },
+  "photos": [
+   "https://fake.example.invalid/img/e2e103-0.jpg",
+   "https://fake.example.invalid/img/e2e103-1.jpg",
+   "https://fake.example.invalid/img/e2e103-2.jpg",
+   "https://fake.example.invalid/img/e2e103-3.jpg",
+   "https://fake.example.invalid/img/e2e103-4.jpg",
+   "https://fake.example.invalid/img/e2e103-5.jpg",
+   "https://fake.example.invalid/img/e2e103-6.jpg",
+   "https://fake.example.invalid/img/e2e103-7.jpg",
+   "https://fake.example.invalid/img/e2e103-8.jpg"
+  ],
+  "phones": [
+   "+34 555 100 103"
+  ],
+  "description": "Synthetic. PVP CONTADO: 32.400 €. PVP FINANCIADO: 31.000 €. Bomba de calor.",
+  "created": "2026-11-08T05:00:00+00:00",
+  "vin": "SYN00000000E2e103"
+ },
+ {
+  "site_ref": "e2e104",
+  "state": "live",
+  "make": "Volkswagen",
+  "model": "ID.4",
+  "title": "Volkswagen ID.4 Pro 77 kWh",
+  "version": "Pro 77 kWh",
+  "price": 27900,
+  "km": 41000,
+  "first_registration": "2022-09",
+  "fuel": "bev",
+  "country": "PT",
+  "location": "Testville",
+  "seller": {
+   "type": "dealer",
+   "name": "Synthetic Seller 04",
+   "city": "Testville",
+   "country": "PT"
+  },
+  "photos": [
+   "https://fake.example.invalid/img/e2e104-0.jpg",
+   "https://fake.example.invalid/img/e2e104-1.jpg",
+   "https://fake.example.invalid/img/e2e104-2.jpg",
+   "https://fake.example.invalid/img/e2e104-3.jpg",
+   "https://fake.example.invalid/img/e2e104-4.jpg",
+   "https://fake.example.invalid/img/e2e104-5.jpg",
+   "https://fake.example.invalid/img/e2e104-6.jpg",
+   "https://fake.example.invalid/img/e2e104-7.jpg",
+   "https://fake.example.invalid/img/e2e104-8.jpg"
+  ],
+  "phones": [
+   "+351 555 100 104"
+  ],
+  "description": "Synthetic. Leasing transfer: retoma de leasing, prestação mensal.",
+  "created": "2026-11-08T04:00:00+00:00",
+  "vin": "SYN00000000E2e104"
+ },
+ {
+  "site_ref": "e2e105",
+  "state": "live",
+  "make": "Skoda",
+  "model": "Enyaq",
+  "title": "Skoda Enyaq 80 iV 150 kW",
+  "version": "80 iV 150 kW",
+  "price": 30500,
+  "km": 36000,
+  "first_registration": "2022-11",
+  "fuel": "bev",
+  "country": "PT",
+  "location": "Testville",
+  "seller": {
+   "type": "dealer",
+   "name": "Synthetic Seller 05",
+   "city": "Testville",
+   "country": "PT"
+  },
+  "photos": [
+   "https://fake.example.invalid/img/e2e105-0.jpg",
+   "https://fake.example.invalid/img/e2e105-1.jpg",
+   "https://fake.example.invalid/img/e2e105-2.jpg",
+   "https://fake.example.invalid/img/e2e105-3.jpg",
+   "https://fake.example.invalid/img/e2e105-4.jpg",
+   "https://fake.example.invalid/img/e2e105-5.jpg",
+   "https://fake.example.invalid/img/e2e105-6.jpg",
+   "https://fake.example.invalid/img/e2e105-7.jpg",
+   "https://fake.example.invalid/img/e2e105-8.jpg"
+  ],
+  "phones": [
+   "+351 555 100 105"
+  ],
+  "description": "Synthetic. Bomba de calor, câmara 360.",
+  "created": "2026-11-07T22:00:00+00:00",
+  "vin": "SYN00000000E2e105"
+ },
+ {
+  "site_ref": "e2e106",
+  "state": "live",
+  "make": "Skoda",
+  "model": "Enyaq",
+  "title": "Skoda Enyaq 85 210 kW",
+  "version": "85 210 kW",
+  "price": 36900,
+  "km": 9000,
+  "first_registration": "2024-06",
+  "fuel": "bev",
+  "country": "ES",
+  "location": "Testciudad",
+  "seller": {
+   "type": "dealer",
+   "name": "Synthetic Seller 06",
+   "city": "Testciudad",
+   "country": "ES"
+  },
+  "photos": [
+   "https://fake.example.invalid/img/e2e106-0.jpg",
+   "https://fake.example.invalid/img/e2e106-1.jpg",
+   "https://fake.example.invalid/img/e2e106-2.jpg",
+   "https://fake.example.invalid/img/e2e106-3.jpg",
+   "https://fake.example.invalid/img/e2e106-4.jpg",
+   "https://fake.example.invalid/img/e2e106-5.jpg",
+   "https://fake.example.invalid/img/e2e106-6.jpg",
+   "https://fake.example.invalid/img/e2e106-7.jpg",
+   "https://fake.example.invalid/img/e2e106-8.jpg"
+  ],
+  "phones": [
+   "+34 555 100 106"
+  ],
+  "description": "Synthetic. Asientos eléctricos con memoria, techo panorámico.",
+  "created": "2026-11-07T21:00:00+00:00",
+  "vin": "SYN00000000E2e106"
+ },
+ {
+  "site_ref": "e2e107",
+  "state": "live",
+  "make": "Audi",
+  "model": "Q4 e-tron",
+  "title": "Audi Q4 45 e-tron 210 kW",
+  "version": "Audi Q4 45 e-tron 210 kW",
+  "price": 38900,
+  "km": 95000,
+  "first_registration": "2024-04",
+  "fuel": "bev",
+  "country": "PT",
+  "location": "Testville",
+  "seller": {
+   "type": "dealer",
+   "name": "Synthetic Seller 07",
+   "city": "Testville",
+   "country": "PT"
+  },
+  "photos": [
+   "https://fake.example.invalid/img/e2e107-0.jpg",
+   "https://fake.example.invalid/img/e2e107-1.jpg",
+   "https://fake.example.invalid/img/e2e107-2.jpg",
+   "https://fake.example.invalid/img/e2e107-3.jpg",
+   "https://fake.example.invalid/img/e2e107-4.jpg",
+   "https://fake.example.invalid/img/e2e107-5.jpg",
+   "https://fake.example.invalid/img/e2e107-6.jpg",
+   "https://fake.example.invalid/img/e2e107-7.jpg",
+   "https://fake.example.invalid/img/e2e107-8.jpg"
+  ],
+  "phones": [
+   "+351 555 100 107"
+  ],
+  "description": "Synthetic. Bomba de calor. High km.",
+  "created": "2026-11-07T20:00:00+00:00",
+  "vin": "SYN00000000E2e107"
+ }
+]

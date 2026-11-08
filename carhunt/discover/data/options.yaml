@@ -1,0 +1,50 @@
+# Multi-language option cues in ad text → cardb option keys (evidence source `ad_text`).
+# Text evidence is the weakest source (VIN/PR code = seller said > photo > ad text > inference); cardb never lets a
+# re-read overwrite stronger evidence (fill-if-empty). `absent:` patterns record a stated absence (keys are not yes/no: YAML reads those as booleans).
+# Unknown ≠ no: sellers of cars without an option rarely say so — absence of a match is "unknown", not "no".
+# `unless:` skips a hit when it matches the same clause (text between . ; ! ?): "panoramic camera" is not a roof.
+heat_pump:
+  present: bomba (?:de )?calor|pompe a chaleur|warmtepomp|warmepumpe|heat ?pump|pompa di calore
+pano:
+  unless: camera|kamera|camara|telecamera|view|vision|vue|vista|display|ecran|scherm|bildschirm
+  present: panoram|teto (?:de abrir|solar|de vidro)|toit (?:ouvrant|vitre|en verre)|sunroof|glazen dak|schiebedach|glasdach|tetto (?:apribile|in vetro)|techo (?:solar|de cristal)
+  absent: ohne panoram|kein panoram|sans (?:toit )?panoram|sem teto panoram|sin techo panoram|no panoramic|senza tetto panoram
+memory_seats:
+  unless: park|einpark|stationnement|aparcamiento|estacionamento|parcheggio|parkeer   # VW "memory parking" ≠ seat memory
+  present: (?:sieges?|bancos?|asientos?|sedili|sitze?|stoelen?|seats?).{0,30}memo(?:ry|ria|ire|rie)|memo(?:ry|ria|ire|rie).{0,25}(?:sieges?|bancos?|asientos?|sedili|sitz|stoel|seats?)|stoel\w*.{0,30}geheugen|geheugen.{0,20}stoel|geheugenfunctie|memory function|memoryfunktion
+electric_seats:
+  present: >-
+    sieges?(?: avant)?(?: a)?(?: reglage)? electriq|reglage electri.{0,15}sieg|bancos? (?:dianteiros? )?(?:com regulacao )?eletric|
+    asientos? (?:delanteros? )?electric|sedili? (?:anteriori )?(?:a regolazione )?elettric|elektr(?:isch|\.).{0,20}(?:sitz|stoel)|
+    (?:sitz|stoel).{0,20}elektr|electric(?:ally)? (?:adjustable )?(?:front )?seats?|power seats?|ergoactive|ergo active
+  absent: >-
+    manuell(?:e|er)? (?:sitzverstellung|verstellbare.{0,12}sitze)|sitzverstellung.{0,15}manuell|ohne elektr(?:ische|ischer|isch).{0,12}sitz|
+    sieges? manuels|asientos?.{0,18}ajuste manual|bancos?.{0,18}(?:ajuste|regulacao) manual|sedili.{0,18}regolazione manuale|handmatig verstelbare stoel
+heated_seats:
+  present: sitzheizung|beheizbare sitze|sieges? chauffants|asientos? calefactad|sedili riscaldat|bancos? aquecid|stoelverwarming|heated (?:front )?seats|seat heating
+ventilated_seats:
+  present: sitzbelueftung|sitzluftung|beluftete sitze|sieges? ventiles|asientos? ventilad|sedili ventilat|bancos? ventilad|stoelventilatie|ventilated seats
+massage_seats:
+  present: massagefunktion|massage|masaje|massaggio|massagem
+premium_audio:   # "Canton" alone is a place name in FR/LU/BE ads
+  present: canton[^.;]{0,20}(?:sound|audio|system|lautsprecher|enceintes|haut-parleurs|altavoces|colunas|speaker)|(?:sound|audio)[^.;]{0,15}canton|sonos|bose|harman.?kardon|bang.{0,5}olufsen|\bb&o\b|meridian|burmester|dynaudio|krell|focal
+  absent: ohne (?:harman|soundsystem)|sans (?:harman|audio premium)|no premium audio
+power_tailgate:
+  present: >-
+    hayon.{0,30}(?:electri|motoris)|heckklappe.{0,30}elektr|elektr.{0,30}(?:heckklappe|achterklep|koffer\b)|achterklep.{0,30}elektr|
+    power (?:tailgate|liftgate)|electric tailgate|portellone.{0,30}elettric|(?:mala|portao|porton|porta da bagageira).{0,30}eletric|
+    porton.{0,30}electric|virtual pedal|easy open|coffre electrique|kofferklappe elektr
+hud:
+  present: head[- ]?up|affichage tete haute|visualizzazione a testa alta|pantalla proyectada
+camera_360:   # "360" alone also appears in ranges and prices
+  present: >-
+    area view|surround view|rundumsicht|top view|birds?.?eye|(?:camera|kamera|camara|telecamera|cam|view|vision|vue|vista)[^.;]{0,12}360|
+    360\s?(?:°|grad|graus|gradi|degrees?)?[^.;]{0,10}(?:camera|kamera|camara|telecamera|cam|view|vision|vue|vista)
+adaptive_cruise:
+  present: \bacc\b|adaptive cruise|abstandsregeltempomat|travel assist|regulateur (?:de vitesse )?adaptatif|cruise control adattivo|control de crucero adaptativo|cruise control adaptativo|adaptieve cruise
+towbar:
+  present: attelage|trekhaak|anhangerkupplung|\bahk\b|towbar|tow bar|tow hook|engate|gancho|gancio traino|bola de remolque
+matrix_led:
+  present: matrix|iq\.? ?light|pixel led|hd matrix
+keyless:
+  present: keyless|kessy|advanced key|acces sans cle|acceso sin llave|accesso senza chiave|acesso sem chave|comfort access
