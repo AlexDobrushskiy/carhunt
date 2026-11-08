@@ -1,0 +1,76 @@
+# Ad-text rules. Patterns are Python regexes on ascii-folded lowercase text (é → e, ü → u, ß → ss).
+# Languages: en de fr es it pt nl. Add a language = add alternatives; tests in tests/test_normalize.py.
+
+flags:
+  lease_transfer:
+    why: 11 lease transfers got into the DB on day 1; the ask is a monthly rate, not a price (2026-11-03)
+    match: >-
+      leasing ?ubernahme|leasinguebernahme|leasing[- ]ubernahme|reprise de (?:leasing|loa|lld|contrat)|
+      subentro (?:leasing|noleggio)|cesion de (?:leasing|renting)|\bcuota\s*/\s*mes\b|overname lease|
+      lease ?overname|lease takeover|take over (?:the )?lease|transferencia de leasing|retoma de leasing
+  damaged:
+    why: several non-running / crashed cars were contacted before anyone read the text (2026-11-03); never auto-contact
+    match: >-
+      incidentat[ao]|sinistrat[ao]|accidentad[oa]|siniestrad[oa]|unfallwagen|unfallfahrzeug|unfallschaden|hagel(?:schaden)?|
+      grele|nicht fahrbereit|fahrzeug defekt|motorschaden|batterieschaden|crash[- ]?sensor|airbag ausgelost|
+      vehicule accidente|ne roule pas|pour pieces|non marciante|per ricambi|no arranca|para piezas|sinistrado|
+      para pecas|nao anda|schadeauto|schade auto|niet rijdend|salvage|non[- ]runner|flood damage|water damage
+  reseller:
+    why: private-labelled ads sold "on behalf of" someone are resellers (stock photos, several cars per account)
+    match: kundenauftrag|im auftrag|depot[- ]vente|pour le compte|in opdracht|mandataire|conto terzi|en nombre de|por cuenta de|em nome de
+  net_wording:
+    why: net asks look 16–23 % cheaper than they are; keep the ask but flag for gross confirmation
+    match: \bnetto\b|\bht\b|hors taxes?|iva esclusa|\+ ?iva|mas iva|sem iva|excl\.?\s*(?:btw|vat|iva)|exkl\.?\s*mwst|zzgl\.?\s*mwst|ex\.? btw
+  history_abroad:
+    why: cars with PL/LT/LV/EE history had clocked km / salvage pasts; verify history before contact
+    match: poland|polonia|polen|pologne|lithuan|litauen|lituan|latvia|letton|lettland|estonia|estland|estonie
+
+# "price for cash" beats a finance-conditional headline price (ES dealers: headline assumes their loan).
+cash_price:
+  why: ES headline prices assumed dealer financing; the cash ask in the text was €2–4k higher (2026-11-04)
+  match: \b(?:precio|pvp)\s+(?:al\s+)?contado\s*[:=-]?\s*(?:eur|euros|€)?\s*([0-9][0-9 .,]{2,15})|\bprecio\s+sin\s+financiar\s*[:=-]?\s*(?:eur|euros|€)?\s*([0-9][0-9 .,]{2,15})
+
+# A vehicle ask stated net of VAT in the description (IT dealers). Battery "netto" kWh is not an ask.
+net_ask:
+  why: IT dealer asks "IVA esclusa" passed the price filter as gross (2026-11-05)
+  match: \bprezzo\s+(?:e\s+)?(?:da\s+ritenere\s+)?(?:al\s+netto\s+di\s+iva|iva\s+esclusa|\+\s*iva)\b|\bprix\s+ht\b|\bpreis\s+netto\b|\bnettopreis\b
+
+facts:
+  owners:
+    match: \b(1|2|3|unico|primeiro|premiere|1ere|eerste|ein|erster|first|one|single|primo)\.?\s*(?:o |er |e )?(?:dono|proprietario|main|hand|proprietaire|eigenaar|halter|owner|propietario)
+  accident_free:
+    match: unfallfrei|non accidente|sans accident|jamais accidente|sem (?:qualquer )?(?:acidente|sinistro)|accident[- ]free|no accidents|ongevalvrij|schadevrij|sin accidentes|nessun incidente|mai incidentata
+  service_history:
+    match: scheckheft|serviceheft|servicehistor|full service|carnet.*entretien|historique.*entretien|entretien.*(?:suivi|a jour|complet)|revisoes em dia|livro de revis|historico de manut|tagliand|historial.*manten|libro de mantenimiento|onderhoudsboek|onderhoudshistor|dealer onderhouden
+  soh:
+    match: (?:soh|state of health|saude da bateria|etat de sante|salud de la bateria|stato di salute|batteriezustand|batterijgezondheid)\D{0,18}(\d{2,3}(?:[.,]\d+)?)\s*%
+  ac_onboard_kw:
+    match: \b(11|22)\s*kw\s*(?:ac|onboard|bordlader|chargeur|cargador|caricatore|carregador|lader)|(?:ac|onboard|bordlader|chargeur embarque|cargador|caricatore|carregador)\D{0,12}\b(11|22)\s*kw\b
+
+fuel:   # site/ad fuel label → cardb powertrain.fuel
+  why: wallapop labels BEVs `electric_hybrid` (2026-11-04); every site has its own vocabulary
+  map:
+    - [bev, '^(?:bev|ev|electric|electrico|electrique|elettrica|elektro|elektrisch|eletrico|electric_hybrid|el)$|^elektr|^electri|^eletri|100 ?% ?electri']
+    - [phev, 'plug.?in|phev|hybride? rechargeable|hibrido enchufable|ibrida plug|hybride_plugin|hibrido plug|recharg']
+    - [mhev, 'mild|mhev|48 ?v']
+    - [hev, 'hybrid|hybride|hibrido|ibrida|^hev$']
+    - [diesel, 'diesel|gasoleo|gazole|gasolio']
+    - [petrol, 'petrol|benzin|gasolina|essence|benzina|gasoline|super']
+    - [lpg, 'lpg|gpl|autogas|glp']
+    - [cng, 'cng|erdgas|metano|gnc|gnv']
+    - [hydrogen, 'hydrogen|wasserstoff|hidrogeno|idrogeno|fcev']
+
+drive:  # structured drive labels (site field) → fwd/rwd/awd
+  why: structured source field first, then text words, then the variant rule — 49 % were unknown until backfilled (2026-11-03)
+  labels:
+    fwd: [front, frontantrieb, vorderradantrieb, voorwielaandrijving, traction avant, traction, trazione anteriore, traccion delantera, tracao dianteira, fwd]
+    rwd: [rear, heck, heckantrieb, hinterradantrieb, achterwielaandrijving, propulsion, trazione posteriore, traccion trasera, tracao traseira, rwd]
+    awd: [4wd, awd, 4x4, allrad, allradantrieb, vierwielaandrijving, integrale, trazione integrale, traccion total, traccion integral, tracao integral, transmission integrale, quatre roues motrices]
+  text_awd: 4motion|quattro|\b8[05]x\b|4matic|xdrive|e-?four|\bawd\b|\b4wd\b|\b4x4\b|\ballrad(?:antrieb)?\b|dual motor|bi-?moteur|bimotor|trazione integrale|traccion total
+  text_rwd: \bpropulsion\b|rear[- ]wheel drive|\bheckantrieb\b|hinterradantrieb|achterwielaandrijving|trazione posteriore|traccion trasera
+  text_fwd: front[- ]wheel drive|frontantrieb|traction avant|voorwielaandrijving|trazione anteriore|traccion delantera
+
+# VIN WMI prefixes of China-market builds of EU models (grey imports: other spec, no EU warranty). Not every L… VIN:
+# EU-market cars built in China (Tesla, Polestar, MG, BYD…) are fine.
+vin_wmi_flags:
+  china_market: {wmi: [LFV, LSV], why: "VW-group China joint ventures; grey imports showed up in ES/IT listings (2026-11)"}

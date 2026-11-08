@@ -1,0 +1,522 @@
+# Model heuristics plug-in: VW-group MEB EVs (VW ID.4/ID.5, Skoda Enyaq/Enyaq Coupe, Audi Q4/Q4 Sportback, Cupra Tavascan)
+#
+# Conventions
+# - Every `match`/`unless` regex is Python `re`, applied to ASCII-folded lowercase text
+#   (NFKD, accents stripped: "Wärmepumpe" -> "warmepumpe", "Coupé" -> "coupe", "más" -> "mas").
+# - families, variants, drive_rules: ordered, first match wins (variants: first match per family).
+# - `family` may be a single name or a list of names from `families`.
+# - `unless`: skip the rule if this regex matches the same text (variants/drive) or the clause around the
+#   match (option_cues; a clause = text between . ; or newline).
+# - `power_kw_min` / `power_kw_max` (variants): rule applies on the ad's stated power when no text rule hit.
+# - option_cues `validated`: "n/m correct" from a blind validation on 67 MEB ads (2026-11-04: photo cues logged
+#   blind, truth from ad text, photo-checked where they disagreed). null = from price lists/manuals, not validated.
+# - Model years: VW MY24 orderable 10/2023, Audi Q4 MY24 production ~09/2023, Enyaq 85 launch ~12/2023, Enyaq
+#   facelift (Tech-Deck face) from ~04/2025. A 2023 registration can be either side of the 286 hp switch:
+#   trust stated power over year.
+
+plugin: vag_meb
+version: 1
+scope_note: "Research focus is the 286 hp (210 kW) RWD versions: ID.4/ID.5 Pro MY24+, Q4/Q4 Sportback 45 MY24+, Enyaq/Enyaq Coupe 85 MY24+."
+
+families:
+  "VW ID.4":              {make: Volkswagen, match: '\bid\.?\s?4(?!\d)'}
+  "VW ID.5":              {make: Volkswagen, match: '\bid\.?\s?5(?!\d)'}
+  "Audi Q4 Sportback e-tron": {make: Audi, match: '\bq4\b.*\bsportback\b|\bsportback\b.*\bq4\b'}
+  "Audi Q4 e-tron":       {make: Audi, match: '\bq4\b'}
+  "Skoda Enyaq Coupe":    {make: Skoda, match: '\benyaq\b.*\bcoupe\b|\bcoupe\b.*\benyaq\b'}
+  "Skoda Enyaq":          {make: Skoda, match: '\benyaq\b'}
+  "Cupra Tavascan":       {make: Cupra, match: '\btavascan\b'}
+
+variants:
+  # --- VW ID.4 / ID.5 ---
+  - {family: ["VW ID.4", "VW ID.5"], match: '\bpure\b|\b5[25]\s?kwh?\b', battery_net_kwh: 52,
+     note: "Pure, 52 kWh net (109/125 kW). Out of the 77 kWh class."}
+  - {family: ["VW ID.4", "VW ID.5"], match: '\bgtx\b', battery_net_kwh: 77, drive: awd,
+     note: "GTX, dual motor AWD. FR/IT/LU MY26-27 lists show 79 kWh on the GTX."}
+  - {family: ["VW ID.4", "VW ID.5"], match: '4\s?motion', battery_net_kwh: 77, drive: awd,
+     note: "Pro 4MOTION = AWD; never treat as the RWD Pro."}
+  - {family: ["VW ID.4", "VW ID.5"], match: '\b79([.,]\d)?\s?kwh\b', year_from: 2026, battery_net_kwh: 79, drive: rwd,
+     note: "79 kWh Pro = MY27 (orderable 03/2026 DE) at the earliest; most markets keep the Pro at 77."}
+  - {family: ["VW ID.4", "VW ID.5"], match: '\bpro\b|\b77([.,]\d)?\s?kwh\b|\b77\b', year_from: 2024, battery_net_kwh: 77, power_kw: 210, drive: rwd,
+     note: "MY24+ Pro: APP550 210 kW (286 hp), 12.9in screen, drive selector stalk on the column."}
+  - {family: ["VW ID.4", "VW ID.5"], match: '\bpro\b|pro ?perf|\b77([.,]\d)?\s?kwh\b|\b77\b', year_to: 2023, battery_net_kwh: 77, power_kw: 150, drive: rwd,
+     note: "MY21-23 Pro / Pro Performance 150 kW (204 hp). Late-2023 regs can be MY24 210 kW: trust stated power. A rotary selector on the cockpit pod = pre-MY24."}
+  - {family: ["VW ID.4", "VW ID.5"], match: '\bpro\b|pro ?perf|\b77([.,]\d)?\s?kwh\b|\b77\b', battery_net_kwh: 77, drive: rwd,
+     note: "Year unknown: 77 kWh RWD; power 150 or 210 kW, check stated power."}
+  - {family: ["VW ID.4", "VW ID.5"], match: '', power_kw_min: 128, battery_net_kwh: 77,
+     note: "Power fallback: >= 128 kW is a 77 kWh car."}
+  - {family: ["VW ID.4", "VW ID.5"], match: '', power_kw_max: 127, battery_net_kwh: 52,
+     note: "Power fallback: < 128 kW = Pure."}
+
+  # --- Audi Q4 / Q4 Sportback ---
+  - {family: ["Audi Q4 e-tron", "Audi Q4 Sportback e-tron"], match: '\b35\b|35\s?e-?tron|e-?tron\s?35|\b5[25]\s?kwh', battery_net_kwh: 52, drive: rwd,
+     note: "Q4 35, 52 kWh net, 7.2 kW AC (KB2)."}
+  - {family: ["Audi Q4 e-tron", "Audi Q4 Sportback e-tron"], match: '\b50\b|50\s?e-?tron|e-?tron\s?50', battery_net_kwh: 77, drive: awd,
+     note: "Q4 50 quattro, AWD."}
+  - {family: ["Audi Q4 e-tron", "Audi Q4 Sportback e-tron"], match: '(\b45\b|45\s?e-?tron|e-?tron\s?45).*quattro|quattro.*(\b45\b|45\s?e-?tron|e-?tron\s?45)', battery_net_kwh: 77, drive: awd,
+     note: "Q4 45 quattro, AWD (not the 286 hp RWD car)."}
+  - {family: ["Audi Q4 e-tron", "Audi Q4 Sportback e-tron"], match: '\b45\b|45\s?e-?tron|e-?tron\s?45', year_from: 2024, battery_net_kwh: 77, power_kw: 210, drive: rwd,
+     unless: 'quattro',
+     note: "MY24+ Q4 45: 210 kW (286 hp) RWD, 77 kWh, 11 kW AC, e-tailgate standard."}
+  - {family: ["Audi Q4 e-tron", "Audi Q4 Sportback e-tron"], match: '\b45\b|45\s?e-?tron|e-?tron\s?45', battery_net_kwh: 77, drive: rwd,
+     unless: 'quattro',
+     note: "Q4 45 with unknown or 2023 year: 77 kWh; 2023 regs can be MY24 210 kW, check stated power."}
+  - {family: ["Audi Q4 e-tron", "Audi Q4 Sportback e-tron"], match: '\b40\b|40\s?e-?tron|e-?tron\s?40', year_from: 2025, battery_net_kwh: 63, drive: rwd,
+     unless: '\b7[67]([.,]\d)?\s?kwh|\b82\s?kwh',
+     note: "2025+ Q4 40 = 63 kWh. If the ad states 76/77/82 kWh, fall through to the 77 kWh rule."}
+  - {family: ["Audi Q4 e-tron", "Audi Q4 Sportback e-tron"], match: '\b40\b|40\s?e-?tron|e-?tron\s?40|\b7[67]([.,]\d)?\s?kwh|\b82\s?kwh', battery_net_kwh: 77, power_kw: 150, drive: rwd,
+     note: "Pre-2025 Q4 40, 77 kWh, 150 kW (204 hp)."}
+  - {family: ["Audi Q4 e-tron", "Audi Q4 Sportback e-tron"], match: '', power_kw_max: 125, battery_net_kwh: 52,
+     note: "Power fallback: <= 125 kW = Q4 35."}
+  - {family: ["Audi Q4 e-tron", "Audi Q4 Sportback e-tron"], match: '', power_kw_min: 150, battery_net_kwh: 77,
+     note: "Power fallback: >= 150 kW = 77 kWh pack (except 2025+ Q4 40, see above)."}
+
+  # --- Skoda Enyaq / Enyaq Coupe ---
+  - {family: ["Skoda Enyaq", "Skoda Enyaq Coupe"], match: '\b50\b|iv\s?50|\b5[25]\s?kwh', unless: '\b8[05]\s?x?\b|\brs\b|\b77\s?kwh|\b82\s?kwh', battery_net_kwh: 52,
+     note: "Enyaq 50: 52 kWh net (net figure not in the sources; general knowledge)."}
+  - {family: ["Skoda Enyaq", "Skoda Enyaq Coupe"], match: '\b(55|58|60|62)\b|iv\s?60|\b5[8]\s?kwh|\b62\s?kwh', unless: '\b8[05]\s?x?\b|\brs\b|\b77\s?kwh|\b82\s?kwh', battery_net_kwh: 58,
+     note: "Enyaq 60: 58 kWh net (net figure not in the sources; general knowledge)."}
+  - {family: ["Skoda Enyaq", "Skoda Enyaq Coupe"], match: '\b8[05]\s?x\b|iv\s?80\s?x|\brs\b', battery_net_kwh: 77, drive: awd,
+     note: "85x / 80x / RS = AWD."}
+  - {family: ["Skoda Enyaq", "Skoda Enyaq Coupe"], match: '\b85\b', battery_net_kwh: 77, power_kw: 210, drive: rwd,
+     note: "Enyaq 85: 210 kW (286 hp) RWD, from ~12/2023."}
+  - {family: ["Skoda Enyaq", "Skoda Enyaq Coupe"], match: '\b80\b|iv\s?80', battery_net_kwh: 77, power_kw: 150, drive: rwd,
+     note: "Enyaq iV 80 (MY21-23): 150 kW (204 hp) RWD."}
+  - {family: ["Skoda Enyaq", "Skoda Enyaq Coupe"], match: '\b7[77]\s?kwh|\b82\s?kwh', battery_net_kwh: 77,
+     note: "Stated 77/82 kWh."}
+  - {family: ["Skoda Enyaq", "Skoda Enyaq Coupe"], match: '', power_kw_min: 150, battery_net_kwh: 77,
+     note: "Power fallback: >= 150 kW = 80/85."}
+  - {family: ["Skoda Enyaq", "Skoda Enyaq Coupe"], match: '', power_kw_max: 149, battery_net_kwh: 58,
+     note: "Power fallback: < 150 kW = Enyaq 60 class."}
+
+  # --- Cupra Tavascan (only drive rules + 286 hp scope are in the sources) ---
+  - {family: "Cupra Tavascan", match: '\bendurance\b', battery_net_kwh: 77, power_kw: 210, drive: rwd,
+     note: "Endurance = 286 hp RWD. 77 kWh net is general knowledge, not from the sources."}
+  - {family: "Cupra Tavascan", match: '\bvz\b', battery_net_kwh: 77, drive: awd,
+     note: "VZ = dual motor AWD. 77 kWh net is general knowledge, not from the sources."}
+
+drive_rules:
+  # on: variant (default) = model + variant (+ title); on: ad_text = title + description + drive fields.
+  # Evaluate ad_text rules first; then variant rules. Collect every hit per pass; exactly one distinct drive = decisive,
+  # more = unknown. A `stop` rule ends its pass with unknown.
+  - {match: '\b(?:not|no|non|without|ohne|kein)\b|\?|\b(?:awd|rwd|fwd)\s*[/|]\s*(?:awd|rwd|fwd)\b', drive: null, stop: true,
+     why: "A variant that negates a drive or lists alternatives is not decisive."}
+  - {match: '\b(?:4matic|quattro|xdrive\s*\d*|awd|4motion|gtx|dual[ -]motor)\b', drive: awd,
+     why: "Explicit AWD markers."}
+  - {match: '\brwd\b', drive: rwd, why: "Explicit."}
+  - {match: '\bfwd\b', drive: fwd, why: "Explicit."}
+  - {family: ["VW ID.4", "VW ID.5"], match: '\bpro\b', unless: '\b(?:4matic|quattro|xdrive|awd|4\s?motion|gtx|dual[ -]motor)\b', drive: rwd,
+     why: "Pro without an AWD marker is the single-motor RWD car; Pro 4MOTION is AWD."}
+  - {family: ["Audi Q4 e-tron", "Audi Q4 Sportback e-tron"], match: '\b40\b', drive: rwd,
+     why: "Q4 40 is single-motor RWD."}
+  - {family: "Cupra Tavascan", match: '\bendurance\b', drive: rwd, why: "Endurance = single motor RWD."}
+  - {family: "Cupra Tavascan", match: '\bvz\b', drive: awd, why: "VZ = dual motor AWD."}
+  # Added from the trim research (not in the 2026-11-03 backfill, which left these families unknown):
+  - {family: ["Skoda Enyaq", "Skoda Enyaq Coupe"], match: '\b8[05]\s?x\b|\brs\b', drive: awd,
+     why: "x suffix / RS = dual motor AWD."}
+  - {family: ["Skoda Enyaq", "Skoda Enyaq Coupe"], match: '\b8[05]\b(?!\s?x)', unless: '\b8[05]\s?x\b|\brs\b|4x4|allrad|awd', drive: rwd,
+     why: "Enyaq 80/85 without x = single motor RWD."}
+  - {family: ["Audi Q4 e-tron", "Audi Q4 Sportback e-tron"], match: '\b45\b', unless: 'quattro|awd|allrad', drive: rwd,
+     why: "MY24+ Q4 45 without quattro = 210 kW RWD (pre-MY24 45 was quattro only; check year)."}
+  # Ad title/prose markers (read these BEFORE the variant rules: a title saying 4Motion beat a stored rwd, 2026-11-04):
+  - {on: ad_text, match: '\ballrad\b|\b8[05]\s?x\b|\b4wd\b|\b4\s?motion\b|\bquattro\b|transmission integrale|traccion total|tracao integral|trazione integrale|vierwielaandrijving', drive: awd,
+     why: "Ad-text AWD markers."}
+  - {on: ad_text, match: '\b4\s?x\s?4\b', drive: awd,
+     unless: 'type de vehicule\s*:\s*suv\s*4x4|\bsuv\s*/\s*4x4\b|\bsuv[ -]4x4\b|gelandewagen\s*/\s*pick-?up',
+     why: "'4x4' counts only outside a site body category: 'SUV / 4x4' is not a drive assertion."}
+
+option_cues:
+  # ---------------- Direct photo cues (all families) ----------------
+  - {option: electric_seats, kind: photo, implies: "yes", validated: "27/28",
+     cue: "Switch panel on the outboard side of the seat base (slide/height rocker + backrest switch)",
+     why: "Direct. Disagreed with ad text once; the photo was right."}
+  - {option: electric_seats, kind: photo, implies: "no", validated: "27/28",
+     cue: "Height pump lever + recline lever or handwheel on the seat side",
+     why: "Direct, same validation as the switch panel. Check both seats: Skoda Plus electrifies the driver seat only."}
+  - {option: memory_seats, kind: photo, implies: "yes", validated: "23/25",
+     cue: "Memory buttons (1/2/3 or M/SET): VW + Skoda on the driver seat side, Audi on the driver door card",
+     why: "Direct. Both misses were photo-correct (dealer lists omitted memory)."}
+  - {option: power_tailgate, kind: photo, implies: "yes", validated: "10/11",
+     cue: "Close button on the inner trim of the open tailgate",
+     why: "Direct. The miss was photo-correct. Visible in only ~18% of ads. Retrofit kits exist."}
+  - {option: pano, kind: photo, implies: "yes", validated: "15/16",
+     cue: "Glass roof seen from inside (blind cover/rails, roof-blind switch in the overhead console)",
+     why: "Direct. From outside it usually hides under a black contrast roof (VW)."}
+  - {option: pano, kind: photo, implies: "no", validated: "15/16",
+     cue: "Solid fabric headliner seen from inside",
+     why: "Direct, same validation as above."}
+  - {option: premium_audio, kind: photo, implies: "yes", validated: "13/13",
+     cue: "harman/kardon, SONOS or CANTON logo on a door/A-pillar speaker grille",
+     why: "Direct. HK = VW, Sonos = Audi, Canton = Skoda."}
+  - {option: premium_audio, kind: photo, implies: "no", validated: "13/13",
+     cue: "Plain speaker grille (no brand logo) in a clear close-up",
+     why: "Direct."}
+  - {option: heat_pump, kind: photo, implies: "yes", validated: null,
+     cue: "A/C refrigerant label under the bonnet reads R744",
+     why: "R744 (CO2) circuit = heat pump; R1234yf = none. Heat pump has no other visible cue. A workshop refill with the wrong gas can mislead."}
+  - {option: heat_pump, kind: photo, implies: "no", validated: null,
+     cue: "A/C refrigerant label under the bonnet reads R1234yf",
+     why: "Same label, other value."}
+  - {option: towbar, kind: photo, implies: "yes", validated: null,
+     cue: "Towbar ball or socket visible under the rear bumper",
+     why: "Direct."}
+
+  # ---------------- VW ID.4 / ID.5 ----------------
+  - {option: electric_seats, kind: photo, implies: "yes", validated: null, families: ["VW ID.4", "VW ID.5"],
+     cue: "ergoActive strip on the seat side (massage button + 1/2/SET)",
+     why: "VW EU MY24+ e-seats come only as Interior Style Plus or Top-Sport Plus, always with memory + massage."}
+  - {option: memory_seats, kind: photo, implies: "yes", validated: null, families: ["VW ID.4", "VW ID.5"],
+     cue: "ergoActive strip on the seat side (massage button + 1/2/SET)", why: "As above: no VW e-seat without memory."}
+  - {option: massage_seats, kind: photo, implies: "yes", validated: null, families: ["VW ID.4", "VW ID.5"],
+     cue: "ergoActive strip on the seat side (massage button + 1/2/SET)", why: "As above: ergoActive includes pneumatic massage."}
+  - {option: electric_seats, kind: photo, implies: "yes", validated: null, families: ["VW ID.4", "VW ID.5"],
+     cue: "Top-Sport seat (one-piece back) with a gloss-black cut-out slot in the headrest and a dotted ID. logo, on a non-GTX",
+     why: "Top-Sport Plus = e-seats + memory + massage. Coding 'one-piece seat' alone scored 4/9: standard ArtVelours seats also look one-piece; the cut-out slot separates them."}
+  - {option: electric_seats, kind: photo, implies: "no", validated: "3/3", families: ["VW ID.4", "VW ID.5"],
+     cue: "Plain cloth upholstery (no leatherette/microfibre)",
+     why: "All brands: 0/13 non-leather/microfibre interiors had e-seats."}
+  - {option: matrix_led, kind: photo, implies: "yes", validated: null, families: ["VW ID.4", "VW ID.5"],
+     cue: "Thin LED light bar between the headlights (unlit: translucent strip, not a solid gloss-black panel)",
+     why: "Light bar = Design pack = Matrix IQ.Light + 3D tail lights with dynamic indicators."}
+  - {option: power_tailgate, kind: photo, implies: "yes", validated: "17/21", families: ["VW ID.4", "VW ID.5"],
+     cue: "Front LED light bar (Design pack), ad outside DE",
+     why: "Weak lift: base rate was 22/31. Design-pack trims (FR Life Max, IT Edition Plus, ES Pro Mas, BE Pro Business, NL LE Plus) carry the e-tailgate; DE cars often don't."}
+  - {option: camera_360, kind: photo, implies: "yes", validated: null, families: ["VW ID.4", "VW ID.5"],
+     cue: "Cameras under the door mirrors / Area View on the screen", why: "Assistance Plus / IQ.DRIVE."}
+  - {option: power_tailgate, kind: photo, implies: "yes", validated: null, families: ["VW ID.4", "VW ID.5"],
+     cue: "360 camera (mirror cameras / Area View) on a MY24-26 car",
+     why: "MY24-26 IQ.DRIVE / Assistance Plus bundles the e-tailgate. Not DE MY27 (moved to a luggage package)."}
+  - {option: adaptive_cruise, kind: photo, implies: "yes", validated: null, families: ["VW ID.4", "VW ID.5"],
+     cue: "360 camera (mirror cameras / Area View) on a MY24-26 car", why: "Same package carries Travel Assist (includes ACC)."}
+  - {option: hud, kind: photo, implies: "yes", validated: null, families: ["VW ID.4", "VW ID.5"],
+     cue: "AR-HUD image or rectangular HUD aperture on the dash top", why: "Infotainment Plus."}
+  - {option: premium_audio, kind: photo, implies: "yes", validated: null, families: ["VW ID.4", "VW ID.5"],
+     cue: "AR-HUD image or rectangular HUD aperture on the dash top", why: "Infotainment Plus = HK + AR-HUD always together."}
+  - {option: hud, kind: photo, implies: "yes", validated: null, families: ["VW ID.4", "VW ID.5"],
+     cue: "harman/kardon grille logo", why: "Infotainment Plus = HK + AR-HUD always together."}
+  - {option: power_tailgate, kind: photo, implies: "no", validated: "1/1", families: ["VW ID.4", "VW ID.5"],
+     cue: "19in steel wheels with full plastic covers (no visible lug nuts)",
+     why: "Bare Pro (DE/IT/LU base, FR ID./Life, ES pre-06/24, PT City). Winter sets can fake it; ID.5 always has alloys."}
+  - {option: electric_seats, kind: photo, implies: "no", validated: null, families: ["VW ID.4", "VW ID.5"],
+     cue: "19in steel wheels with full plastic covers", why: "Bare car."}
+
+  # ---------------- Audi Q4 ----------------
+  - {option: electric_seats, kind: photo, implies: "no", validated: null, families: ["Audi Q4 e-tron", "Audi Q4 Sportback e-tron"],
+     cue: "Interior mirror with a frame and a manual tilt tab (MY24-26)",
+     why: "No Komfortpaket (frameless auto-dim mirror comes with PYA/PYY), so no PYY e-seats. MY27: frameless is standard, no signal."}
+  - {option: pano, kind: photo, implies: "yes", validated: null, families: ["Audi Q4 e-tron", "Audi Q4 Sportback e-tron"],
+     cue: "Gloss-black roof panel on a light-coloured car",
+     why: "Audi has no contrast-roof option; the pano roof is the gloss-black roof. Dark paint hides it."}
+  - {option: matrix_led, kind: photo, implies: "yes", validated: null, families: ["Audi Q4 e-tron", "Audi Q4 Sportback e-tron"],
+     cue: "Lit full-width rear light bar + two reversing lights; or headlight-washer covers in the bumper (DE MY24-26)",
+     why: "Matrix package PXC. NL has Matrix standard from Advanced edition and sold washers separately."}
+  - {option: camera_360, kind: photo, implies: "yes", validated: null, families: ["Audi Q4 e-tron", "Audi Q4 Sportback e-tron"],
+     cue: "Cameras under the mirrors + front grille camera", why: "PZC (MY24-26) / Tech plus-pro (MY27)."}
+  - {option: hud, kind: photo, implies: "yes", validated: null, families: ["Audi Q4 e-tron", "Audi Q4 Sportback e-tron"],
+     cue: "Large AR-HUD projector recess on the dash top", why: "MMI Navigation pro (PYH) MY24-26; separate KS3 on MY27."}
+  - {option: electric_seats, kind: photo, implies: "no", validated: "9/9", families: ["Audi Q4 e-tron", "Audi Q4 Sportback e-tron"],
+     cue: "Textured unpainted black plastic arches and bottom line (MY24-26)",
+     why: "Base exterior. Adds little: the Audi base rate was 18/19 without e-seats. Never rank or skip on it alone."}
+
+  # ---------------- Skoda Enyaq ----------------
+  - {option: electric_seats, kind: photo, implies: "yes", validated: "5/5", families: ["Skoda Enyaq", "Skoda Enyaq Coupe"],
+     cue: "Sportline: black mirrors, gloss-black rails and window trim, Sportline badges, sport seats with integrated headrests",
+     why: "Sportline carries Plus content: driver e-seat with memory (passenger manual unless Maxx)."}
+  - {option: memory_seats, kind: photo, implies: "yes", validated: null, families: ["Skoda Enyaq", "Skoda Enyaq Coupe"],
+     cue: "Sportline exterior or lit grille", why: "Plus content: driver e-seat memory."}
+  - {option: power_tailgate, kind: photo, implies: "yes", validated: "3/3", families: ["Skoda Enyaq", "Skoda Enyaq Coupe"],
+     cue: "Sportline exterior or lit grille", why: "Plus/Clever content (nested packages)."}
+  - {option: electric_seats, kind: photo, implies: "yes", validated: "5/5", families: ["Skoda Enyaq", "Skoda Enyaq Coupe"],
+     cue: "Pre-facelift lit Crystal Face grille (translucent ribs + light strip) or facelift lit Tech-Deck light bar",
+     why: "Advanced package, which includes Plus. Validated together with Sportline (5/5)."}
+  - {option: hud, kind: photo, implies: "yes", validated: null, families: ["Skoda Enyaq", "Skoda Enyaq Coupe"],
+     cue: "Lit grille (Crystal Face / Tech-Deck) or HUD projector opening on the dash top", why: "Advanced package."}
+  - {option: premium_audio, kind: photo, implies: "yes", validated: null, families: ["Skoda Enyaq", "Skoda Enyaq Coupe"],
+     cue: "Lit grille (Crystal Face / Tech-Deck)", why: "Advanced package includes Canton."}
+  - {option: electric_seats, kind: photo, implies: "yes", validated: null, families: ["Skoda Enyaq", "Skoda Enyaq Coupe"],
+     cue: "Pre-facelift L&K: L&K fender badges, Platinum Grey bumper/diffuser/mirror caps, chrome-framed Crystal Face",
+     why: "L&K pre-facelift = both front e-seats with memory + massage + ventilation, e-tailgate, Canton, HUD, Matrix; pano still optional. Facelift DE 'L&K' is only an interior pack."}
+  - {option: ventilated_seats, kind: photo, implies: "yes", validated: null, families: ["Skoda Enyaq", "Skoda Enyaq Coupe"],
+     cue: "Pre-facelift L&K exterior, or perforated ventilated leather", why: "L&K std; facelift Maxx with ventilation (Suite/ecoSuite only)."}
+  - {option: electric_seats, kind: photo, implies: "yes", validated: null, families: ["Skoda Enyaq", "Skoda Enyaq Coupe"],
+     cue: "3-spoke steering wheel on a non-Sportline, non-RS car (base cars have 2-spoke)",
+     why: "Maxx package = both front e-seats with memory, DCC. L&K keeps a 2-spoke wheel but has e-seats anyway."}
+  - {option: electric_seats, kind: photo, implies: "yes", validated: null, families: ["Skoda Enyaq", "Skoda Enyaq Coupe"],
+     cue: "Front camera in the grille on a pre-facelift car", why: "Pre-facelift Area View sits in Maxx (both e-seats)."}
+  - {option: power_tailgate, kind: photo, implies: "yes", validated: null, families: ["Skoda Enyaq", "Skoda Enyaq Coupe"],
+     cue: "Headlamp-washer caps (pre-facelift, or facelift MY25)", why: "Plus package. Dropped from the DE MY26 Plus list."}
+  - {option: power_tailgate, kind: photo, implies: "yes", validated: null, families: ["Skoda Enyaq"],
+     cue: "Rear-door pull-up sun blinds on a facelift car", why: "Facelift Plus (DE/FR). Standard on all pre-facelift CH cars, so no signal there."}
+  - {option: matrix_led, kind: photo, implies: "yes", validated: null, families: ["Skoda Enyaq", "Skoda Enyaq Coupe"],
+     cue: "Dynamic (animated) rear indicators; Sportline; lit grille", why: "Matrix comes in Plus."}
+
+  # ---------------- Text cues: generic option words (DE/FR/NL/ES/PT/IT/EN) ----------------
+  - {option: electric_seats, kind: text, implies: "yes", validated: null,
+     match: '(vorder|fahrer)?sitze?\w*[^.;\n]{0,25}elektr|elektr\w*[^.;\n]{0,20}(vorder|fahrer)?sitz|electric(ally)?( adjustable| power)?( front| driver)? seats?|power seats?|sieges?( avant| conducteur)?[^.;\n]{0,15}electriq|elektrisch verstelbare? (voor|bestuurders)?stoel|asientos?[^.;\n]{0,20}electric|bancos?[^.;\n]{0,20}ele(c)?tric|sedil[ei][^.;\n]{0,20}elettric|ergoactive plus|top-?sport plus|interior style plus|komfortpaket plus|comfortpakket plus',
+     unless: 'lumb|lenden|lordos|lombair|lendensteun',
+     cue: "Explicit electric-seat wording",
+     why: "Only an explicit mention counts. Electric lumbar alone is not e-seats; 'ergoActive' or 'comfort seats' alone are not either."}
+  - {option: memory_seats, kind: text, implies: "yes", validated: null,
+     match: '\bmemory\b|memoria|memoire|geheugen|\bmemorie\b|speicherfunktion|memory-funktion',
+     unless: 'park|einpark|stationnement|aparcamiento|estacionamento|parcheggio|parkeer',
+     cue: "Seat memory wording", why: "VW 'memory parking' (IQ.DRIVE) is not seat memory."}
+  - {option: power_tailgate, kind: text, implies: "yes", validated: null,
+     match: '(heckklappe|gepackraumklappe|kofferraumklappe)[^.;\n]{0,30}elektr|elektr\w*[^.;\n]{0,15}(heckklappe|gepackraumklappe|kofferraum|achterklep|kofferklep)|hayon[^.;\n]{0,20}(electrique|motorise)|porton[^.;\n]{0,20}electric|portellone[^.;\n]{0,20}elettric|(porta|portao|tampa) (da |de )?bagageira[^.;\n]{0,15}ele(c)?tric|(power|electric)[^.;\n]{0,10}(tailgate|boot ?lid|liftgate)|easy open (&|and|und|et|e|y) close|virtual pedal|komfortoffnung',
+     cue: "Electric tailgate wording", why: "Explicit mention."}
+  - {option: pano, kind: text, implies: "yes", validated: null,
+     match: 'panorama|panoramic|panoramique|panoramico|panoramisch|glasdach|toit (ouvrant )?vitre|\bpano\b|tejadillo|teto (de abrir|panor)',
+     unless: 'camera|kamera|camara|view|vision|vue|vista|display|ecran|scherm',
+     cue: "Panoramic roof wording", why: "Excludes 'panoramic view' cameras and screens. Seller-entered site tags can be inflated: check the ad text."}
+  - {option: premium_audio, kind: text, implies: "yes", validated: null,
+     match: 'harman|kardon|sonos|dynaudio|canton[^.;\n]{0,20}(sound|audio|system|lautsprecher|enceintes|haut-parleurs|altavoces|colunas|speaker)|(sound|audio)[^.;\n]{0,15}canton|premium sound',
+     cue: "Premium audio brand", why: "'Canton' alone is also a place name in FR/LU/BE ads, so it needs an audio word next to it."}
+  - {option: heat_pump, kind: text, implies: "yes", validated: null,
+     match: 'warmepumpe|pompe a chaleur|warmtepomp|bomba de calor|pompa di calore|heat ?pump|\br744\b|\b9m3\b|tepelne cerpadlo',
+     cue: "Heat pump wording, R744, or PR code 9M3", why: "Explicit mention. Never infer it from a trim name."}
+  - {option: hud, kind: text, implies: "yes", validated: null,
+     match: 'head[- ]?up|\bhud\b|affichage tete haute|vision tete haute|\bar-?hud\b', cue: "HUD wording", why: "Explicit."}
+  - {option: camera_360, kind: text, implies: "yes", validated: null,
+     match: 'area view|rundumsicht|top view|(camera|kamera|camara|cam|view|vision|vue|vista)[^.;\n]{0,12}360|360\s?(°|grad|graus|gradi|degree)?[^.;\n]{0,10}(camera|kamera|camara|cam|view|vision|vue|vista)',
+     cue: "360 camera wording", why: "'360' alone also appears in ranges and prices."}
+  - {option: adaptive_cruise, kind: text, implies: "yes", validated: null,
+     match: '\bacc\b|adaptive?[^.;\n]{0,12}(cruise|tempomat|geschwindigkeits)|abstandsregel|regulateur[^.;\n]{0,20}adaptatif|adaptieve cruise|crucero adaptativo|cruise control adatt|cruise control adaptativo|travel assist',
+     cue: "ACC wording", why: "Travel Assist includes ACC."}
+  - {option: matrix_led, kind: text, implies: "yes", validated: null,
+     match: 'matrix|iq\.?\s?light', cue: "Matrix wording", why: "Explicit."}
+  - {option: keyless, kind: text, implies: "yes", validated: null,
+     match: 'keyless|kessy|advanced key|komfortschliess|acces sans cle|entrada sin llave|accesso senza chiave|acesso sem chave|smart entry',
+     cue: "Keyless wording", why: "Explicit."}
+  - {option: keyless, kind: text, implies: "yes", validated: null, families: ["Audi Q4 e-tron", "Audi Q4 Sportback e-tron"],
+     match: 'sensorgesteuert|kick|fussbewegung|hands-?free[^.;\n]{0,15}(tailgate|hayon|heckklappe)',
+     cue: "Sensor/kick-opening tailgate on a Q4", why: "Audi kick opening (4E6) requires keyless entry (4K5)."}
+  - {option: towbar, kind: text, implies: "yes", validated: null,
+     match: '\bahk\b|anhangerkupplung|anhaengerkupplung|towbar|tow bar|attelage|trekhaak|gancio (di )?traino|bola de remolque|enganche|gancho de reboque',
+     cue: "Towbar wording", why: "Explicit."}
+  - {option: heated_seats, kind: text, implies: "yes", validated: null,
+     match: 'sitzheizung|beheizbare (vorder)?sitze|sieges? chauffants?|stoelverwarming|asientos? calefact|bancos? aquecidos|sedili riscaldati|heated (front )?seats',
+     cue: "Heated-seat wording", why: "Explicit. Standard on Q4 MY24+."}
+  - {option: ventilated_seats, kind: text, implies: "yes", validated: null,
+     match: 'sitzbel(u|ue)ftung|bel(u|ue)ftete (vorder)?sitze|sieges? ventiles|stoelventilatie|geventileerde stoelen|asientos? ventilados|bancos? ventilados|sedili ventilati|ventilated seats',
+     cue: "Ventilated-seat wording", why: "Explicit."}
+  - {option: massage_seats, kind: text, implies: "yes", validated: null,
+     match: 'massage|masaje|massagem|massaggio', cue: "Massage wording", why: "Explicit."}
+
+  # ---------------- Text cues: trim / package names ----------------
+  # VW
+  - {option: electric_seats, kind: text, implies: "yes", validated: null, families: ["VW ID.4", "VW ID.5"],
+     match: 'limited edition plus|style max|pro black|style pack|black style',
+     cue: "NL Pro Limited Edition Plus / FR Style Max (06/2025+) / ES Pro Black (08/2025+) / IT Style Pack (MY26) / PT Black Style",
+     why: "These trims bundle Top-Sport ergoActive e-seats + memory + massage + pano + e-tailgate. PT Black Style contents unverified. DE BLACK EDITION is styling only (not matched)."}
+  - {option: memory_seats, kind: text, implies: "yes", validated: null, families: ["VW ID.4", "VW ID.5"],
+     match: 'limited edition plus|style max|pro black|style pack|black style', cue: "Same trims", why: "Same bundle."}
+  - {option: pano, kind: text, implies: "yes", validated: null, families: ["VW ID.4", "VW ID.5"],
+     match: 'limited edition plus|style max|pro black|style pack|black style', cue: "Same trims", why: "Same bundle."}
+  - {option: power_tailgate, kind: text, implies: "yes", validated: null, families: ["VW ID.4", "VW ID.5"],
+     match: 'limited edition plus|style max|pro black|style pack|black style', cue: "Same trims", why: "Same bundle."}
+  - {option: power_tailgate, kind: text, implies: "yes", validated: "14/16", families: ["VW ID.4", "VW ID.5"],
+     match: 'life max', cue: "FR Life Max", why: "Pack Design + e-tailgate + Hamar 19in."}
+  - {option: electric_seats, kind: text, implies: "no", validated: "8/8", families: ["VW ID.4", "VW ID.5"], year_to: 2024,
+     match: 'life max', unless: 'style max',
+     cue: "FR Life Max registered 2024 or earlier",
+     why: "Manual seats; 2025+ Life Max can carry the Style Max option (e-seats + pano)."}
+  - {option: power_tailgate, kind: text, implies: "yes", validated: "4/4", families: ["VW ID.4", "VW ID.5"],
+     match: 'pro business', cue: "BE Pro Business", why: "Matrix, 3D tails, e-tailgate, privacy glass."}
+  - {option: premium_audio, kind: text, implies: "yes", validated: null, families: ["VW ID.4", "VW ID.5"],
+     match: 'pro business premium', cue: "BE Pro Business Premium", why: "Adds HK + AR-HUD + Area View. No pano or e-seats at any BE fleet level."}
+  - {option: power_tailgate, kind: text, implies: "yes", validated: "1/1", families: ["VW ID.4", "VW ID.5"],
+     match: 'pro mas\b', cue: "ES Pro Mas (01/2024-08/2025)", why: "Matrix + light bar, privacy glass, e-tailgate."}
+  - {option: power_tailgate, kind: text, implies: "yes", validated: null, families: ["VW ID.4", "VW ID.5"],
+     match: 'edition plus|pro urban|\bgoal\b|\benergy\b|\bmove\b', unless: 'limited edition\b(?! plus)',
+     cue: "IT Pro Edition Plus / PT PRO Urban / DE GOAL, ENERGY, MOVE",
+     why: "These trims include the e-tailgate. DE specials have no Matrix; e-seats/pano only if ticked separately."}
+  - {option: power_tailgate, kind: text, implies: "no", validated: "2/2", families: ["VW ID.4", "VW ID.5"],
+     match: 'limited edition', unless: 'limited edition plus',
+     cue: "NL Pro Limited Edition (without Plus), MY25", why: "No Matrix, no e-tailgate."}
+  - {option: power_tailgate, kind: text, implies: "yes", validated: null, families: ["VW ID.4", "VW ID.5"],
+     match: 'iq\.?\s?drive|assist(ance|enz)[- ]?(paket |pack(et)? )?plus|easy open', cue: "IQ.DRIVE / Assistance Plus package named",
+     why: "MY24-26 bundle: e-tailgate + Area View + Travel Assist. Not DE MY27."}
+  - {option: premium_audio, kind: text, implies: "yes", validated: null, families: ["VW ID.4", "VW ID.5"],
+     match: 'infotainment[- ]?(paket |pack(et)? )?plus|multimedia pakket plus', cue: "Infotainment Plus named", why: "HK + AR-HUD + navigation."}
+  - {option: hud, kind: text, implies: "yes", validated: null, families: ["VW ID.4", "VW ID.5"],
+     match: 'infotainment[- ]?(paket |pack(et)? )?plus|multimedia pakket plus', cue: "Infotainment Plus named", why: "HK + AR-HUD + navigation."}
+  - {option: matrix_led, kind: text, implies: "yes", validated: null, families: ["VW ID.4", "VW ID.5"],
+     match: 'design[- ]?(paket|pack|pakket)|pack design', cue: "Design pack named", why: "Matrix + light bar + 3D tails."}
+  # Audi
+  - {option: power_tailgate, kind: text, implies: "yes", validated: "20/20", families: ["Audi Q4 e-tron", "Audi Q4 Sportback e-tron"], year_from: 2024,
+     match: '\b45\b|\b50\b', cue: "Q4 45/50, MY24+", why: "E-tailgate (4E7) standard on every MY24+ trim."}
+  - {option: electric_seats, kind: text, implies: "yes", validated: null, families: ["Audi Q4 e-tron", "Audi Q4 Sportback e-tron"],
+     match: 'komfortpaket plus|comfortpakket plus|comfort pack|\bpyy\b|\bpv3\b', cue: "Komfortpaket plus / PYY (MY24-26) / PV3 (MY27) / UK Comfort Pack",
+     why: "Only route to Q4 e-seats; option on every trim. Plain 'Komfortpaket' (PYA) has no e-seats."}
+  - {option: memory_seats, kind: text, implies: "yes", validated: null, families: ["Audi Q4 e-tron", "Audi Q4 Sportback e-tron"],
+     match: 'komfortpaket plus|comfortpakket plus|comfort pack|\bpyy\b|\bpv3\b', cue: "Same packages", why: "Driver seat + mirror memory included."}
+  - {option: premium_audio, kind: text, implies: "yes", validated: null, families: ["Audi Q4 e-tron", "Audi Q4 Sportback e-tron"],
+     match: '\bavus\b|mmi experience pro', cue: "FR Avus / MY27 MMI experience pro", why: "Avus bundles Sonos + AR-HUD + hands-free tailgate; MY27 Sonos sits inside MMI experience pro."}
+  - {option: hud, kind: text, implies: "yes", validated: null, families: ["Audi Q4 e-tron", "Audi Q4 Sportback e-tron"],
+     match: '\bavus\b|mmi navigation pro|\bpyh\b', cue: "FR Avus / MMI Navigation pro (MY24-26)", why: "AR-HUD only inside PYH on MY24-26."}
+  - {option: heated_seats, kind: text, implies: "yes", validated: null, families: ["Audi Q4 e-tron", "Audi Q4 Sportback e-tron"], year_from: 2024,
+     match: '\b45\b|\b50\b', cue: "Q4 MY24+", why: "Heated front seats standard from MY24."}
+  # Skoda
+  - {option: electric_seats, kind: text, implies: "yes", validated: "5/5", families: ["Skoda Enyaq", "Skoda Enyaq Coupe"],
+     match: 'sportline|laurin|\bl ?& ?k\b|business edition|selection plus',
+     cue: "Sportline / pre-facelift L&K / NL Business Edition / PT Selection Plus",
+     why: "Plus content: driver e-seat with memory (+ massage on facelift). Facelift DE 'L&K' is an interior pack only."}
+  - {option: memory_seats, kind: text, implies: "yes", validated: null, families: ["Skoda Enyaq", "Skoda Enyaq Coupe"],
+     match: 'sportline|laurin|\bl ?& ?k\b|business edition|selection plus', cue: "Same trims", why: "Plus package."}
+  - {option: power_tailgate, kind: text, implies: "yes", validated: "3/3", families: ["Skoda Enyaq", "Skoda Enyaq Coupe"],
+     match: 'sportline|laurin|\bl ?& ?k\b|business edition|\bclever\b', cue: "Sportline / L&K / NL Business Edition / FR Clever",
+     why: "Clever (facelift) and Plus (pre-facelift) carry the e-tailgate. PT Selection Plus tailgate not stated."}
+  - {option: electric_seats, kind: text, implies: "yes", validated: null, families: ["Skoda Enyaq", "Skoda Enyaq Coupe"], year_from: 2025,
+     match: '\bplus\b', unless: 'business edition plus',
+     cue: "'Plus' in a facelift title (reg >= 2025-04 or MY26+)",
+     why: "Facelift FR/DE Plus = driver e-seat memory + massage. Pre-facelift 'Plus' titles are unreliable (a pre-facelift FR 'Plus' car was base, 2026-11-04)."}
+  - {option: electric_seats, kind: text, implies: "yes", validated: null, families: ["Skoda Enyaq", "Skoda Enyaq Coupe"],
+     match: '\bmaxx\b', cue: "Maxx package", why: "Both front e-seats with memory (+ massage), DCC."}
+  - {option: hud, kind: text, implies: "yes", validated: null, families: ["Skoda Enyaq", "Skoda Enyaq Coupe"],
+     match: '\badvanced\b|\bmaxx\b|business upgrade', cue: "Advanced / Maxx package", why: "AR-HUD + Canton (+ Plus content, nested)."}
+  - {option: premium_audio, kind: text, implies: "yes", validated: null, families: ["Skoda Enyaq", "Skoda Enyaq Coupe"],
+     match: '\badvanced\b|\bmaxx\b|business upgrade', cue: "Advanced / Maxx package", why: "Canton in Advanced (nested into Maxx)."}
+  - {option: electric_seats, kind: text, implies: "no", validated: "3/4", families: ["Skoda Enyaq", "Skoda Enyaq Coupe"],
+     match: '\bloft\b', unless: 'plus|sportline|maxx|advanced',
+     cue: "Plain Loft design selection, no package named", why: "Base interior; the miss had Plus added without saying so."}
+  - {option: pano, kind: text, implies: "yes", validated: "3/3", families: ["Skoda Enyaq Coupe"],
+     match: 'coupe', cue: "Enyaq Coupe", why: "Every Coupe has the fixed glass roof, but no factory blind (SUV pano has an electric blind)."}
+  - {option: heat_pump, kind: text, implies: "yes", validated: null, families: ["Skoda Enyaq", "Skoda Enyaq Coupe"],
+     match: '\bphc\b', cue: "Skoda sales package PHC", why: "Heat pump package. Heat pump is std on DE/CH Enyaq, optional in NL/FR/SK."}
+
+pr_codes:
+  # Read by family (first two characters): one code per family per car. conf: confirmed | family (code family confirmed, exact code for this model not) | probable
+  "3FU": {option: pano, implies: "yes", conf: confirmed, note: "Audi Q4 Panoramadach. Skoda: 3FU or 3FG."}
+  "3FG": {option: pano, implies: "yes", conf: confirmed, note: "VW ID.4/5 Panorama-Glasdach with electric blind."}
+  "3FA": {option: pano, implies: "no", conf: confirmed, note: "No roof opening."}
+  "4E6": {option: power_tailgate, implies: "yes", conf: confirmed, note: "Electric open/close with sensor release (Audi kick, Skoda Virtual Pedal). Needs keyless on Audi."}
+  "4E7": {option: power_tailgate, implies: "yes", conf: family, note: "Electric tailgate (Q4 MY24+ standard)."}
+  "4E0": {option: power_tailgate, implies: "no", conf: family, note: "Manual (4E2, 4E5 also manual)."}
+  "4E2": {option: power_tailgate, implies: "no", conf: family}
+  "4E5": {option: power_tailgate, implies: "no", conf: family}
+  "5I6": {option: power_tailgate, implies: "yes", conf: confirmed, note: "VW LU standalone e-tailgate (sales code)."}
+  "3L5": {option: electric_seats, implies: "yes", conf: confirmed, note: "Audi: electric front seats, no memory by itself (memory = AI1)."}
+  "3L4": {option: memory_seats, implies: "yes", conf: family, note: "VW/Skoda: electric seats with memory (3L4/3L6/3L7/3L8)."}
+  "3L6": {option: memory_seats, implies: "yes", conf: family}
+  "3L7": {option: memory_seats, implies: "yes", conf: family}
+  "3L8": {option: memory_seats, implies: "yes", conf: family}
+  "3L0": {option: electric_seats, implies: "no", conf: family, note: "3L0-3L3 = manual seats."}
+  "3L1": {option: electric_seats, implies: "no", conf: family}
+  "3L2": {option: electric_seats, implies: "no", conf: family}
+  "3L3": {option: electric_seats, implies: "no", conf: family}
+  "AI1": {option: memory_seats, implies: "yes", conf: confirmed, note: "Audi driver seat + mirror memory (with 3L5)."}
+  "1R3": {option: memory_seats, implies: "yes", conf: confirmed, note: "VW DE component code: ergoActive memory."}
+  "8I6": {option: massage_seats, implies: "yes", conf: confirmed, note: "VW DE component code: massage."}
+  "7P1": {option: null, conf: confirmed, note: "Electric 4-way lumbar only. NOT electric seats."}
+  "9VS": {option: premium_audio, implies: "yes", conf: confirmed, note: "Audi SONOS. VW HK / Skoda Canton may also use 9VS (unverified)."}
+  "9VG": {option: premium_audio, implies: "yes", conf: probable, note: "VW DE component code for Harman Kardon; possibly Skoda Canton."}
+  "9VD": {option: premium_audio, implies: "no", conf: confirmed, note: "Audi basic sound system."}
+  "9M3": {option: heat_pump, implies: "yes", conf: confirmed, note: "Audi, Skoda confirmed; VW family-level."}
+  "9M8": {option: heat_pump, implies: "yes", conf: confirmed, note: "Audi MY27 heat pump."}
+  "KK2": {option: heat_pump, implies: "yes", conf: confirmed, note: "Refrigerant R744 => heat pump."}
+  "KK3": {option: heat_pump, implies: "no", conf: confirmed, note: "Refrigerant R1234yf => no heat pump."}
+  "8IV": {option: matrix_led, implies: "yes", conf: confirmed, note: "VW Matrix IQ.Light."}
+  "8IR": {option: matrix_led, implies: "no", conf: confirmed, note: "VW plain LED."}
+  "KS3": {option: hud, implies: "yes", conf: confirmed, note: "AR-HUD (VW DE component code; Audi MY27 standalone)."}
+  "4K5": {option: keyless, implies: "yes", conf: confirmed, note: "Audi keyless entry."}
+  # Sales package codes: in price lists and dealer printouts; the sticker sometimes lists them too.
+  "PYY": {option: electric_seats, implies: "yes", conf: confirmed, note: "Audi Komfortpaket plus: e-seats + driver memory (sticker shows 3L5 + 7P1 + 6XL)."}
+  "PYA": {option: electric_seats, implies: "no", conf: confirmed, note: "Audi Komfortpaket WITHOUT e-seats/memory."}
+  "PV3": {option: memory_seats, implies: "yes", conf: confirmed, note: "Audi MY27 e-seats with memory (needs Tech)."}
+  "PXC": {option: matrix_led, implies: "yes", conf: confirmed, note: "Audi Matrix LED package."}
+  "PYH": {option: hud, implies: "yes", conf: confirmed, note: "Audi MMI Navigation pro (AR-HUD) MY24-26; MY27 PYH includes Sonos."}
+  "PZC": {option: camera_360, implies: "yes", conf: confirmed, note: "Audi Fahren & Parken pro (360 cameras)."}
+  "PYL": {option: adaptive_cruise, implies: "yes", conf: confirmed, note: "Audi Fahren & Parken plus (ACC, rear camera)."}
+  "PAD": {option: electric_seats, implies: "yes", conf: confirmed, note: "VW Interior Style Plus (also PAF, PAJ, WAJ): e-seats + memory + massage."}
+  "PAF": {option: electric_seats, implies: "yes", conf: confirmed}
+  "PAJ": {option: electric_seats, implies: "yes", conf: confirmed}
+  "WAJ": {option: electric_seats, implies: "yes", conf: confirmed}
+  "PAG": {option: electric_seats, implies: "yes", conf: confirmed, note: "VW Top-Sport Plus (also PAH, PAK, WAK): e-seats + memory + massage."}
+  "PAH": {option: electric_seats, implies: "yes", conf: confirmed}
+  "PAK": {option: electric_seats, implies: "yes", conf: confirmed}
+  "WAK": {option: electric_seats, implies: "yes", conf: confirmed}
+  "RD3": {option: premium_audio, implies: "yes", conf: confirmed, note: "VW Infotainment Plus MY24 (HK + AR-HUD). RD9 MY25+, RB2 NL MY27."}
+  "RD9": {option: premium_audio, implies: "yes", conf: confirmed}
+  "RB2": {option: premium_audio, implies: "yes", conf: confirmed}
+  "WD5": {option: power_tailgate, implies: "yes", conf: confirmed, note: "VW Assistance Plus / IQ.DRIVE MY24-26 (also WD6, WD9, PE9): e-tailgate + Area View + Travel Assist."}
+  "WD6": {option: power_tailgate, implies: "yes", conf: confirmed}
+  "WD9": {option: power_tailgate, implies: "yes", conf: confirmed}
+  "PE9": {option: power_tailgate, implies: "yes", conf: confirmed}
+  "PA2": {option: matrix_led, implies: "yes", conf: confirmed, note: "VW Design pack (PA6 later)."}
+  "PA6": {option: matrix_led, implies: "yes", conf: confirmed}
+  "PA5": {option: pano, implies: "yes", conf: confirmed, note: "VW Design Plus MY24 (IT/FR/ES): Matrix + pano."}
+  "WPU": {option: heat_pump, implies: "yes", conf: confirmed, note: "VW heat pump option (also WPX)."}
+  "WPX": {option: heat_pump, implies: "yes", conf: confirmed}
+  "PHC": {option: heat_pump, implies: "yes", conf: confirmed, note: "Skoda heat pump package."}
+  "WHR": {option: power_tailgate, implies: "yes", conf: confirmed, note: "Skoda pre-facelift Plus: e-tailgate + driver e-seat memory + Matrix."}
+  "WHS": {option: premium_audio, implies: "yes", conf: confirmed, note: "Skoda pre-facelift Advanced (includes Plus): Crystal Face, AR-HUD, Canton."}
+  "WHT": {option: electric_seats, implies: "yes", conf: confirmed, note: "Skoda pre-facelift Maxx: both front e-seats with memory, driver massage, Area View."}
+
+fallback_ask: >-
+  When the photos and text leave e-seats, tailgate, pano or audio unknown, ask the seller once for a photo of the
+  vehicle data sticker ("Fahrzeugdatenträger"): a white label with the VIN, paint/interior codes and a block of
+  3-character PR codes. On MEB cars it is in the boot, stuck to the metal under the boot floor panel (often the only
+  copy; MEB has no paper service book, though some dealers stick a copy on the handover page of the owner's manual).
+  A selling dealer can instead print the factory equipment list ("Fahrzeugdaten", PR list) from the VIN in a minute.
+  Decode it for free by typing the codes into https://oemwolf.com/wiki/pr/?search=3FU+9M3+4E6 (space-separated codes,
+  '+' in the URL; generic VAG meanings, so cross-check with pr_codes above). Optional second photo: the A/C refrigerant
+  label under the bonnet (R744 = heat pump). Registration documents and the CoC carry no option list, the
+  infotainment shows no equipment list, and no free VIN decoder returned options for 2023+ MEB cars (tested
+  2026-11-04; paid ETKA-based lookups start around EUR 6 per VIN).
+fallback_ask_i18n:
+  en: "Could you please send a photo of the vehicle data sticker with the PR codes? It's a white label with the VIN and many 3-character codes, usually under the boot floor panel, sometimes in the owner's/service booklet. If you're a dealer, the factory equipment printout by VIN works too."
+  de: "Könnten Sie mir bitte ein Foto des Fahrzeugdatenträgers mit den PR-Nummern schicken? Weißer Aufkleber mit FIN und vielen dreistelligen Codes, meist unter dem Kofferraumboden, manchmal in der Betriebsanleitung/im Serviceheft. Als Händler gerne auch den Fahrzeugdaten-Ausdruck (Ausstattung zur FIN)."
+  fr: "Pourriez-vous m'envoyer une photo de l'étiquette des données du véhicule avec les codes PR ? Autocollant blanc avec le VIN et des codes à 3 caractères, en général sous le plancher du coffre, parfois dans la notice/le carnet. Pour un professionnel, la fiche d'équipement d'origine par VIN convient aussi."
+  es: "¿Podría enviarme una foto de la etiqueta de datos del vehículo con los códigos PR? Es una pegatina blanca con el bastidor y muchos códigos de 3 caracteres, normalmente bajo el piso del maletero, a veces en el manual/libro de mantenimiento. Si es concesionario, también sirve el listado de equipamiento de fábrica por bastidor."
+  nl: "Kunt u een foto sturen van de voertuiggegevenssticker met de PR-codes? Een witte sticker met het VIN en veel codes van 3 tekens, meestal onder de laadvloer van de kofferbak, soms in het instructie-/onderhoudsboekje. Als dealer mag ook de uitdraai van de fabrieksuitrusting op VIN."
+  it: "Potrebbe inviarmi una foto dell'etichetta dati del veicolo con i codici PR? È un adesivo bianco con il telaio e molti codici di 3 caratteri, di solito sotto il piano del bagagliaio, a volte nel libretto d'uso/manutenzione. Se è un concessionario, va bene anche la stampa della dotazione di fabbrica da telaio."
+  pt: "Pode enviar-me uma fotografia da etiqueta de dados do veículo com os códigos PR? É um autocolante branco com o VIN e muitos códigos de 3 caracteres, normalmente debaixo do piso da bagageira, às vezes no manual/livro de manutenção. Se for stand, também serve a listagem do equipamento de fábrica pelo VIN."
+
+rules:
+  - rule: "Interior photo cues beat everything, including a dealer's 'full' equipment list."
+    why: "88 photo/text pairs agreed, 5 disagreed, and the photo was right in all 5 (lists missed memory twice, pano once, tailgate once)."
+  - rule: "Silence is not a no: a missing option in photos or a short list stays unknown; only a long structured list that lacks it is a (weak) no."
+    why: "Sellers of manual-seat cars rarely photograph the seat side; coverage was seat side 57%, headliner 30%, speaker logo 24%, tailgate button 18%."
+  - rule: "On VW and Audi the wanted options are standalone packages, not trims; on Skoda the packages nest (Clever < Plus < Advanced < Maxx), so a visible trim cue carries seats + tailgate."
+    why: "E-seat base rate 9/58 (VW 4/31, Audi 1/19, Skoda 4/8); Skoda Sportline/lit grille scored 5/5."
+  - rule: "Exterior trim cues mostly fail for equipment: ignore Audi arch colour and S line badges for e-seats."
+    why: "Audi painted/grey arches -> e-seats 0/14; S line -> e-seats 1/14. Manhattan-grey contrast paint is standard on advanced and S line; body colour is a EUR 250 option; e-seats need Komfortpaket plus on any trim."
+  - rule: "Audi black textured arches = base exterior; use only as a reason to check options, never to rank or skip."
+    why: "9/9 had no e-seats, but 18/19 Audis had none anyway; well-equipped cars with unpainted bumpers exist (buyer correction, 2026-11-04)."
+  - rule: "VW arch cladding, privacy glass and a 'no light bar' front say nothing."
+    why: "Arch cladding is black on every Pro; no light bar -> no e-tailgate was 3/8 (worse than a coin)."
+  - rule: "VW black Bergen wheels do not mean pano."
+    why: "6/16: only ES Pro Black, FR Style Max and IT Style Pack carry pano; NL Limited Edition and DE BLACK EDITION use the same wheels without it."
+  - rule: "VW separate headrests do not mean manual seats."
+    why: "22/26 'no e-seats' equals the 27/31 base rate; Interior Style Plus e-seats keep separate headrests."
+  - rule: "A VW tailgate switch on the driver door card is not e-tailgate evidence; only the close button on the tailgate trim is."
+    why: "The door switch also appears on manual-tailgate cars."
+  - rule: "A lit front VW logo is aftermarket."
+    why: "Not offered on ID.4/ID.5 in any DE/FR/IT/ES/LU/NL list."
+  - rule: "Heat pump: never infer from a trim or package name; text, R744 label or PR code only."
+    why: "Standalone option on every VW and Audi trim (Audi dropped it from 02/2023 production, back for MY24); standard on Skoda DE/CH, optional NL/FR/SK."
+  - rule: "11 kW AC is not a filter on these cars."
+    why: "Standard on ID.4/ID.5 Pro, Q4 45 and Enyaq 85; only the Q4 35 had 7.2 kW."
+  - rule: "Audi Q4 45 MY24+: don't score the e-tailgate, it is standard."
+    why: "20/20 in validation; 4E7 standard on all trims."
+  - rule: "Audi MY27 cars: black arches and a frameless mirror are standard, so neither is a signal."
+    why: "MY27 price lists."
+  - rule: "VW: an e-seat always means memory + massage (EU MY24+); HK always means AR-HUD and vice versa."
+    why: "Interior Style Plus / Top-Sport Plus and Infotainment Plus bundles."
+  - rule: "Enyaq Coupe always has a glass roof but no factory blind; an SUV pano comes with an electric blind."
+    why: "Score accordingly if a blind matters."
+  - rule: "Pre-facelift Skoda 'Plus' in an ad title is not evidence of the Plus package."
+    why: "A pre-facelift FR 'Plus' car turned out to be a base car (2026-11-04)."
+  - rule: "Drive: read the ad title/text first (4Motion, quattro, AWD, 85x, Allrad, 4x4), variant rules second; check badges in photos."
+    why: "2026-11-04: an 'ID.4 Pro Life Max' was 4Motion in its title while the DB said rwd; a Q4 showed a quattro badge in its photos."
+  - rule: "A site body category 'SUV / 4x4' is not a drive assertion."
+    why: "FR sites label every SUV 'SUV 4x4'; the drive backfill strips it before matching."
+  - rule: "Trust stated power over registration year around the MY24 switch."
+    why: "VW/Audi 286 hp arrived with MY24 (orders from ~09-10/2023); late-2023 regs can be either 204 or 286 hp. A rotary drive selector on the VW cockpit pod = pre-MY24 150 kW car."
+  - rule: "Fetch the full photo gallery before judging options."
+    why: "2026-11-04: 47 of 89 ID.4/ID.5 286 hp ads had one stored photo, so the seat-side check could not run."
+  - rule: "Seller-entered site tags are noisy; prefer ad prose and photos."
+    why: "Marketplace 'panorama roof' and 'electric seat' tags were found inflated on other models (sunroof or display counted as pano)."
+  - rule: "20in/21in wheels are a small comfort minus, and a weak 'options ticked' signal."
+    why: "All 20-21in Q4 wheels are staggered; 21in Narvik on VW is a EUR 1,000-2,400 option."
+  - rule: "UK (RHD) ads use different trim/package names (e.g. Audi 'Comfort Pack', Skoda 'SE L/Edition'); map with care or skip."
+    why: "Research tables are LHD EU markets."
