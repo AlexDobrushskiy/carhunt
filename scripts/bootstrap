@@ -1,0 +1,178 @@
+#!/usr/bin/env bash
+# carhunt bootstrap: clone -> ready for `carhunt doctor` and a first sweep. Idempotent: re-run any time.
+# Steps owned by other modules run their entry points when present and are skipped with a warning when not.
+set -euo pipefail
+
+usage() {
+  cat <<'USAGE'
+usage: scripts/bootstrap [--dry-run] [--yes] [--skip-mcp] [--skip-browsers-launchd] [--skip-compose]
+                         [--extras all|core,...]
+  --dry-run                print every step and the commands it would run; change nothing
+  --yes                    no questions (MCP registration counts as "yes" unless --skip-mcp)
+  --skip-mcp               don't register MCP servers with Claude Code
+  --skip-browsers-launchd  don't install the browsers' launchd jobs
+  --skip-compose           don't start cardb + web with docker compose
+  --extras LIST            pip extras to install (default: all)
+env: CARHUNT_HOME (default ~/.carhunt), CLAUDE_CONFIG_DIR (default ~/.claude), CARHUNT_BIN_DIR (default ~/.local/bin)
+USAGE
+}
+
+DRY=0 YES=0 SKIP_MCP=0 SKIP_LAUNCHD=0 SKIP_COMPOSE=0 EXTRAS=all
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --dry-run) DRY=1 ;;
+    --yes|-y) YES=1 ;;
+    --skip-mcp) SKIP_MCP=1 ;;
+    --skip-browsers-launchd) SKIP_LAUNCHD=1 ;;
+    --skip-compose) SKIP_COMPOSE=1 ;;
+    --extras) shift; EXTRAS=${1:?--extras needs a value} ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "unknown option: $1" >&2; usage >&2; exit 2 ;;
+  esac
+  shift
+done
+
+REPO=$(cd "$(dirname "$0")/.." && pwd)
+CH=${CARHUNT_HOME:-$HOME/.carhunt}
+CLAUDE_DIR=${CLAUDE_CONFIG_DIR:-$HOME/.claude}
+BIN_DIR=${CARHUNT_BIN_DIR:-$HOME/.local/bin}
+VENV=$REPO/.venv
+CARHUNT=$VENV/bin/carhunt
+TOTAL=15 N=0 WARNED=0
+
+step() { N=$((N + 1)); printf '\n[%d/%d] %s\n' "$N" "$TOTAL" "$1"; }
+say() { printf '    %s\n' "$*"; }
+warn() { WARNED=$((WARNED + 1)); printf '    warn: %s\n' "$*"; }
+# run CMD...: execute, or only show it in --dry-run
+run() {
+  if [ "$DRY" = 1 ]; then say "would run: $*"; else say "\$ $*"; "$@"; fi
+}
+have() { command -v "$1" >/dev/null 2>&1; }
+ask() {  # ask "question" -> 0 = yes
+  [ "$YES" = 1 ] && return 0
+  [ "$DRY" = 1 ] && { say "would ask: $1 [y/N]"; return 1; }
+  printf '    %s [y/N] ' "$1"; read -r ans </dev/tty || ans=
+  case "$ans" in y|Y|yes) return 0 ;; *) return 1 ;; esac
+}
+
+echo "carhunt bootstrap$([ "$DRY" = 1 ] && echo ' (dry run: nothing changes)')"
+echo "repo $REPO · home $CH"
+
+step "Prerequisites (macOS, Homebrew, agterm, Claude Code, Docker)"
+[ "$(uname -s)" = Darwin ] && say "macOS: ok" || warn "macOS only in v1 (docs/design.md D1)"
+for t in brew agterm claude docker; do
+  if have "$t" || { [ "$t" = agterm ] && { have agtermctl || [ -d /Applications/agterm.app ]; }; }; then say "$t: ok"
+  else
+    case "$t" in
+      brew) warn "Homebrew missing: https://brew.sh" ;;
+      agterm) warn "agterm missing (required for agent sessions): https://github.com/umputun/agterm" ;;
+      claude) warn "Claude Code missing: https://claude.com/claude-code" ;;
+      docker) warn "Docker missing (cardb + web run in compose): Docker Desktop or OrbStack" ;;
+    esac
+  fi
+done
+
+step "Homebrew packages (go node@22 python@3.12 uv gitleaks jq shfmt)"
+node_major() { node -v 2>/dev/null | sed -E 's/^v([0-9]+).*/\1/'; }
+for pair in go:go node@22:node python@3.12:python3.12 uv:uv gitleaks:gitleaks jq:jq shfmt:shfmt; do
+  f=${pair%%:*} b=${pair#*:}
+  if have "$b" && { [ "$b" != node ] || [ "$(node_major)" -ge 22 ]; }; then say "$f: ok ($(command -v "$b"))"
+  elif have brew && brew list --versions "$f" >/dev/null 2>&1; then say "$f: installed (brew; not on PATH?)"
+  elif have brew || [ "$DRY" = 1 ]; then run brew install "$f"
+  else warn "$f: no Homebrew, install it yourself"; fi
+done
+have wacli || say "wacli (WhatsApp CLI) not found: optional, see docs/contact.md"
+
+step "Python venv + carhunt package (.venv, extras: $EXTRAS)"
+if [ -x "$VENV/bin/python" ]; then say ".venv exists"
+elif have uv || [ "$DRY" = 1 ]; then run uv venv --python 3.12 "$VENV"
+else run python3.12 -m venv "$VENV"; fi
+if have uv || [ "$DRY" = 1 ]; then run uv pip install --python "$VENV/bin/python" -e "$REPO[$EXTRAS]"
+else run "$VENV/bin/pip" install -e "$REPO[$EXTRAS]"; fi
+
+step "carhunt on PATH ($BIN_DIR/carhunt)"
+if [ -L "$BIN_DIR/carhunt" ] && [ "$(readlink "$BIN_DIR/carhunt")" = "$CARHUNT" ]; then say "linked"
+elif [ -e "$BIN_DIR/carhunt" ]; then warn "$BIN_DIR/carhunt exists and is not ours: left alone"
+else run mkdir -p "$BIN_DIR"; run ln -s "$CARHUNT" "$BIN_DIR/carhunt"; fi
+case ":$PATH:" in *":$BIN_DIR:"*) ;; *) say "add $BIN_DIR to PATH in your shell profile" ;; esac
+
+step "Build cardb (db module: make -C cardb build)"
+if [ -f "$REPO/cardb/Makefile" ]; then run make -C "$REPO/cardb" build
+else warn "cardb/Makefile not found: db module not installed, skipped"; fi
+
+step "Web UI dependencies (npm ci in web/)"
+if [ -f "$REPO/web/package-lock.json" ]; then run npm ci --prefix "$REPO/web"
+else warn "web/package-lock.json not found: web module not installed, skipped"; fi
+
+step "Run-data home $CH (mode 700)"
+if [ -d "$CH" ]; then say "exists"; else run mkdir -p "$CH"; fi
+run chmod 700 "$CH"
+
+step "Config $CH/config.yaml (from config.example.yaml, owner.tz = this Mac's zone)"
+SYS_TZ=$(readlink /etc/localtime 2>/dev/null | sed 's#.*/zoneinfo/##' || true)
+if [ -f "$CH/config.yaml" ]; then say "exists: left as is"
+else
+  run cp "$REPO/config.example.yaml" "$CH/config.yaml"
+  if [ -n "$SYS_TZ" ]; then
+    if [ "$DRY" = 1 ]; then say "would set owner.tz: $SYS_TZ"
+    else sed -i '' -E "s#^(  tz: )[^ ]+#\\1$SYS_TZ#" "$CH/config.yaml"; say "owner.tz: $SYS_TZ"; fi
+  fi
+  say "edit it: owner, search, notify (docs/core.md)"
+fi
+
+step "cardb init (data dir, API token into the secrets backend)"
+CARDB_BIN=""
+[ -x "$REPO/cardb/bin/cardb" ] && CARDB_BIN=$REPO/cardb/bin/cardb
+[ -z "$CARDB_BIN" ] && have cardb && CARDB_BIN=$(command -v cardb)
+if [ -n "$CARDB_BIN" ]; then run "$CARDB_BIN" init
+elif [ "$DRY" = 1 ]; then say "would run: cardb init (after the build step)"
+else warn "cardb binary not found: skipped"; fi
+
+step "Start cardb + web (docker compose -f deploy/compose.yaml up -d)"
+if [ "$SKIP_COMPOSE" = 1 ]; then say "skipped (--skip-compose)"
+elif [ ! -f "$REPO/deploy/compose.yaml" ]; then warn "deploy/compose.yaml not found: skipped"
+elif ! have docker && [ "$DRY" = 0 ]; then warn "docker missing: skipped"
+else CARHUNT_HOME=$CH run docker compose -f "$REPO/deploy/compose.yaml" up -d; fi
+
+step "Link skills into $CLAUDE_DIR/skills (carhunt-*; never overwrites your own)"
+found=0
+for d in "$REPO"/skills/carhunt-*; do
+  [ -d "$d" ] || continue
+  found=1; name=$(basename "$d"); dest=$CLAUDE_DIR/skills/$name
+  if [ -L "$dest" ] && [ "$(readlink "$dest")" = "$d" ]; then say "$name: linked"
+  elif [ -e "$dest" ] || [ -L "$dest" ]; then warn "$dest exists and is not our link: left alone"
+  else run mkdir -p "$CLAUDE_DIR/skills"; run ln -s "$d" "$dest"; fi
+done
+[ "$found" = 1 ] || warn "no skills/carhunt-* yet: skipped"
+
+step "Browsers: agent Chrome, lanes, identity pool, MCP servers (browsers/install)"
+if [ -x "$REPO/browsers/install" ]; then
+  args=()
+  [ "$YES" = 1 ] && args+=(--yes)
+  [ "$SKIP_LAUNCHD" = 1 ] && args+=(--skip-launchd)
+  if [ "$SKIP_MCP" = 1 ]; then args+=(--skip-mcp)
+  elif ! ask "Register the carhunt MCP servers (browser lanes) with Claude Code?"; then args+=(--skip-mcp); fi
+  run "$REPO/browsers/install" ${args[@]+"${args[@]}"}
+else warn "browsers/install not found: browsers module not installed, skipped"; fi
+
+step "Agent guard hooks (carhunt hooks install)"
+if [ "$DRY" = 1 ]; then say "would run: carhunt hooks install (if the orchestrate module is installed)"
+elif [ -x "$CARHUNT" ] && "$CARHUNT" hooks --help >/dev/null 2>&1; then run "$CARHUNT" hooks install
+else warn "orchestrate module not installed (no 'carhunt hooks'): skipped"; fi
+
+step "Git privacy hooks (scripts/install-hooks)"
+if git -C "$REPO" rev-parse --git-dir >/dev/null 2>&1; then run "$REPO/scripts/install-hooks"
+else say "not a git checkout: skipped"; fi
+
+step "Doctor"
+if [ "$DRY" = 1 ]; then say "would run: carhunt doctor"
+else CARHUNT_HOME=$CH "$CARHUNT" doctor || say "doctor found problems: fix the FAIL lines above, then re-run scripts/doctor"; fi
+
+printf '\n%s: %d step(s), %d warning(s).\n' "$([ "$DRY" = 1 ] && echo 'dry run done' || echo 'bootstrap done')" "$N" "$WARNED"
+[ "$DRY" = 1 ] || cat <<NEXT
+next:
+  1. edit $CH/config.yaml
+  2. carhunt secret set telegram_bot_token   (optional providers: docs/secrets.md)
+  3. scripts/doctor
+  4. carhunt sweep --sites autoscout24 --dry-run
+NEXT
