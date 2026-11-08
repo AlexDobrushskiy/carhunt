@@ -52,6 +52,7 @@ def test_backend_from_config(write_config, monkeypatch):
     assert b.name == "op" and b.vault == "v"
 
 
+@pytest.mark.keychain
 @pytest.mark.skipif(sys.platform != "darwin", reason="Keychain is macOS-only")
 def test_keychain_round_trip_throwaway_service():
     service = f"carhunt-test-{uuid.uuid4().hex[:10]}"

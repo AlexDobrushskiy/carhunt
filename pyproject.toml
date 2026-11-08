@@ -14,13 +14,18 @@ dependencies = ["pyyaml>=6", "jsonschema>=4.20", "requests>=2.31"]
 
 [project.optional-dependencies]
 core = ["pyyaml>=6", "jsonschema>=4.20", "requests>=2.31"]
-browsers = ["playwright", "camoufox", "opencv-python-headless", "pillow", "numpy"]
-sites = ["cryptography", "beautifulsoup4"]
-discover = ["imagehash", "pillow"]
-contact = []  # stdlib + core (Gmail over REST); site senders also need the browsers extra
-vet = ["markdown"]
-dev = ["pytest>=8", "pytest-cov", "ruff"]
-all = ["carhunt[core,browsers,sites,discover,contact,vet]"]
+# agent browsers: CDP, cookie jar crypto, slider/grid captcha vision
+browsers = ["playwright>=1.47", "websocket-client>=1.8", "cryptography>=42", "numpy>=1.26", "opencv-python-headless>=4.9"]
+# optional browser routes: camoufox (Imperva sites behind a country proxy), curl_cffi (TLS-fingerprinted plain HTTP)
+stealth = ["camoufox>=0.4", "curl_cffi>=0.7"]
+# local image-grid captcha model; heavy (torch), so not in `all`: bootstrap --extras all,captcha
+captcha = ["pillow>=10", "torch>=2.3", "transformers>=4.44", "pyobjc-framework-Quartz>=10; sys_platform == 'darwin'", "pyobjc-framework-Cocoa>=10; sys_platform == 'darwin'"]
+sites = ["cryptography>=42"]
+discover = []
+contact = []
+vet = ["markdown>=3.5"]
+dev = ["pytest>=8", "pytest-cov", "ruff", "jsonschema>=4.20", "pyyaml>=6"]
+all = ["carhunt[core,browsers,stealth,sites,discover,contact,vet,dev]"]
 
 [project.scripts]
 carhunt = "carhunt.cli:main"
@@ -30,9 +35,10 @@ include = ["carhunt*"]
 
 [tool.setuptools.package-data]
 "*" = ["*.json", "*.yaml", "*.md"]
+"carhunt.vet" = ["data/*.csv"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "carhunt"]
 addopts = "-q --import-mode=importlib"
 markers = ["macos: needs macOS (Keychain)"]
 
