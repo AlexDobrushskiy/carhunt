@@ -190,6 +190,17 @@ step_home() {
 
 BOOT_FLAGS=(--yes --skip-mcp --skip-browsers-launchd --skip-compose --skip-schedule)
 
+step_bootstrap_dry() {  # --dry-run must print the plan and change nothing
+  local before after
+  before=$(cd "$HOME" && find . | sort | shasum)
+  "$CLONE/scripts/bootstrap" --dry-run "${BOOT_FLAGS[@]}" >"$LOGS/bootstrap-dry.log" 2>&1 \
+    || { tail -30 "$LOGS/bootstrap-dry.log"; die "bootstrap --dry-run failed"; }
+  after=$(cd "$HOME" && find . | sort | shasum)
+  [ "$before" = "$after" ] || die "bootstrap --dry-run changed files under HOME"
+  [ ! -e "$CLONE/.venv" ] || die "bootstrap --dry-run created .venv"
+  info "$(grep -c 'would ' "$LOGS/bootstrap-dry.log") planned actions, nothing changed"
+}
+
 step_bootstrap() {
   "$CLONE/scripts/bootstrap" "${BOOT_FLAGS[@]}" 2>&1 | tee "$LOGS/bootstrap.log"
   local f
@@ -397,6 +408,7 @@ step_isolation() {  # nothing outside the temp HOME was touched
 
 run_step clone      "git clone into a temp dir"                      step_clone
 run_step home       "temp HOME, scrubbed env, guard stubs"           step_home
+run_step bootstrap-dry "scripts/bootstrap --dry-run changes nothing" step_bootstrap_dry
 run_step bootstrap  "scripts/bootstrap ${BOOT_FLAGS[*]}"             step_bootstrap
 run_step bootstrap2 "bootstrap again (idempotent)"                   step_bootstrap_again
 run_step cardb      "cardb serve on a free port"                     step_cardb
