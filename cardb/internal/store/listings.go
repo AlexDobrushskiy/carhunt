@@ -178,7 +178,7 @@ func observePrice(tx *sql.Tx, l *listingRow, price int, note string, at float64,
 
 // carFields applies the car-level parts of an upsert to an existing car (fill-if-empty unless overwrite).
 // Returns whether identity fields (VIN/plate/seller contacts) changed.
-func carFields(tx *sql.Tx, car *carRow, in *api.ListingUpsert, specs map[string]any, created bool, author string, at float64, lid *int64) (bool, error) {
+func (s *Store) carFields(tx *sql.Tx, car *carRow, in *api.ListingUpsert, specs map[string]any, created bool, author string, at float64, lid *int64) (bool, error) {
 	identity := false
 	if !created {
 		changes, err := writeSpecs(tx, car, specs, in.Overwrite, at)
@@ -200,7 +200,7 @@ func carFields(tx *sql.Tx, car *carRow, in *api.ListingUpsert, specs map[string]
 		identity = v || p
 	}
 	if in.Seller != nil && !created {
-		sid, changed, err := ensureSeller(tx, car.SellerID.Int64, in.Seller, in.Overwrite, false, at)
+		sid, changed, err := s.ensureSeller(tx, car.SellerID.Int64, in.Seller, in.Overwrite, false, at)
 		if err != nil {
 			return false, err
 		}
@@ -288,7 +288,7 @@ func validateUpsert(in *api.ListingUpsert) error {
 	return nil
 }
 
-func sellerProbe(in *api.SellerInput) (phones []string, sellerType string) {
+func sellerProbe(in *api.SellerInput, home string) (phones []string, sellerType string) {
 	sellerType = "unknown"
 	if in == nil {
 		return nil, sellerType
@@ -298,7 +298,7 @@ func sellerProbe(in *api.SellerInput) (phones []string, sellerType string) {
 	}
 	for _, c := range in.Contacts {
 		if c.Kind == "phone" || c.Kind == "whatsapp" {
-			if v := NormalizePhone(c.Value); v != "" {
+			if v := NormalizePhone(c.Value, home); v != "" {
 				phones = append(phones, v)
 			}
 		}
@@ -384,7 +384,7 @@ func (s *Store) UpsertListing(ctx context.Context, in api.ListingUpsert, photos 
 				return err
 			}
 			lid := l.ID
-			if identity, err = carFields(tx, car, &in, specs, false, author, at, &lid); err != nil {
+			if identity, err = s.carFields(tx, car, &in, specs, false, author, at, &lid); err != nil {
 				return err
 			}
 			if !l.SellerID.Valid && car.SellerID.Valid {
@@ -402,7 +402,7 @@ func (s *Store) UpsertListing(ctx context.Context, in api.ListingUpsert, photos 
 				linkedBy = "car_param"
 			} else {
 				p := probeFromSpecs(specs)
-				p.Phones, p.SellerType = sellerProbe(in.Seller)
+				p.Phones, p.SellerType = sellerProbe(in.Seller, s.profile.Owner.Home.Country)
 				for _, ph := range photos {
 					p.PHashes = append(p.PHashes, ph.Prepared.PHash)
 				}
@@ -426,7 +426,7 @@ func (s *Store) UpsertListing(ctx context.Context, in api.ListingUpsert, photos 
 			if carID == 0 {
 				var sellerID int64
 				if in.Seller != nil {
-					if sellerID, _, err = ensureSeller(tx, 0, in.Seller, false, false, at); err != nil {
+					if sellerID, _, err = s.ensureSeller(tx, 0, in.Seller, false, false, at); err != nil {
 						return err
 					}
 				}
@@ -492,7 +492,7 @@ func (s *Store) UpsertListing(ctx context.Context, in api.ListingUpsert, photos 
 					return err
 				}
 			}
-			if identity, err = carFields(tx, car, &in, specs, res.CarCreated, author, at, &lid); err != nil {
+			if identity, err = s.carFields(tx, car, &in, specs, res.CarCreated, author, at, &lid); err != nil {
 				return err
 			}
 			if car.SellerID.Valid && sellerArg == nil {

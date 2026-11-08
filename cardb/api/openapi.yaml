@@ -97,7 +97,7 @@ paths:
           schema: { type: array, items: { type: string } }
           style: form
           explode: true
-          description: "\"To rate\" tier 1|2|3 (see GET /queue); repeatable, comma lists ok (`tier=1,2`), `T1` ok. ORed within, ANDed with other filters. 400 on another value."
+          description: "\"To rate\" tier (GET /profile `tiers`; see GET /queue); repeatable, comma lists ok (`tier=1,2`), `T1` ok. ORed within, ANDed with other filters. 400 on a tier the profile does not define."
         - { name: market, in: query, schema: { type: string, enum: [home, abroad] }, description: "home = country equals owner.home.country" }
         - name: fuel
           in: query
@@ -109,8 +109,8 @@ paths:
         - name: sort
           in: query
           schema: { type: string, enum: [last_activity, price, km, year, distance_km, created, status, model, deal_rank, score], default: last_activity }
-          description: "deal_rank: `T<tier>-<n>` by (tier, n); unparseable values after parseable ones and missing last, in both orders"
-        - { name: order, in: query, schema: { type: string, enum: [asc, desc] }, description: "default desc for last_activity/created/year, asc otherwise" }
+          description: "deal_rank: `T<tier>-<n>` by (tier, n); unparseable values after parseable ones and missing last, in both orders. score: the queue score (GET /queue) of every car; no price = missing, last in both orders"
+        - { name: order, in: query, schema: { type: string, enum: [asc, desc] }, description: "default desc for last_activity/created/year/score, asc otherwise" }
         - { name: limit, in: query, schema: { type: integer, default: 200, maximum: 1000 } }
         - { name: offset, in: query, schema: { type: integer, default: 0 } }
       responses:
@@ -325,15 +325,26 @@ paths:
       summary: "\"To rate\" queue: cars `user` (default owner) has not rated that pass the profile's hard filters, ranked"
       description: |
         Eligible = no verdict from `user`; status not closed/dropped/bought; at least one live listing; and every
-        `search` hard filter of the profile: `year_min`, `price.max_eur`, `km_max`, `countries`, `exclude_regions`
-        (+ `exclude_places`), `powertrain`, and each `hard_filters` rule (field min/max, fact words, flags). A missing
-        value passes (shown as `? year` etc. in `why`). `GET /profile` lists the effective rules.
+        `search` hard filter of the profile: `year_min`, `price.max_eur` (+ `price.min_eur`), `km_max`, `countries`,
+        `exclude_regions` (ISO 3166-2, matched on the city; a known car country must be the region's) + `exclude_places`,
+        `powertrain` (fuels), and each `hard_filters` rule: `field` min/max; `fact`/`facts` + min/max (first number),
+        `words` (folded whole words) or `mentions_country` (country names in EU languages), or truthy; `flag` = a truthy
+        fact of that name or a `price_flags` entry of the car's price listing. A missing value passes (shown as `? year`
+        etc. in `why`). `GET /profile` lists the effective rules.
 
-        Tier = first `search.models` entry whose family + `when` conditions match (else `search.default_tier`, default 3).
-        Score (see DESIGN.md "Ranking"): peer-group fair landed price (median of per-country medians) → value;
-        option/age/km/seller fit; missing-evidence and red-flag risk; `score = w.value·value·fit − w.risk·risk`.
-        Order: tier asc; good_deal first; deal_rank (`T<tier>-<n>`, parsed, unparseable, missing); score desc;
-        landed asc (missing last); created_at desc; id desc.
+        Tier = first `search.models` entry whose family + `when` conditions match (else `search.default_tier`).
+        Ranking (DESIGN.md "Ranking"; every constant is a `search.ranking` key):
+        - landed = price + trip + registration + VAT reserve. Market home = car country == owner.home.country (unknown
+          country counts as home). Distance = car distance (stored, else lat/lon estimate), else
+          `landed_cost.default_distance_km[country]`, else great-circle to the country centroid × road_factor (+ risk).
+        - Peers: pool = live, priced, in scope (price cap aside), no VAT reserve, not closed/dropped, minus outliers;
+          ladder family+trim+year+km band (n ≥ 8) → +year (6) → +trim (3) → family (3), wider steps adjusted for
+          year/km. fair = median of per-country medians (rounded to 50); value = 50 + 2·clamp(gap %, −15, 20).
+        - fit = base_fit + weights.fit × Σ terms (options_wanted ± weight × option_unit, penalties, seller, home market,
+          age, km, history facts): weights.fit scales the terms around base_fit, never base_fit itself.
+        - risk = Σ missing-evidence / warning points; `score = weights.value·value·fit − weights.risk·risk`.
+        Order: tier asc; good_deal first; deal_rank (`T<tier>-<n>`, parsed, unparseable, missing); score desc
+        (missing last); landed asc (missing last); created_at desc; id desc.
       parameters:
         - name: tier
           in: query
@@ -350,7 +361,7 @@ paths:
         - { name: offset, in: query, schema: { type: integer, default: 0 } }
       responses:
         "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Queue" } } } }
-        "400": { $ref: "#/components/responses/Error" }
+        "400": { description: "bad tier/spec/user, or spec without search.must_have", $ref: "#/components/responses/Error" }
 
   /cars/{car}/events:
     parameters: [ { $ref: "#/components/parameters/car" } ]
@@ -1191,8 +1202,8 @@ components:
         car: { $ref: "#/components/schemas/CarSummary" }
         score: { type: number, nullable: true, description: "w.value·value·fit − w.risk·risk, 2 decimals; null when the car has no price" }
         value: { type: number, nullable: true, description: "50 + 2·clamp(gap_pct, −15, 20) (20…90); 50 when there is no peer group" }
-        fit: { type: number, description: "search.fit: base per family + option weights + age/km/seller/history terms (3 decimals)" }
-        risk: { type: number, description: "missing evidence + unknown must-haves + thin peer group + red flags + model risk (2 decimals)" }
+        fit: { type: number, description: "base_fit (search.models entry, else ranking.fit.base_default) + weights.fit × Σ terms (options_wanted, penalties, seller, home market, age, km, history facts); 3 decimals" }
+        risk: { type: number, description: "ranking.risk points: unknown must-have/top wanted options, no VIN/service/owners/accidents/health fact, distance unknown, reseller, VAT reserve, thin peers, wide spread, model risk, red flags, forced price (2 decimals)" }
         risk_reasons: { type: array, items: { type: string }, description: "top contributors, e.g. `no VIN +0.8`" }
         landed: { type: integer, nullable: true, description: "price + trip + registration + VAT reserve (search.landed_cost)" }
         fair_price: { type: integer, nullable: true, description: "peer-group fair asking price: median of per-country medians, rounded to 50" }
@@ -1200,9 +1211,9 @@ components:
         fair_n: { type: integer, description: "peers behind fair_price (0 when null)" }
         fair_basis: { type: string, nullable: true, example: "VW ID.4 · 2024 · <30k km", description: "which fallback step of the peer ladder" }
         price_gap_pct: { type: number, nullable: true, example: 8.4, description: "(fair_landed − landed) / fair_landed × 100, 1 decimal; positive = cheaper than peers" }
-        trim_score: { type: number, description: "numeric `trim_score` fact if present, else Σ search.options_wanted weights (yes +w, no −w)" }
+        trim_score: { type: number, description: "numeric `trim_score` fact if present, else Σ search.options_wanted weights (yes +w, no −w) − penalty weights hit (1 decimal)" }
         trim_score_source: { type: string, enum: [fact, options] }
-        why: { type: string, description: "one line (≤ 160 chars): good-deal note, else known wanted options, gap and unknowns" }
+        why: { type: string, description: "one line (≤ 160 chars): good-deal note, else wanted options known yes/no (by weight), penalties hit, gap vs fair_basis, unknown must-haves and core fields" }
 
     ModelFamilies:
       type: object
@@ -1272,7 +1283,7 @@ components:
           properties:
             name: { type: string }
             tz: { type: string }
-            home: { type: object, properties: { city: { type: string }, country: { type: string }, lat: { type: number }, lon: { type: number } } }
+            home: { type: object, properties: { city: { type: string }, country: { type: string }, lat: { type: number, nullable: true }, lon: { type: number, nullable: true } } }
         users:
           type: array
           items: { type: object, required: [name, role], properties: { name: { type: string }, role: { type: string, enum: [owner, viewer] } } }
@@ -1287,3 +1298,5 @@ components:
         currency: { type: string, example: EUR }
         weights: { type: object, additionalProperties: { type: number } }
         families: { type: array, items: { type: string }, description: "canonical family names (built-in table + search.families + search.models)" }
+        ranking: { type: object, description: "effective search.ranking (peers, landed_cost, vat_reserve, fit, risk) with defaults applied" }
+        warnings: { type: array, items: { type: string }, description: "config problems that did not stop the server (unknown keys, unknown option names)" }

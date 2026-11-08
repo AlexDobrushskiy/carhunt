@@ -101,6 +101,9 @@ func Main(ctx context.Context, args []string) error {
 		switch {
 		case err == nil:
 			prof = p
+			for _, w := range p.Warnings {
+				slog.Warn("profile", "config", *config, "warning", w)
+			}
 		case errors.Is(err, os.ErrNotExist):
 			slog.Warn("no config file, using the neutral profile", "config", *config)
 		default:

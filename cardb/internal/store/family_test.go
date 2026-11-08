@@ -1,6 +1,14 @@
 package store
 
-import "testing"
+import (
+	"slices"
+	"testing"
+
+	"carhunt/cardb/internal/profile"
+)
+
+// builtin resolves families with the built-in table only (neutral profile).
+var builtin = newFamilies(nil)
 
 func TestFamily(t *testing.T) {
 	cases := []struct{ make, model, variant, want string }{
@@ -136,13 +144,13 @@ func TestFamily(t *testing.T) {
 		{"", "", "", ""},
 	}
 	for _, c := range cases {
-		got, mk, ok := Family(c.make, c.model, c.variant)
+		got, mk, ok := builtin.Family(c.make, c.model, c.variant)
 		if got != c.want || ok != (c.want != "") {
 			t.Errorf("Family(%q, %q, %q) = %q, %v; want %q", c.make, c.model, c.variant, got, ok, c.want)
 			continue
 		}
 		if ok {
-			if _, wantMake, _ := CanonicalFamily(got); mk != wantMake {
+			if _, wantMake, _ := builtin.Canonical(got); mk != wantMake {
 				t.Errorf("Family(%q, %q) make = %q, want %q", c.make, c.model, mk, wantMake)
 			}
 		}
@@ -150,7 +158,7 @@ func TestFamily(t *testing.T) {
 }
 
 func TestFamilyNames(t *testing.T) {
-	names := FamilyNames()
+	names := builtin.Names()
 	seen := map[string]bool{}
 	for _, n := range names {
 		k := normFamilyText(n)
@@ -158,20 +166,83 @@ func TestFamilyNames(t *testing.T) {
 			t.Fatalf("two families normalize to %q", k)
 		}
 		seen[k] = true
-		got, _, ok := CanonicalFamily(n)
+		got, _, ok := builtin.Canonical(n)
 		if !ok || got != n {
 			t.Fatalf("CanonicalFamily(%q) = %q, %v", n, got, ok)
 		}
 	}
 	for in, want := range map[string]string{"skoda enyaq coupe": "Škoda Enyaq Coupé", "vw id4": "VW ID.4", "AUDI Q4 SPORTBACK": "Audi Q4 Sportback", "mercedes eqa": "Mercedes EQA"} {
-		if got, _, ok := CanonicalFamily(in); !ok || got != want {
+		if got, _, ok := builtin.Canonical(in); !ok || got != want {
 			t.Errorf("CanonicalFamily(%q) = %q, %v; want %q", in, got, ok, want)
 		}
 	}
-	if _, _, ok := CanonicalFamily("Audi Q5"); ok {
+	if _, _, ok := builtin.Canonical("Audi Q5"); ok {
 		t.Error("unknown family resolved")
 	}
 	if names[0] != "Audi Q4" {
 		t.Errorf("names not sorted by make then family: %v", names[:3])
+	}
+}
+
+func mustProfile(t *testing.T, y string) *profile.Profile {
+	t.Helper()
+	p, err := profile.Parse([]byte(y))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return p
+}
+
+// search.families override a built-in rule in place, add new ones ahead of their make's built-ins (with new make
+// spellings); search.models get automatic rules; Names/Canonical/Base follow the merged set.
+func TestFamiliesFromProfile(t *testing.T) {
+	p := mustProfile(t, `
+search:
+  families:
+    - {make: VW, name: ID.4, match: [id4, id 4], with: [gtx], bare: true}       # override: only GTX is ID.4 now
+    - {make: VW, name: ID.4 Crozz, match: [id4 crozz, id 4 crozz], bare: true} # added before the VW built-ins
+    - {make: Dacia, make_aliases: [dacia automobile], name: Spring, match: [spring], body: [cargo], body_name: Spring Cargo}
+  models:
+    - {make: Fiat, model: 600e, tier: 1}
+    - {make: Renault, model: "Megane E-Tech", tier: 1}
+    - {make: Audi, model: Q4 e-tron, tier: 1}
+    - {make: Lancia, model: "", tier: 1}
+`)
+	f := newFamilies(p)
+	for _, c := range []struct{ make, model, variant, want string }{
+		{"VW", "ID.4 GTX", "", "VW ID.4"},
+		{"VW", "ID.4 Pro", "", ""},
+		{"VW", "ID.4 Crozz", "Pro", "VW ID.4 Crozz"},
+		{"Dacia Automobile", "Spring", "Cargo 45", "Dacia Spring Cargo"},
+		{"dacia", "Spring Extreme", "", "Dacia Spring"},
+		{"Fiat", "600e La Prima", "", "Fiat 600e"},
+		{"FIAT", "600 e", "", ""},
+		{"Renault", "Mégane E-Tech EV60", "", "Renault Megane E-Tech"},
+		{"Audi", "Q4 Sportback e-tron 45", "", "Audi Q4 Sportback"},
+		{"VW", "ID.3", "", "VW ID.3"},
+	} {
+		got, _, ok := f.Family(c.make, c.model, c.variant)
+		if got != c.want || ok != (c.want != "") {
+			t.Errorf("Family(%q, %q, %q) = %q, want %q", c.make, c.model, c.variant, got, c.want)
+		}
+	}
+	names := f.Names()
+	for _, n := range []string{"Dacia Spring", "Dacia Spring Cargo", "Fiat 600e", "Renault Megane E-Tech", "VW ID.4 Crozz"} {
+		if !slices.Contains(names, n) {
+			t.Errorf("Names lacks %q", n)
+		}
+	}
+	if slices.Contains(names, "Audi Q4 e-tron") {
+		t.Error("a model entry that resolves to a built-in family got an automatic rule")
+	}
+	if got, mk, ok := f.Canonical("dacia spring cargo"); !ok || got != "Dacia Spring Cargo" || mk != "Dacia" {
+		t.Errorf("Canonical: %q %q %v", got, mk, ok)
+	}
+	if f.Base("Dacia Spring Cargo") != "Dacia Spring" || f.Base("Audi Q4 Sportback") != "Audi Q4" || f.Base("VW ID.3") != "VW ID.3" {
+		t.Error("Base")
+	}
+	// The built-in resolver is untouched by another profile.
+	if got, _, _ := builtin.Family("VW", "ID.4 Pro", ""); got != "VW ID.4" {
+		t.Errorf("builtin changed: %q", got)
 	}
 }

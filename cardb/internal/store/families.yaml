@@ -1,0 +1,79 @@
+# Built-in model families: a canonical "<Make> <Family>" read from messy make/model/variant ad text.
+# search.families in config.yaml overrides a rule (same make + name) or adds one (checked before the built-ins of
+# its make); search.models entries that match no rule get an automatic one. Rule keys: see profile.FamilyRule.
+# Words are matched after folding (lower case, no diacritics, '.' and '-' dropped): "ID.4" → "id4".
+# Order matters: specific rules before general ones within a make.
+
+makes:   # canonical display make: spellings (folded)
+  Audi: [audi]
+  BMW: [bmw]
+  BYD: [byd]
+  Cupra: [cupra]
+  Ford: [ford]
+  Hyundai: [hyundai]
+  KGM: [kgm, kg mobility, kgmobility, ssangyong, ssang yong]
+  Kia: [kia]
+  MINI: [mini, bmw mini]
+  Mercedes: [mercedes, mercedesbenz, mercedes benz, mb]
+  Nissan: [nissan]
+  Peugeot: [peugeot]
+  Polestar: [polestar]
+  Renault: [renault]
+  "Škoda": [skoda]
+  Smart: [smart]
+  Tesla: [tesla]
+  Toyota: [toyota]
+  Volvo: [volvo]
+  VW: [vw, volkswagen]
+  XPeng: [xpeng]
+
+rules:
+  - {make: Audi, name: Q4, match: [q4], bare: true, body: [sportback, spb], body_name: Q4 Sportback}
+  - {make: Audi, name: "Q6 e-tron", match: [q6, sq6]}
+  - {make: Audi, name: "Q8 e-tron", match: [q8, sq8], with: [etron], bare: true}
+  - {make: BMW, name: iX1, match: [ix1], bare: true}
+  - {make: BMW, name: iX2, match: [ix2], bare: true}
+  - {make: BMW, name: iX3, match: [ix3], bare: true}
+  - {make: BMW, name: iX, match: [ix]}
+  - {make: BMW, name: i4, match: [i4]}
+  - {make: BYD, name: Seal U, match: [seal u]}
+  - {make: BYD, name: Sealion 7, match: [sealion 7, sealion7], bare: true}
+  - {make: BYD, name: Seal, match: [seal]}
+  - {make: BYD, name: Atto 3, match: [atto 3, atto3], bare: true}
+  - {make: Cupra, name: Tavascan, match: [tavascan], bare: true}
+  - {make: Cupra, name: Born, match: [born]}
+  - {make: Ford, name: "Mustang Mach-E", match: [mache, mach e], bare: true}
+  - {make: Hyundai, name: Ioniq 5, match: [ioniq 5, ioniq5], bare: true}
+  - {make: Hyundai, name: Ioniq 6, match: [ioniq 6, ioniq6], bare: true}
+  - {make: Hyundai, name: Kona Electric, match: [kona], bare: true}
+  - {make: KGM, name: Torres EVX, match: [torres], with: [evx], bare: true}
+  - {make: Kia, name: EV3, match: [ev3], bare: true}
+  - {make: Kia, name: EV6, match: [ev6], bare: true}
+  - {make: Kia, name: EV9, match: [ev9], bare: true}
+  - {make: Kia, name: Niro EV, match: [niro, eniro], bare: true}
+  - {make: MINI, name: Countryman, match: [countryman], bare: true}
+  - {make: Mercedes, name: EQA, match: [eqa], bare: true}
+  - {make: Mercedes, name: EQB, match: [eqb], bare: true}
+  - {make: Mercedes, name: EQC, match: [eqc], bare: true}
+  - {make: Mercedes, name: EQE SUV, match: [eqe], with: [suv], bare: true}
+  - {make: Nissan, name: Ariya, match: [ariya], bare: true}
+  - {make: Peugeot, name: "e-308", match: [e308, e 308], bare: true}
+  - {make: Polestar, name: "2", match: ["2"], lead: true}
+  - {make: Polestar, name: "4", match: ["4"], lead: true}
+  - {make: Renault, name: "Scenic E-Tech", match: [scenic]}
+  - {make: "Škoda", name: Enyaq, match: [enyaq], bare: true, body: [coupe], body_name: "Enyaq Coupé"}
+  - {make: "Škoda", name: Elroq, match: [elroq], bare: true}
+  - {make: Smart, name: "#1", match: ["1"], lead: true}
+  - {make: Smart, name: "#3", match: ["3"], lead: true}
+  - {make: Tesla, name: Model 3, match: [model 3, model3], bare: true}
+  - {make: Tesla, name: Model Y, match: [model y, modely], bare: true}
+  - {make: Toyota, name: bZ4X, match: [bz4x], bare: true}
+  - {make: Volvo, name: EX30, match: [ex30], bare: true}
+  - {make: Volvo, name: EX40, match: [ex40], bare: true}
+  - {make: Volvo, name: XC40 Recharge, match: [xc40], bare: true}
+  - {make: VW, name: ID.3, match: [id3, id 3], bare: true}
+  - {make: VW, name: ID.4, match: [id4, id 4], bare: true}
+  - {make: VW, name: ID.5, match: [id5, id 5], bare: true}
+  - {make: VW, name: ID.7, match: [id7, id 7], bare: true}
+  - {make: VW, name: ID. Buzz, match: [idbuzz, id buzz], bare: true}
+  - {make: XPeng, name: G6, match: [g6]}

@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"carhunt/cardb/internal/api"
 	"carhunt/cardb/internal/profile"
 
 	_ "modernc.org/sqlite" // driver "sqlite"
@@ -57,6 +58,7 @@ type Store struct {
 	photosDir string
 	now       func() time.Time
 	profile   *profile.Profile
+	rk        *ranker // profile-derived: families, tier rules, hard filters, value model
 }
 
 // Open opens (creating if needed) $dataDir/cardb.sqlite3 and migrates the schema. Profile = profile.Default() until SetProfile.
@@ -72,7 +74,8 @@ func Open(dataDir string) (*Store, error) {
 	}
 	db.SetMaxOpenConns(1)
 	db.SetConnMaxIdleTime(0)
-	s := &Store{db: db, dataDir: dataDir, photosDir: filepath.Join(dataDir, "photos"), now: time.Now, profile: profile.Default()}
+	s := &Store{db: db, dataDir: dataDir, photosDir: filepath.Join(dataDir, "photos"), now: time.Now}
+	s.SetProfile(nil)
 	if err := s.migrate(); err != nil {
 		db.Close()
 		return nil, err
@@ -89,6 +92,7 @@ func (s *Store) SetProfile(p *profile.Profile) {
 		p = profile.Default()
 	}
 	s.profile = p
+	s.rk = newRanker(p)
 }
 
 // Profile returns the active buyer profile.
@@ -262,3 +266,6 @@ func boolInt(b bool) int {
 	}
 	return 0
 }
+
+// ProfileView is GET /profile: the effective profile with the merged family names.
+func (s *Store) ProfileView() api.Profile { return s.profile.View(s.rk.fam.Names()) }

@@ -29,15 +29,15 @@ type CarFilter struct {
 	NeedsOwner, HasDuplicates         *bool
 	GoodDeal                          *bool
 	ModelFamily                       []string // canonical names or "none" (unmapped); ORed
-	Tier                              []string // "1"|"2"|"3", comma lists ok; ORed
-	Market                            string
+	Tier                              []string // profile tiers, comma lists ok; ORed
+	Market                            string   // home | abroad
 	Sort, Order                       string
 	Limit, Offset                     int
 
 	tiers []int
 }
 
-var sortKeys = []string{"last_activity", "price", "km", "year", "distance_km", "created", "status", "model", "deal_rank"}
+var sortKeys = []string{"last_activity", "price", "km", "year", "distance_km", "created", "status", "model", "deal_rank", "score"}
 
 // ParseOptionFilter parses "key:value".
 func ParseOptionFilter(s string) (OptionFilter, error) {
@@ -52,7 +52,7 @@ func ParseOptionFilter(s string) (OptionFilter, error) {
 	return OptionFilter{Key: k, Value: v}, nil
 }
 
-func (f *CarFilter) validate() error {
+func (f *CarFilter) validate(rk *ranker) error {
 	check := func(name string, vals, allowed []string) error {
 		for _, v := range vals {
 			if !slices.Contains(allowed, v) {
@@ -82,8 +82,8 @@ func (f *CarFilter) validate() error {
 	if f.HpMin != nil && f.HpMax != nil && *f.HpMin > *f.HpMax {
 		return badRequestf("hp_min must not exceed hp_max")
 	}
-	if f.Market != "" && f.Market != "PT" && f.Market != "abroad" {
-		return badRequestf("market must be PT|abroad")
+	if f.Market != "" && f.Market != "home" && f.Market != "abroad" {
+		return badRequestf("market must be home|abroad")
 	}
 	var fams []string
 	for _, v := range f.ModelFamily {
@@ -92,7 +92,7 @@ func (f *CarFilter) validate() error {
 				continue
 			} else if strings.EqualFold(p, "none") {
 				fams = append(fams, "none")
-			} else if name, _, ok := CanonicalFamily(p); ok {
+			} else if name, _, ok := rk.fam.Canonical(p); ok {
 				fams = append(fams, name)
 			} else {
 				return badRequestf("unknown model family %q; GET /model-families", p)
@@ -100,7 +100,7 @@ func (f *CarFilter) validate() error {
 		}
 	}
 	f.ModelFamily = fams
-	tiers, err := parseTiers(f.Tier, nil)
+	tiers, err := parseTiers(f.Tier, nil, rk.p.Tiers())
 	if err != nil {
 		return err
 	}
@@ -113,7 +113,7 @@ func (f *CarFilter) validate() error {
 	}
 	if f.Order == "" {
 		f.Order = "asc"
-		if f.Sort == "last_activity" || f.Sort == "created" || f.Sort == "year" {
+		if f.Sort == "last_activity" || f.Sort == "created" || f.Sort == "year" || f.Sort == "score" {
 			f.Order = "desc"
 		}
 	}
@@ -138,10 +138,11 @@ type summaryRow struct {
 	sellerT  string
 	createdT float64
 	activity float64
+	score    *float64 // filled for sort=score
 }
 
-// buildSummaries computes CarSummary rows for every live car.
-func buildSummaries(tx *sql.Tx) ([]*summaryRow, error) {
+// buildSummaries computes CarSummary rows for every live car (tier, market and distance from the profile).
+func (s *Store) buildSummaries(tx *sql.Tx) ([]*summaryRow, error) {
 	cars, err := loadLiveCars(tx)
 	if err != nil {
 		return nil, err
@@ -341,19 +342,20 @@ func buildSummaries(tx *sql.Tx) ([]*summaryRow, error) {
 	out := make([]*summaryRow, 0, len(cars))
 	for _, c := range cars {
 		specs := specsStruct(c.Specs)
+		s.rk.locate(&specs)
 		cs := api.CarSummary{
 			ID: c.ID, Slug: strPtr(c.Slug), Title: c.title(), Make: specs.Make, Model: specs.Model, Variant: specs.Variant,
 			Year: specs.Year, RegDate: specs.RegDate, Km: specs.Km, Powertrain: specs.Powertrain, PowerKw: specs.PowerKw, Drive: specs.Drive,
-			Country: specs.Country, City: specs.City, DistanceKm: specs.DistanceKm, Market: specs.Market, Interior: specs.Interior,
+			Country: specs.Country, City: specs.City, DistanceKm: specs.DistanceKm, DistanceSource: specs.DistanceSource, Market: specs.Market, Interior: specs.Interior,
 			InteriorTone: specs.InteriorTone, WheelsIn: specs.WheelsIn, SellerType: "unknown", Status: c.Status,
 			StatusReason: strPtr(c.StatusReason), NeedsOwner: c.NeedsOwner, NeedsOwnerReason: strPtr(c.NeedsOwnerReason),
 			Summary: strPtr(c.Summary), Options: map[string]string{}, OptionSources: map[string]string{}, Sites: []string{}, CreatedAt: fromTS(c.CreatedAt),
 			Verdict: verdicts[c.ID], DuplicateCandidateCount: dupCount[c.ID],
 		}
-		cs.ModelFamily, _, cs.ModelFamilyManual = c.family()
+		cs.ModelFamily, _, cs.ModelFamilyManual = c.family(s.rk.fam)
 		cs.GoodDeal, cs.GoodDealNote, cs.GoodDealBy, cs.GoodDealAt = c.GoodDeal, strPtr(c.GoodDealNote), strPtr(c.GoodDealBy), fromNullTS(c.GoodDealAt)
 		cs.DealRank = dealRanks[c.ID]
-		cs.Tier = carTier(&cs)
+		cs.Tier, _ = s.rk.tierOf(&cs)
 		hay := []string{c.title(), c.str("city"), c.str("vin"), c.str("plate"), c.str("colour"), c.Summary.String}
 		row := &summaryRow{createdT: c.CreatedAt}
 		if c.SellerID.Valid {
@@ -565,20 +567,39 @@ func sortValue(r *summaryRow, key string) (float64, bool) {
 		return ip(c.DistanceKm)
 	case "status":
 		return float64(statusRank(c.Status)), true
+	case "score":
+		if r.score == nil {
+			return 0, false
+		}
+		return *r.score, true
 	}
 	return 0, false
 }
 
 // ListCars handles GET /cars.
 func (s *Store) ListCars(ctx context.Context, f CarFilter) (*api.CarList, error) {
-	if err := f.validate(); err != nil {
+	rk := s.rk
+	if err := f.validate(rk); err != nil {
 		return nil, err
 	}
 	var rows []*summaryRow
 	err := s.tx(ctx, func(tx *sql.Tx) error {
+		if f.Sort != "score" {
+			var err error
+			rows, err = s.buildSummaries(tx)
+			return err
+		}
+		now := s.now()
+		var cars []*rankCar
 		var err error
-		rows, err = buildSummaries(tx)
-		return err
+		if rows, cars, err = s.rankInputs(tx, now); err != nil {
+			return err
+		}
+		pool := rk.pool(cars)
+		for i, rc := range cars {
+			rows[i].score = rk.rank(rc, pool, now).score
+		}
+		return nil
 	})
 	if err != nil {
 		return nil, err
@@ -624,7 +645,7 @@ func (s *Store) ListCars(ctx context.Context, f CarFilter) (*api.CarList, error)
 
 // ModelFamilies handles GET /model-families: effective families over live cars, by make then family.
 func (s *Store) ModelFamilies(ctx context.Context) (*api.ModelFamilies, error) {
-	out := &api.ModelFamilies{Families: []api.ModelFamilyCount{}, Known: FamilyNames()}
+	out := &api.ModelFamilies{Families: []api.ModelFamilyCount{}, Known: s.rk.fam.Names()}
 	err := s.tx(ctx, func(tx *sql.Tx) error {
 		cars, err := loadLiveCars(tx)
 		if err != nil {
@@ -632,7 +653,7 @@ func (s *Store) ModelFamilies(ctx context.Context) (*api.ModelFamilies, error) {
 		}
 		counts := map[familyInfo]int{}
 		for _, c := range cars {
-			fam, mk, _ := c.family()
+			fam, mk, _ := c.family(s.rk.fam)
 			if fam == nil {
 				out.Unmapped++
 				continue

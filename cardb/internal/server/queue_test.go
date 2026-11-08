@@ -103,10 +103,19 @@ func TestQueueEligibility(t *testing.T) {
 	out["country PL"] = c.qcar("c-PL", map[string]any{"country": "PL", "city": nil})
 	out["country CH"] = c.qcar("c-CH", map[string]any{"country": "CH", "city": nil})
 	in["country unknown"] = c.qcar("c-unknown", map[string]any{"country": nil, "city": nil})
-	for i, city := range []string{"Funchal (Madeira)", "Las Palmas De Gran Canaria", "Ponta Delgada", "Santa Cruz De Tenerife", "Açores"} {
-		out["island "+city] = c.qcar(fmt.Sprintf("isl-%d", i), map[string]any{"city": city})
+	// exclude_regions PT-20 PT-30 ES-CN: matched on the city; a known country must be the region's.
+	for i, cc := range [][2]string{{"Funchal (Madeira)", "PT"}, {"Las Palmas De Gran Canaria", "ES"}, {"Ponta Delgada", "PT"},
+		{"Santa Cruz De Tenerife", "ES"}, {"Açores", ""}} {
+		out["island "+cc[0]] = c.qcar(fmt.Sprintf("isl-%d", i), map[string]any{"city": cc[0], "country": cc[1]})
 	}
 	in["city Palmela"] = c.qcar("palmela", map[string]any{"city": "Palmela"})
+	in["Mallorca (ES-IB not excluded)"] = c.qcar("mallorca", map[string]any{"city": "Palma de Mallorca", "country": "ES"})
+
+	// Lease transfer / declared damage flags.
+	out["lease transfer"] = c.qcar("lease", nil)
+	setFact(c, out["lease transfer"], "lease_transfer", "yes (Leasingübernahme)")
+	in["lease transfer no"] = c.qcar("lease-no", nil)
+	setFact(c, in["lease transfer no"], "lease_transfer", "no")
 
 	// History facts (origin/import/history_report/other) naming PL/LT/LV/EE.
 	for key, val := range map[string]string{"origin": "Imported from Poland (ad)", "import": "importado da Lituânia",
@@ -309,43 +318,42 @@ func TestQueueOrder(t *testing.T) {
 		expect(t, "deal", order(c), gdRank, gdNoRank, r2, r10, r21, odd, missing)
 	})
 
-	t.Run("trim score", func(t *testing.T) {
+	t.Run("score", func(t *testing.T) {
 		c := newServer(t)
-		none := c.qcar("none", map[string]any{"seen_at": at(9)})
-		opts := c.qcar("opts", map[string]any{"seen_at": at(1), "wheels_in": 20, "options": map[string]any{
-			"electric_seats": map[string]any{"value": "yes"}, "pano": map[string]any{"value": "no"}}}) // 4 − 1.5 − 0.5 = 2
-		fact := c.qcar("fact", map[string]any{"seen_at": at(0)})
-		setFact(c, fact, "trim_score", "2.5")
-		neg := c.qcar("neg", map[string]any{"seen_at": at(8), "options": map[string]any{"power_tailgate": map[string]any{"value": "no"}}})
-		expect(t, "trim", order(c), fact, opts, none, neg)
+		plain := c.qcar("plain", map[string]any{"seen_at": at(9)})
+		reseller := c.qcar("reseller", map[string]any{"seen_at": at(8), "seller": map[string]any{"type": "reseller", "name": "SYNTH Trade"}})
+		vetted := c.qcar("vetted", map[string]any{"seen_at": at(1), "vin": "SYN4ZZZE2ZRP00001", "options": map[string]any{
+			"electric_seats": map[string]any{"value": "yes"}, "power_tailgate": map[string]any{"value": "yes"}}})
+		for k, v := range map[string]string{"owners": "1", "service_history": "yes", "accidents": "none", "battery_soh": "95 %"} {
+			setFact(c, vetted, k, v)
+		}
+		expect(t, "score", order(c), vetted, plain, reseller)
 		q := c.queue("")
-		if it := queueItem(t, q, fact); it.TrimScore != 2.5 || it.TrimScoreSource != "fact" {
-			t.Fatalf("fact item: %+v", it)
+		for _, it := range q.Items {
+			if it.Score == nil || it.Value == nil || *it.Value != 50 || it.Landed == nil || it.FairPrice != nil || it.Risk <= 0 || len(it.RiskReasons) == 0 {
+				t.Fatalf("item %d: %+v", it.Car.ID, it)
+			}
 		}
-		if it := queueItem(t, q, opts); it.TrimScore != 2 || it.TrimScoreSource != "options" || it.Why != `✓ e-seats · ✗ pano · ✗ 20" wheels · ±0 % vs ID.4 2024 (n=4) · ? tailgate` {
-			t.Fatalf("options item: %v %s %q", it.TrimScore, it.TrimScoreSource, it.Why)
+		if it := queueItem(t, q, reseller); !slices.Contains(it.RiskReasons, "reseller +4") {
+			t.Fatalf("reseller reasons %q", it.RiskReasons)
 		}
-		if it := queueItem(t, q, neg); it.TrimScore != -3 {
-			t.Fatalf("negative trim: %v", it.TrimScore)
+		if it := queueItem(t, q, vetted); it.Fit <= queueItem(t, q, plain).Fit || it.Risk >= queueItem(t, q, plain).Risk {
+			t.Fatalf("vetted fit/risk: %v %v", it.Fit, it.Risk)
 		}
 	})
 
-	t.Run("price gap", func(t *testing.T) {
+	t.Run("landed breaks score ties", func(t *testing.T) {
 		c := newServer(t)
+		// No peers (n < 3): value 50 for both, equal score; the cheaper landed cost wins over the newer car.
 		cheap := c.qcar("cheap", map[string]any{"price": 30000, "seen_at": at(1)})
-		mid := c.qcar("mid", map[string]any{"price": 33000, "seen_at": at(2)})
-		dear := c.qcar("dear", map[string]any{"price": 36000, "seen_at": at(3)})
+		dear := c.qcar("dear", map[string]any{"price": 35000, "seen_at": at(2)})
 		noPrice := c.qcar("noprice", map[string]any{"price": nil, "seen_at": at(9)})
-		expect(t, "gap", order(c), cheap, mid, dear, noPrice)
+		expect(t, "landed", order(c), cheap, dear, noPrice)
 		q := c.queue("")
-		it := queueItem(t, q, cheap)
-		if it.FairPrice == nil || *it.FairPrice != 33000 || it.FairN != 3 || deref(it.FairBasis) != "VW ID.4 2024" || it.PriceGapPct == nil || *it.PriceGapPct != -9.1 {
-			t.Fatalf("cheap: %+v", it)
+		if it := queueItem(t, q, cheap); *it.Landed != 30165 || *it.Score != *queueItem(t, q, dear).Score {
+			t.Fatalf("cheap: landed %v score %v", *it.Landed, *it.Score)
 		}
-		if !strings.Contains(it.Why, "−9 % vs ID.4 2024 (n=3)") {
-			t.Fatalf("cheap why: %q", it.Why)
-		}
-		if it := queueItem(t, q, noPrice); it.PriceGapPct != nil || it.FairPrice == nil || *it.FairPrice != 33000 {
+		if it := queueItem(t, q, noPrice); it.Score != nil || it.Value != nil || it.Landed != nil {
 			t.Fatalf("no price: %+v", it)
 		}
 	})
@@ -366,43 +374,48 @@ func TestQueueOrder(t *testing.T) {
 
 func TestQueueFairPrice(t *testing.T) {
 	c := newServer(t)
-	// VW ID.4 2024: three live priced cars, one of them rated and one over the price cap (both still count), plus a
-	// removed-only car and an unpriced car (both ignored).
+	// VW ID.4 Pro 2024, 20 000 km: PT asks (one rated, one over the price cap — both still peers), a removed-only and an
+	// unpriced car (both ignored), and one ES ask 950 km away.
 	a := c.qcar("a", map[string]any{"price": 30000})
 	rated := c.qcar("rated", map[string]any{"price": 32000})
 	c.call("PUT", fmt.Sprintf("/api/v1/cars/%d/verdict", rated), map[string]any{"value": "down"}, 200, nil)
 	c.qcar("dear", map[string]any{"price": 45000})
+	c.qcar("other", map[string]any{"price": 33000})
 	c.qcar("gone", map[string]any{"price": 1000, "listing_status": "removed"})
 	c.qcar("unpriced", map[string]any{"price": nil})
-	// VW ID.4 2025: one car → falls back to the family (4 live priced cars).
-	y25 := c.qcar("y25", map[string]any{"reg_date": "2025-02", "price": 38000})
-	// Audi Q4: two cars → no fair price.
+	es := c.qcar("es", map[string]any{"price": 30000, "country": "ES", "city": "Vigo", "distance_km": 950})
+	// Audi Q4: two cars → no fair price. Unmapped family.
 	q4 := c.qcar("q4", map[string]any{"make": "Audi", "model": "Q4 e-tron 45", "price": 40000})
 	c.qcar("q4b", map[string]any{"make": "Audi", "model": "Q4 e-tron 45", "price": 41000})
-	// Unmapped family.
 	odd := c.qcar("odd", map[string]any{"make": "Foo", "model": "Bar", "price": 30000})
 
 	q := c.queue("tier=1,2,3")
+	// a: peers rated/dear/other (PT) + es → median of country medians: PT 33000, ES 30000 → 31500. Landed: PT
+	// 32165/33165/45165 → 33165 (+100 trip +65 registration, default distance 250), ES 30888 → 32026.5 → 32050.
 	it := queueItem(t, q, a)
-	if it.FairPrice == nil || *it.FairPrice != 32000 || it.FairN != 3 || deref(it.FairBasis) != "VW ID.4 2024" || *it.PriceGapPct != -6.3 {
-		t.Fatalf("family+year: fair %v n %d basis %v gap %v", it.FairPrice, it.FairN, it.FairBasis, it.PriceGapPct)
+	if *it.FairPrice != 31500 || *it.FairLanded != 32050 || it.FairN != 4 || deref(it.FairBasis) != "VW ID.4 · ~275 hp 2wd" ||
+		*it.Landed != 30165 || *it.PriceGapPct != 5.9 || *it.Value != 61.8 {
+		t.Fatalf("a: fair %v/%v n %d basis %v landed %v gap %v value %v", *it.FairPrice, *it.FairLanded, it.FairN, deref(it.FairBasis),
+			*it.Landed, *it.PriceGapPct, *it.Value)
 	}
-	it = queueItem(t, q, y25)
-	if it.FairPrice == nil || *it.FairPrice != 35000 || it.FairN != 4 || deref(it.FairBasis) != "VW ID.4 all years" || *it.PriceGapPct != 8.6 {
-		t.Fatalf("family fallback: fair %v n %d basis %v gap %v", it.FairPrice, it.FairN, it.FairBasis, it.PriceGapPct)
+	if !strings.Contains(it.Why, "−6 % vs ID.4 · ~275 hp 2wd (n=4)") {
+		t.Fatalf("a why: %q", it.Why)
 	}
-	if !strings.Contains(it.Why, "+9 % vs ID.4 all years (n=4)") {
-		t.Fatalf("fallback why: %q", it.Why)
+	// es: landed 30000 + 100 + 250 + 0.135·950 + 1 night 100 + food 60 + import 250 = 30888; peers all PT.
+	it = queueItem(t, q, es)
+	if *it.Landed != 30888 || *it.FairPrice != 32500 || *it.FairLanded != 32650 || *it.PriceGapPct != 5.4 || deref(it.Car.Market) != "abroad" {
+		t.Fatalf("es: landed %v fair %v/%v gap %v", *it.Landed, *it.FairPrice, *it.FairLanded, *it.PriceGapPct)
 	}
 	for _, id := range []int64{q4, odd} {
-		if it := queueItem(t, q, id); it.FairPrice != nil || it.FairN != 0 || it.FairBasis != nil || it.PriceGapPct != nil || strings.Contains(it.Why, " vs ") {
+		if it := queueItem(t, q, id); it.FairPrice != nil || it.FairN != 0 || it.FairBasis != nil || it.PriceGapPct != nil || *it.Value != 50 || strings.Contains(it.Why, " vs ") {
 			t.Fatalf("car %d: want no fair price, got %+v", id, it)
 		}
 	}
-	// Raw JSON shape: nulls present, counts keyed by tier.
+	// Raw JSON shape: nulls present, counts keyed by every profile tier.
 	body := string(c.call("GET", "/api/v1/queue?tier=3", nil, 200, nil))
-	for _, s := range []string{`"total":`, `"counts":{"1":`, `"items":[`, `"fair_price":null`, `"fair_basis":null`, `"price_gap_pct":null`,
-		`"fair_n":0`, `"trim_score":0`, `"trim_score_source":"options"`, `"position":1`, `"removed_listing_count":0`, `"tier":3`} {
+	for _, s := range []string{`"total":`, `"counts":{"1":`, `"3":`, `"items":[`, `"fair_price":null`, `"fair_landed":null`, `"fair_basis":null`,
+		`"price_gap_pct":null`, `"fair_n":0`, `"score":`, `"value":50`, `"fit":`, `"risk":`, `"risk_reasons":[`, `"landed":`, `"trim_score":0`,
+		`"trim_score_source":"options"`, `"position":1`, `"removed_listing_count":0`, `"tier":3`} {
 		if !strings.Contains(body, s) {
 			t.Fatalf("queue JSON lacks %s: %s", s, body)
 		}

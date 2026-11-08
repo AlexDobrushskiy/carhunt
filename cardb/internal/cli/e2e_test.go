@@ -137,7 +137,7 @@ func TestUpsertIdempotent(t *testing.T) {
 func TestShowFullCard(t *testing.T) {
 	e := newE2E(t)
 	r := e.upsert("--url", adURL, "--price", "34600", "--make", "MINI", "--model", "Countryman E", "--variant", "Favoured L",
-		"--seller-name", "Rui", "--seller-type", "private", "--phone", "+351555010203",
+		"--seller-name", "Rui", "--seller-type", "private", "--phone", "555010203",
 		"--opt", "pano=yes:ad_text:Teto panorâmico", "--fact", "warranty=to 2028-11:seller_said", "--slug", "pt-testcar-lisbon")
 	car := id(r.CarID)
 	e.ok("verdict", car, "👍", "--note", "great spec")
@@ -173,7 +173,7 @@ func TestShowFullCard(t *testing.T) {
 
 func TestMsgByPhone(t *testing.T) {
 	e := newE2E(t)
-	r := e.upsert("--url", adURL, "--make", "MINI", "--model", "Countryman E", "--seller-type", "private", "--phone", "+351 555 010 203")
+	r := e.upsert("--url", adURL, "--make", "MINI", "--model", "Countryman E", "--seller-type", "private", "--phone", "555 010 203") // national: PT home
 	var m struct {
 		Message api.Message `json:"message"`
 		Created bool        `json:"created"`
@@ -500,7 +500,7 @@ func TestRemovedThenRelisted(t *testing.T) {
 
 func TestMsgAttachByPhoneLinksPhoto(t *testing.T) {
 	e := newE2E(t)
-	r := e.upsert("--url", adURL, "--make", "MINI", "--model", "Countryman E", "--seller-type", "private", "--phone", "+351555010203")
+	r := e.upsert("--url", adURL, "--make", "MINI", "--model", "Countryman E", "--seller-type", "private", "--phone", "555010203")
 	img := writeJPEG(t, 33)
 	args := []string{"msg", "--to", "351555010203", "--channel", "whatsapp", "--dir", "in", "--external-id", "wamid.att", "--attach", img, "Foto do VIN"}
 	check := func() api.Message {

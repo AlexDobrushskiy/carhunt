@@ -21,7 +21,7 @@ func cmdLs(e *env, args []string) error {
 	f.Var(&opts, "opt", "option filter key:value, value yes|no|unknown|yes_or_unknown (repeatable, ANDed)")
 	f.Var(&drives, "drive", "fwd|rwd|awd|unknown (repeatable/comma)")
 	f.Var(&families, "family", "model family, e.g. \"Audi Q4,VW ID.4\" (repeatable/comma; none = unmapped; see cardb families)")
-	f.Var(&tiers, "tier", "\"To rate\" tier 1|2|3 (repeatable/comma)")
+	f.Var(&tiers, "tier", "\"To rate\" tier (repeatable/comma; see cardb profile)")
 	goodDeal := f.Bool("good-deal", false, "only cars flagged as a good deal (--good-deal=false: only unflagged)")
 	minHp := f.String("min-hp", "", "min metric horsepower (rounded kW × 1.36)")
 	maxHp := f.String("max-hp", "", "max metric horsepower")
@@ -36,8 +36,8 @@ func cmdLs(e *env, args []string) error {
 	maxDist := f.String("max-dist", "", "max km away")
 	needsOwner := f.Bool("needs-owner", false, "only cars flagged for the owner")
 	dupes := f.Bool("dupes", false, "only cars with open duplicate proposals")
-	market := f.String("market", "", "PT|abroad")
-	sortBy := f.String("sort", "", "last_activity|price|km|year|distance_km|created|status|model|deal_rank")
+	market := f.String("market", "", "home|abroad (vs the profile's home country)")
+	sortBy := f.String("sort", "", "last_activity|price|km|year|distance_km|created|status|model|deal_rank|score")
 	order := f.String("order", "", "asc|desc")
 	limit := f.Int("limit", 0, "max rows (server default 200)")
 	offset := f.Int("offset", 0, "skip rows")
@@ -135,11 +135,10 @@ func cmdLs(e *env, args []string) error {
 		}
 		flt.Options = append(flt.Options, normalizeKey(k)+":"+v)
 	}
-	if *market != "" && *market != "PT" && *market != "abroad" {
-		if strings.EqualFold(*market, "pt") {
-			flt.Market = "PT"
-		} else {
-			return usageErrorf("--market: want PT|abroad")
+	if *market != "" {
+		flt.Market = strings.ToLower(*market)
+		if flt.Market != "home" && flt.Market != "abroad" {
+			return usageErrorf("--market: want home|abroad")
 		}
 	}
 	t := true

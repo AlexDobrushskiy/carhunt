@@ -27,6 +27,7 @@ var specCols = []specCol{
 	{"battery_net_kwh", 'f'}, {"battery_gross_kwh", 'f'}, {"power_kw", 'f'}, {"drive", 's'}, {"seats", 'i'},
 	{"colour", 's'}, {"interior", 's'}, {"interior_tone", 's'}, {"wheels_in", 'i'}, {"vin", 's'}, {"plate", 's'},
 	{"country", 's'}, {"city", 's'}, {"distance_km", 'i'},
+	{"lat", 'f'}, {"lon", 'f'}, // car location (migration 8)
 }
 
 func specKind(name string) (byte, bool) {
@@ -93,6 +94,12 @@ func normSpec(col string, v any) (any, error) {
 		}
 		return x, nil
 	case float64:
+		if col == "lat" || col == "lon" {
+			if lim := map[string]float64{"lat": 90, "lon": 180}[col]; math.IsNaN(x) || x < -lim || x > lim {
+				return nil, invalidf("%s must be within ±%v", col, lim)
+			}
+			return x, nil
+		}
 		if x < 0 || math.IsNaN(x) || math.IsInf(x, 0) {
 			return nil, invalidf("%s must be ≥ 0", col)
 		}
@@ -167,6 +174,12 @@ func specsMap(s api.CarSpecs) (map[string]any, error) {
 	if s.DistanceKm != nil {
 		put("distance_km", *s.DistanceKm)
 	}
+	if s.Lat != nil {
+		put("lat", *s.Lat)
+	}
+	if s.Lon != nil {
+		put("lon", *s.Lon)
+	}
 	out := map[string]any{}
 	for k, v := range raw {
 		nv, err := normSpec(k, v)
@@ -205,13 +218,12 @@ func specsStruct(m map[string]any) api.CarSpecs {
 		RegDate: str("reg_date"), Km: in("km"), PowerKw: fl("power_kw"), Drive: str("drive"),
 		Seats: in("seats"), Colour: str("colour"), Interior: str("interior"), InteriorTone: str("interior_tone"),
 		WheelsIn: in("wheels_in"), VIN: str("vin"), Plate: str("plate"), Country: str("country"),
-		City: str("city"), DistanceKm: in("distance_km"),
+		City: str("city"), DistanceKm: in("distance_km"), Lat: fl("lat"), Lon: fl("lon"),
 	}
 	if pt := (&api.Powertrain{BatteryNetKwh: fl("battery_net_kwh"), BatteryGrossKwh: fl("battery_gross_kwh")}); !pt.Empty() {
 		s.Powertrain = pt
 	}
 	s.Year = yearOf(s.RegDate)
-	s.Market = marketOf(s.Country)
 	return s
 }
 
@@ -226,13 +238,14 @@ func yearOf(regDate *string) *int {
 	return &y
 }
 
-func marketOf(country *string) *string {
-	if country == nil {
+// MarketOf: "home" when country is the owner's home country, "abroad" otherwise; nil when either is unknown.
+func MarketOf(country *string, home string) *string {
+	if country == nil || *country == "" || home == "" {
 		return nil
 	}
 	m := "abroad"
-	if *country == "PT" {
-		m = "PT"
+	if strings.EqualFold(*country, home) {
+		m = "home"
 	}
 	return &m
 }
@@ -263,13 +276,13 @@ type carRow struct {
 }
 
 // family is the effective model family: the manual override, else derived from make/model/variant.
-func (c *carRow) family() (family, familyMake *string, manual bool) {
+func (c *carRow) family(fam *Families) (family, familyMake *string, manual bool) {
 	if c.FamilyOverride.Valid {
-		if f, mk, ok := CanonicalFamily(c.FamilyOverride.String); ok {
+		if f, mk, ok := fam.Canonical(c.FamilyOverride.String); ok {
 			return &f, &mk, true
 		}
 	}
-	if f, mk, ok := Family(c.str("make"), c.str("model"), c.str("variant")); ok {
+	if f, mk, ok := fam.Family(c.str("make"), c.str("model"), c.str("variant")); ok {
 		return &f, &mk, false
 	}
 	return nil, nil, false
@@ -622,7 +635,7 @@ func (s *Store) CreateCar(ctx context.Context, in api.CarInput, author string) (
 		}
 		var sellerID int64
 		if in.Seller != nil {
-			if sellerID, _, err = ensureSeller(tx, 0, in.Seller, true, false, now); err != nil {
+			if sellerID, _, err = s.ensureSeller(tx, 0, in.Seller, true, false, now); err != nil {
 				return err
 			}
 		}
@@ -660,7 +673,7 @@ func (s *Store) CreateCar(ctx context.Context, in api.CarInput, author string) (
 		if _, err := proposeDuplicates(tx, id, true, author, now); err != nil {
 			return err
 		}
-		out, err = carDetail(tx, id)
+		out, err = s.carDetail(tx, id)
 		return err
 	})
 	return out, err
@@ -831,7 +844,7 @@ func (s *Store) SetStatus(ctx context.Context, ref string, in api.StatusInput, a
 		if _, err := setStatus(tx, car, in.Status, strings.TrimSpace(in.Reason), author, atOr(in.At, s.nowTS())); err != nil {
 			return err
 		}
-		out, err = carDetail(tx, id)
+		out, err = s.carDetail(tx, id)
 		return err
 	})
 	return out, err
@@ -957,7 +970,7 @@ func (s *Store) PatchCar(ctx context.Context, ref string, patch map[string]json.
 					return invalidf("seller must be an object or null")
 				}
 				cur := car.SellerID.Int64
-				sid, contactsChanged, err := ensureSeller(tx, cur, &in, true, true, now)
+				sid, contactsChanged, err := s.ensureSeller(tx, cur, &in, true, true, now)
 				if err != nil {
 					return err
 				}
@@ -976,7 +989,7 @@ func (s *Store) PatchCar(ctx context.Context, ref string, patch map[string]json.
 				}
 				var next any
 				if v != nil {
-					name, _, ok := CanonicalFamily(*v)
+					name, _, ok := s.rk.fam.Canonical(*v)
 					if !ok {
 						return invalidf("unknown model family %q; GET /model-families", *v)
 					}
@@ -1061,7 +1074,7 @@ func (s *Store) PatchCar(ctx context.Context, ref string, patch map[string]json.
 				return err
 			}
 		}
-		out, err = carDetail(tx, live)
+		out, err = s.carDetail(tx, live)
 		return err
 	})
 	return out, err

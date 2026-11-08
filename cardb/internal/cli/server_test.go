@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"carhunt/cardb/internal/profile"
 	"carhunt/cardb/internal/server"
 	"carhunt/cardb/internal/store"
 )
@@ -18,6 +19,11 @@ func startServer(t *testing.T) (string, string) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	p, err := profile.Load("../profile/testdata/ev.yaml") // PT home: national-format phones get 351
+	if err != nil {
+		t.Fatal(err)
+	}
+	st.SetProfile(p)
 	srv := httptest.NewServer(server.NewHandler(st, map[string]string{"agents": "tok"}))
 	t.Cleanup(func() {
 		srv.Close()

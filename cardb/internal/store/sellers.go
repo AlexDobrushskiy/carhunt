@@ -13,14 +13,14 @@ import (
 
 var contactKinds = []string{"phone", "whatsapp", "email", "site_chat", "web"}
 
-func normContacts(in []api.Contact) ([]api.Contact, error) {
+func normContacts(in []api.Contact, home string) ([]api.Contact, error) {
 	var out []api.Contact
 	for _, c := range in {
 		kind := strings.ToLower(strings.TrimSpace(c.Kind))
 		if !slices.Contains(contactKinds, kind) {
 			return nil, invalidf("contact kind must be one of %s", strings.Join(contactKinds, "|"))
 		}
-		v := NormalizeContact(kind, c.Value)
+		v := NormalizeContact(kind, c.Value, home)
 		if v == "" {
 			continue
 		}
@@ -81,14 +81,14 @@ func sellerKeyOf(tx *sql.Tx, id int64) (string, error) {
 // cur is the car's current seller (0 = none). strict makes a contact owned by another seller a 409.
 // A contact identifies a seller only while it is that seller's own (not shared) and the names don't conflict;
 // a contact that turns up with a differently named seller becomes shared on both.
-func ensureSeller(tx *sql.Tx, cur int64, in *api.SellerInput, overwrite, strict bool, now float64) (int64, bool, error) {
+func (s *Store) ensureSeller(tx *sql.Tx, cur int64, in *api.SellerInput, overwrite, strict bool, now float64) (int64, bool, error) {
 	if in == nil {
 		return cur, false, nil
 	}
 	if in.Type != nil && *in.Type != "" && !slices.Contains(api.SellerTypes, *in.Type) {
 		return 0, false, invalidf("seller type must be one of %s", strings.Join(api.SellerTypes, "|"))
 	}
-	contacts, err := normContacts(in.Contacts)
+	contacts, err := normContacts(in.Contacts, s.profile.Owner.Home.Country)
 	if err != nil {
 		return 0, false, err
 	}
@@ -303,7 +303,7 @@ func (s *Store) PatchSeller(ctx context.Context, id int64, in api.SellerInput, a
 		if _, err := loadSeller(tx, id); err != nil {
 			return err
 		}
-		_, changed, err := ensureSeller(tx, id, &in, true, true, now)
+		_, changed, err := s.ensureSeller(tx, id, &in, true, true, now)
 		if err != nil {
 			return err
 		}

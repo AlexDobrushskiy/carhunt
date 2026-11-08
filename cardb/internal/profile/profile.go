@@ -1,5 +1,6 @@
-// Package profile loads the buyer profile cardb ranks and filters with: the `owner`, `search` and `cardb`
-// sections of $CARHUNT_HOME/config.yaml. Nothing buyer-specific lives in Go; this is the only input.
+// Package profile loads the buyer profile cardb ranks and filters with: the `owner`, `search` and `cardb` sections
+// of $CARHUNT_HOME/config.yaml. Nothing buyer-specific lives in Go; this is the only input. Defaults (Default,
+// defaultRanking) are the worked example's values where the value model needs a number.
 package profile
 
 import (
@@ -20,6 +21,8 @@ type Profile struct {
 	Search Search `yaml:"search" json:"search"`
 	Cardb  Cardb  `yaml:"cardb" json:"-"`
 	Path   string `yaml:"-" json:"-"` // file it came from ("" = built-in default)
+	// Warnings: unknown keys and unknown option names (the profile still loads).
+	Warnings []string `yaml:"-" json:"warnings,omitempty"`
 }
 
 // Owner is the human buyer.
@@ -32,11 +35,14 @@ type Owner struct {
 
 // Home is where cars are brought to (distance, market, phone numbers without a country code).
 type Home struct {
-	City    string  `yaml:"city" json:"city"`
-	Country string  `yaml:"country" json:"country"` // ISO-2, upper case
-	Lat     float64 `yaml:"lat" json:"lat"`
-	Lon     float64 `yaml:"lon" json:"lon"`
+	City    string   `yaml:"city" json:"city"`
+	Country string   `yaml:"country" json:"country"` // ISO-2, upper case
+	Lat     *float64 `yaml:"lat" json:"lat,omitempty"`
+	Lon     *float64 `yaml:"lon" json:"lon,omitempty"`
 }
+
+// Located reports whether home has coordinates.
+func (h Home) Located() bool { return h.Lat != nil && h.Lon != nil }
 
 // Cardb is the server's own config section (secrets are references, never values).
 type Cardb struct {
@@ -51,7 +57,7 @@ type User struct {
 	Role string `yaml:"role" json:"role"` // owner | viewer
 }
 
-// Search is the buyer profile proper: scope, queue tiers, hard filters, weights.
+// Search is the buyer profile proper: scope, queue tiers, hard filters, fit, weights, ranking tunables.
 type Search struct {
 	Countries            []string           `yaml:"countries" json:"countries"`
 	PrivateSellersAbroad *bool              `yaml:"private_sellers_abroad" json:"private_sellers_abroad,omitempty"`
@@ -60,13 +66,15 @@ type Search struct {
 	Price                Price              `yaml:"price" json:"price"`
 	YearMin              int                `yaml:"year_min" json:"year_min,omitempty"`
 	KmMax                int                `yaml:"km_max" json:"km_max,omitempty"`
-	Powertrain           []string           `yaml:"powertrain" json:"powertrain,omitempty"` // allowed fuels (BEV, PHEV, …); empty = any
+	Powertrain           []string           `yaml:"powertrain" json:"powertrain,omitempty"` // allowed fuels (bev, phev, …); empty = any
 	Models               []Model            `yaml:"models" json:"models,omitempty"`
 	DefaultTier          int                `yaml:"default_tier" json:"default_tier"`
 	QueueDefaultTiers    []int              `yaml:"queue_default_tiers" json:"queue_default_tiers"`
+	TierLabels           map[int]string     `yaml:"tier_labels" json:"tier_labels,omitempty"`
 	Families             []FamilyRule       `yaml:"families" json:"-"`
 	HardFilters          []HardFilter       `yaml:"hard_filters" json:"hard_filters,omitempty"`
 	OptionsWanted        map[string]float64 `yaml:"options_wanted" json:"options_wanted,omitempty"`
+	OptionLabels         map[string]string  `yaml:"option_labels" json:"option_labels,omitempty"`
 	MustHave             []string           `yaml:"must_have" json:"must_have,omitempty"`
 	OptionKeys           []string           `yaml:"option_keys" json:"option_keys,omitempty"`
 	Penalties            []Penalty          `yaml:"penalties" json:"penalties,omitempty"`
@@ -84,53 +92,73 @@ type Price struct {
 }
 
 // Model is one wanted make/model family with its queue tier; `When` narrows it (first match wins).
+// Model "" = every family of the make.
 type Model struct {
-	Make    string  `yaml:"make" json:"make"`
-	Model   string  `yaml:"model" json:"model"`
-	Tier    int     `yaml:"tier" json:"tier"`
-	Label   string  `yaml:"label" json:"label,omitempty"`
-	BaseFit float64 `yaml:"base_fit" json:"base_fit,omitempty"`
-	Risk    float64 `yaml:"risk" json:"risk,omitempty"` // model-specific risk (known weak points)
-	When    *When   `yaml:"when" json:"when,omitempty"`
+	Make    string   `yaml:"make" json:"make"`
+	Model   string   `yaml:"model" json:"model"`
+	Tier    int      `yaml:"tier" json:"tier"`
+	Label   string   `yaml:"label" json:"label,omitempty"`
+	BaseFit *float64 `yaml:"base_fit" json:"base_fit,omitempty"` // default ranking.fit.base_default
+	Risk    float64  `yaml:"risk" json:"risk,omitempty"`         // model-specific risk (known weak points)
+	When    *When    `yaml:"when" json:"when,omitempty"`
 }
 
-// When: every set condition must hold. Unknown car values: see the ranking package doc.
+// When: every set condition must hold; an unknown car value passes, except as below.
+// Measured ranges (power_hp, battery_net_kwh): a known value must be in range; an unknown one is decided by
+// variant_any (the trim marker) when set, else passes. Without a measured range variant_any must hold outright.
+// Tokens/phrases are matched as whole words in model + variant (folded; "85x" also reads as "85 x").
+// Drive: awd tokens in the text (quattro, 4motion, …) count as awd.
 type When struct {
-	PowerHP       []float64 `yaml:"power_hp" json:"power_hp,omitempty"`         // [min, max]
-	Drive         []string  `yaml:"drive" json:"drive,omitempty"`               // allowed: fwd rwd awd
-	VariantAny    []string  `yaml:"variant_any" json:"variant_any,omitempty"`   // a token present in model+variant
-	VariantNone   []string  `yaml:"variant_none" json:"variant_none,omitempty"` // none of these tokens
+	PowerHP       []float64 `yaml:"power_hp" json:"power_hp,omitempty"` // [min, max] metric hp
+	Drive         []string  `yaml:"drive" json:"drive,omitempty"`       // allowed: fwd rwd awd
+	VariantAny    []string  `yaml:"variant_any" json:"variant_any,omitempty"`
+	VariantNone   []string  `yaml:"variant_none" json:"variant_none,omitempty"` // none of these, always
 	YearMin       int       `yaml:"year_min" json:"year_min,omitempty"`
+	YearMax       int       `yaml:"year_max" json:"year_max,omitempty"`
 	BatteryNetKwh []float64 `yaml:"battery_net_kwh" json:"battery_net_kwh,omitempty"` // [min, max]
 	Fuel          []string  `yaml:"fuel" json:"fuel,omitempty"`
 }
 
-// FamilyRule adds or overrides a model-family recognition rule (see store.Family).
+// FamilyRule adds or overrides a model-family recognition rule (same make + name = override; see store families.yaml).
 type FamilyRule struct {
-	Make     string   `yaml:"make"`
-	Name     string   `yaml:"name"`
-	Match    []string `yaml:"match"`
-	With     []string `yaml:"with"`
-	Lead     bool     `yaml:"lead"`
-	Bare     bool     `yaml:"bare"`
-	Body     []string `yaml:"body"`
-	BodyName string   `yaml:"body_name"`
+	Make        string   `yaml:"make"`
+	MakeAliases []string `yaml:"make_aliases"` // other spellings of the make ("vw", "volkswagen")
+	Name        string   `yaml:"name"`
+	Match       []string `yaml:"match"` // word sequences, any one matches
+	With        []string `yaml:"with"`  // words that must also appear in model + variant
+	Lead        bool     `yaml:"lead"`  // the sequence must start the model
+	Bare        bool     `yaml:"bare"`  // matches when the make is empty or unknown
+	Body        []string `yaml:"body"`  // a body word in model + variant selects body_name
+	BodyName    string   `yaml:"body_name"`
 }
 
 // HardFilter is one queue exclusion rule. Exactly one of Field / Fact(s) / Flag is set.
+//   - field + min/max: car field out of range → excluded (missing passes).
+//   - fact(s) + min/max: numeric fact out of range; + words: a folded whole word/phrase present; + mentions_country:
+//     a value names one of the countries; neither: the fact is truthy.
+//   - flag: a truthy fact of that name or a price flag of the car's price listing.
 type HardFilter struct {
-	Field           string   `yaml:"field" json:"field,omitempty"` // car field, e.g. powertrain.battery_net_kwh, wheels_in
+	Field           string   `yaml:"field" json:"field,omitempty"`
 	Min             *float64 `yaml:"min" json:"min,omitempty"`
 	Max             *float64 `yaml:"max" json:"max,omitempty"`
 	Fact            string   `yaml:"fact" json:"fact,omitempty"`
 	Facts           []string `yaml:"facts" json:"facts,omitempty"`
-	Words           []string `yaml:"words" json:"words,omitempty"`                       // folded whole words
-	MentionsCountry []string `yaml:"mentions_country" json:"mentions_country,omitempty"` // ISO-2, names in EU languages
+	Words           []string `yaml:"words" json:"words,omitempty"`
+	MentionsCountry []string `yaml:"mentions_country" json:"mentions_country,omitempty"` // ISO-2
 	Flag            string   `yaml:"flag" json:"flag,omitempty"`
 	Label           string   `yaml:"label" json:"label,omitempty"`
 }
 
-// Penalty lowers the trim score / fit when a numeric field is at or above Min (or at/below Max).
+// FactKeys is the fact list of a fact rule (fact + facts).
+func (h HardFilter) FactKeys() []string {
+	if h.Fact != "" {
+		return append([]string{h.Fact}, h.Facts...)
+	}
+	return h.Facts
+}
+
+// Penalty: a numeric car field at/above Min (or at/below Max) lowers fit by weight × fit.option_unit and the trim
+// score by weight. Label may contain {v} for the value ('{v}" wheels').
 type Penalty struct {
 	Field  string   `yaml:"field" json:"field"`
 	Min    *float64 `yaml:"min" json:"min,omitempty"`
@@ -139,17 +167,10 @@ type Penalty struct {
 	Label  string   `yaml:"label" json:"label,omitempty"`
 }
 
-// Ranking holds the value model's tunables (landed cost, fit, risk). Zero values get defaults in applyDefaults.
-type Ranking struct {
-	LandedCost map[string]any `yaml:"landed_cost" json:"landed_cost,omitempty"`
-	Fit        map[string]any `yaml:"fit" json:"fit,omitempty"`
-	Risk       map[string]any `yaml:"risk" json:"risk,omitempty"`
-	Peers      map[string]any `yaml:"peers" json:"peers,omitempty"`
-}
-
-// Default is the neutral profile used when no config file exists: no filters, one tier.
+// Default is the neutral profile used when no config file exists: no filters, one tier, no home.
 func Default() *Profile {
 	p := &Profile{}
+	p.Search.Ranking = defaultRanking()
 	p.applyDefaults()
 	return p
 }
@@ -197,12 +218,36 @@ func Load(path string) (*Profile, error) {
 	return p, nil
 }
 
-// Parse parses YAML bytes into a defaulted, validated profile.
+// Parse parses YAML bytes into a defaulted, validated profile. Unknown keys in owner/search/cardb are warnings
+// (other tools extend those sections); type errors and invalid values are errors.
 func Parse(b []byte) (*Profile, error) {
-	var p Profile
+	p := Profile{}
+	p.Search.Ranking = defaultRanking()
 	dec := yaml.NewDecoder(bytes.NewReader(b))
-	if err := dec.Decode(&p); err != nil && !errors.Is(err, io.EOF) {
-		return nil, err
+	dec.KnownFields(true)
+	var doc struct {
+		Owner  *Owner               `yaml:"owner"`
+		Search *Search              `yaml:"search"`
+		Cardb  *Cardb               `yaml:"cardb"`
+		Rest   map[string]yaml.Node `yaml:",inline"`
+	}
+	doc.Owner, doc.Search, doc.Cardb = &p.Owner, &p.Search, &p.Cardb
+	if err := dec.Decode(&doc); err != nil && !errors.Is(err, io.EOF) {
+		var te *yaml.TypeError
+		if !errors.As(err, &te) {
+			return nil, err
+		}
+		var fatal []string
+		for _, e := range te.Errors {
+			if strings.Contains(e, "not found in type") {
+				p.Warnings = append(p.Warnings, "unknown key: "+e)
+			} else {
+				fatal = append(fatal, e)
+			}
+		}
+		if len(fatal) > 0 {
+			return nil, errors.New("profile: " + strings.Join(fatal, "; "))
+		}
 	}
 	p.applyDefaults()
 	if err := p.Validate(); err != nil {
@@ -217,68 +262,59 @@ func (p *Profile) applyDefaults() {
 	}
 	p.Owner.Name = strings.TrimSpace(p.Owner.Name)
 	p.Owner.Home.Country = strings.ToUpper(strings.TrimSpace(p.Owner.Home.Country))
-	for i, c := range p.Search.Countries {
-		p.Search.Countries[i] = strings.ToUpper(strings.TrimSpace(c))
+	s := &p.Search
+	upper := func(xs []string) {
+		for i, x := range xs {
+			xs[i] = strings.ToUpper(strings.TrimSpace(x))
+		}
 	}
-	if p.Search.DefaultTier <= 0 {
+	lower := func(xs []string) {
+		for i, x := range xs {
+			xs[i] = strings.ToLower(strings.TrimSpace(x))
+		}
+	}
+	upper(s.Countries)
+	upper(s.ExcludeRegions)
+	lower(s.Powertrain)
+	for i := range s.HardFilters {
+		upper(s.HardFilters[i].MentionsCountry)
+	}
+	for i := range s.Models {
+		if w := s.Models[i].When; w != nil {
+			lower(w.Drive)
+			lower(w.Fuel)
+		}
+	}
+	if s.DefaultTier <= 0 {
 		maxTier := 0
-		for _, m := range p.Search.Models {
+		for _, m := range s.Models {
 			maxTier = max(maxTier, m.Tier)
 		}
-		p.Search.DefaultTier = maxTier + 1
+		s.DefaultTier = maxTier + 1
 	}
-	if len(p.Search.QueueDefaultTiers) == 0 {
-		for t := 1; t < p.Search.DefaultTier; t++ {
-			p.Search.QueueDefaultTiers = append(p.Search.QueueDefaultTiers, t)
+	if len(s.QueueDefaultTiers) == 0 {
+		for t := 1; t < s.DefaultTier; t++ {
+			s.QueueDefaultTiers = append(s.QueueDefaultTiers, t)
 		}
-		if len(p.Search.QueueDefaultTiers) == 0 {
-			p.Search.QueueDefaultTiers = []int{p.Search.DefaultTier}
+		if len(s.QueueDefaultTiers) == 0 {
+			s.QueueDefaultTiers = []int{s.DefaultTier}
 		}
 	}
-	if p.Search.RoadFactor <= 0 {
-		p.Search.RoadFactor = 1.3
+	if s.RoadFactor <= 0 {
+		s.RoadFactor = 1.3
 	}
-	if p.Search.Weights == nil {
-		p.Search.Weights = map[string]float64{}
+	if s.Weights == nil {
+		s.Weights = map[string]float64{}
 	}
 	for _, k := range []string{"value", "fit", "risk"} {
-		if _, ok := p.Search.Weights[k]; !ok {
-			p.Search.Weights[k] = 1
+		if _, ok := s.Weights[k]; !ok {
+			s.Weights[k] = 1
 		}
 	}
-	if p.Search.Price.Currency == "" {
-		p.Search.Price.Currency = "EUR"
+	if s.Price.Currency == "" {
+		s.Price.Currency = "EUR"
 	}
-}
-
-// Validate rejects a profile cardb cannot apply (with the offending key in the message).
-func (p *Profile) Validate() error {
-	var errs []string
-	seen := map[string]bool{strings.ToLower(p.Owner.Name): true}
-	for _, u := range p.Cardb.Users {
-		n := strings.ToLower(strings.TrimSpace(u.Name))
-		switch {
-		case n == "":
-			errs = append(errs, "cardb.users: empty name")
-		case seen[n]:
-			errs = append(errs, fmt.Sprintf("cardb.users: duplicate name %q", u.Name))
-		case u.Role != "" && u.Role != "viewer":
-			errs = append(errs, fmt.Sprintf("cardb.users[%s].role: want viewer (the owner is owner.name)", u.Name))
-		}
-		seen[n] = true
-	}
-	for i, m := range p.Search.Models {
-		if m.Tier < 1 {
-			errs = append(errs, fmt.Sprintf("search.models[%d] (%s %s): tier must be ≥ 1", i, m.Make, m.Model))
-		}
-		if m.Tier >= p.Search.DefaultTier {
-			errs = append(errs, fmt.Sprintf("search.models[%d]: tier %d ≥ default_tier %d", i, m.Tier, p.Search.DefaultTier))
-		}
-	}
-	if len(errs) > 0 {
-		return errors.New("profile: " + strings.Join(errs, "; "))
-	}
-	return nil
+	p.Search.Ranking.applyDefaults(p)
 }
 
 // Users is the owner followed by the configured viewers.
@@ -307,4 +343,12 @@ func (p *Profile) Tiers() []int {
 		out = append(out, t)
 	}
 	return out
+}
+
+// Weight returns search.weights[name] (value, fit, risk).
+func (p *Profile) Weight(name string) float64 { return p.Search.Weights[name] }
+
+// HomeMarket reports whether an ISO-2 country is the owner's home country (false when either is unknown).
+func (p *Profile) HomeMarket(country string) bool {
+	return p.Owner.Home.Country != "" && strings.EqualFold(country, p.Owner.Home.Country)
 }

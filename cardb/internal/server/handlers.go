@@ -49,6 +49,7 @@ func NewHandler(st *store.Store, tokens map[string]string) http.Handler {
 		_, err := w.Write(apispec.Spec)
 		return err
 	})
+	route("GET "+p+"/profile", h.profile)
 	route("GET "+p+"/stats", h.stats)
 	route("GET "+p+"/cars", h.listCars)
 	route("POST "+p+"/cars", h.createCar)
@@ -572,7 +573,7 @@ func (h *handler) putGoodDeal(w http.ResponseWriter, r *http.Request) error {
 
 func (h *handler) queue(w http.ResponseWriter, r *http.Request) error {
 	q := r.URL.Query()
-	f := store.QueueFilter{Tier: q["tier"], Spec: q.Get("spec")}
+	f := store.QueueFilter{Tier: q["tier"], Spec: q.Get("spec"), User: q.Get("user")}
 	for name, dst := range map[string]*int{"limit": &f.Limit, "offset": &f.Offset} {
 		if v := q.Get(name); v != "" {
 			n, err := strconv.Atoi(v)
@@ -953,5 +954,10 @@ func (h *handler) deletePhoto(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
+
+func (h *handler) profile(w http.ResponseWriter, r *http.Request) error {
+	writeJSON(w, http.StatusOK, h.st.ProfileView())
 	return nil
 }

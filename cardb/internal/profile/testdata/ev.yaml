@@ -1,0 +1,55 @@
+# EV worked example (tests): a buyer in Portugal after a used electric SUV, 286 hp RWD VAG first.
+# Mirrors config.example.yaml's owner/search sections plus the EV run's tier rules.
+owner:
+  name: owner
+  languages: [en, pt]
+  tz: Europe/Lisbon
+  home: {city: Lisbon, country: PT, lat: 38.72, lon: -9.14}
+
+search:
+  countries: [PT, ES, DE, FR, BE, NL, LU, IT]
+  private_sellers_abroad: false
+  exclude_regions: [PT-20, PT-30, ES-CN]
+  price: {max_eur: 42000, gross: true}
+  year_min: 2023
+  km_max: 50000
+  powertrain: [bev]
+  default_tier: 3
+  queue_default_tiers: [1, 2]
+  tier_labels: {1: VAG 286 hp RWD, 2: long-range alternatives}
+  models:   # first match wins; tier-3 entries only carry base_fit / model risk
+    - &vag {make: VW, model: ID.4, tier: 1, base_fit: 0.80, risk: 1.5,
+            when: {power_hp: [280, 290], drive: [fwd, rwd], variant_any: [pro], variant_none: [gtx, pure, pro performance, pro power], year_min: 2023}}
+    - {<<: *vag, model: ID.5, base_fit: 0.78}
+    - {make: Audi, model: Q4, tier: 1, base_fit: 0.80, risk: 1.5,
+       when: {power_hp: [280, 290], drive: [fwd, rwd], variant_any: ["45"], variant_none: [sq4], year_min: 2024}}
+    - {make: Skoda, model: Enyaq, tier: 1, base_fit: 0.80, risk: 1.5,
+       when: {power_hp: [280, 290], drive: [fwd, rwd], variant_any: ["85"], variant_none: [85x, rs]}}
+    - {make: Hyundai, model: Ioniq 5, tier: 2, base_fit: 0.62, risk: 4, when: {battery_net_kwh: [74, 85], variant_any: ["77", "84"]}}
+    - {make: Kia, model: EV6, tier: 2, base_fit: 0.58, risk: 4, when: {variant_none: [gt, gtline]}}
+    - {make: XPeng, model: G6, tier: 2, base_fit: 0.58}
+    - {make: Cupra, model: Tavascan, tier: 2, base_fit: 0.60,
+       when: {power_hp: [280, 290], drive: [fwd, rwd], variant_any: [endurance], variant_none: [vz]}}
+    - {make: Mercedes, model: EQA, tier: 3, risk: 7, when: {year_max: 2024}}   # battery recall years
+    - {make: Mercedes, model: EQA, tier: 3, risk: 2}
+    - {make: Mercedes, model: EQB, tier: 3, risk: 7, when: {year_max: 2024}}
+    - {make: Mercedes, model: EQB, tier: 3, risk: 2}
+    - {make: Toyota, model: bZ4X, tier: 3, risk: 2}
+    - {make: BMW, model: iX1, tier: 3, risk: 2}
+    - {make: MINI, model: Countryman, tier: 3, risk: 2}
+  hard_filters:
+    - {fact: deal_flag, words: [suspect], label: suspect ad}
+    - {facts: [origin, import, history_report, other], mentions_country: [PL, LT, LV, EE], label: PL/Baltic history}
+    - {flag: lease_transfer, label: lease transfer}
+    - {flag: damaged, label: declared damage}
+  options_wanted: {electric_seats: 5, power_tailgate: 5, pano: 1.67, memory_seats: 1.33, premium_audio: 1.33, heat_pump: 1}
+  must_have: [electric_seats, power_tailgate]
+  penalties:
+    - {field: wheels_in, min: 20, weight: 2, label: '{v}" wheels'}
+  weights: {value: 1, fit: 1, risk: 1}
+  ranking:
+    landed_cost:
+      default_distance_km: {PT: 250, ES: 950, FR: 1700, DE: 2600, BE: 2200, NL: 2350, LU: 2100, IT: 2600, other: 2500}
+
+cardb:
+  url: http://127.0.0.1:8484

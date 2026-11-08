@@ -1,6 +1,7 @@
 package store
 
 import (
+	"carhunt/cardb/internal/geo"
 	"net/url"
 	"regexp"
 	"sort"
@@ -137,22 +138,9 @@ func hostIs(host, domain string) bool {
 	return host == domain || strings.HasSuffix(host, "."+domain)
 }
 
-// NormalizePhone keeps digits only, drops a 00 international prefix and prefixes
-// 9-digit Portuguese numbers (starting 9 or 2) with 351.
-func NormalizePhone(s string) string {
-	var b strings.Builder
-	for _, r := range s {
-		if r >= '0' && r <= '9' {
-			b.WriteRune(r)
-		}
-	}
-	d := b.String()
-	d = strings.TrimPrefix(d, "00")
-	if len(d) == 9 && (d[0] == '9' || d[0] == '2') {
-		d = "351" + d
-	}
-	return d
-}
+// NormalizePhone: digits with the country code, no + ("351555010203"); a national-format number gets the calling
+// code of home (ISO-2, the owner's country). See geo.NormalizePhone.
+func NormalizePhone(s, home string) string { return geo.NormalizePhone(s, home) }
 
 // looksLikePhone: only phone punctuation and at least 7 digits.
 func looksLikePhone(s string) bool {
@@ -169,26 +157,26 @@ func looksLikePhone(s string) bool {
 	return digits >= 7
 }
 
-// NormalizeContact normalizes a contact value by kind.
-func NormalizeContact(kind, value string) string {
+// NormalizeContact normalizes a contact value by kind (home: see NormalizePhone).
+func NormalizeContact(kind, value, home string) string {
 	value = strings.TrimSpace(value)
 	switch kind {
 	case "phone", "whatsapp":
-		return NormalizePhone(value)
+		return NormalizePhone(value, home)
 	case "email":
 		return strings.ToLower(value)
 	}
 	return value
 }
 
-// NormalizeCounterpart turns a phone/email/handle into the form stored on messages and contacts.
-func NormalizeCounterpart(s string) string {
+// NormalizeCounterpart turns a phone/email/handle into the form stored on messages and contacts (home: see NormalizePhone).
+func NormalizeCounterpart(s, home string) string {
 	s = strings.TrimSpace(s)
 	switch {
 	case s == "":
 		return ""
 	case looksLikePhone(s):
-		return NormalizePhone(s)
+		return NormalizePhone(s, home)
 	case strings.Contains(s, "@") && !strings.Contains(s, "/"):
 		return strings.ToLower(s)
 	}

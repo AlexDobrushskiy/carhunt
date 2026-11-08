@@ -24,6 +24,7 @@ import (
 	"github.com/gen2brain/avif"
 
 	"carhunt/cardb/internal/api"
+	"carhunt/cardb/internal/profile"
 	"carhunt/cardb/internal/store"
 )
 
@@ -35,9 +36,17 @@ type client struct {
 	token string
 	hdr   map[string]string
 	dir   string // data dir of the in-process server
+	st    *store.Store
 }
 
+// newServer runs the API with the EV worked-example profile (PT home; internal/profile/testdata/ev.yaml).
 func newServer(t *testing.T) *client {
+	t.Helper()
+	return newServerWith(t, "../profile/testdata/ev.yaml")
+}
+
+// newServerWith runs the API with a profile file ("" = the neutral default profile).
+func newServerWith(t *testing.T, profilePath string) *client {
 	t.Helper()
 	dir := t.TempDir()
 	st, err := store.Open(dir)
@@ -45,9 +54,16 @@ func newServer(t *testing.T) *client {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { st.Close() })
+	if profilePath != "" {
+		p, err := profile.Load(profilePath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		st.SetProfile(p)
+	}
 	srv := httptest.NewServer(NewHandler(st, map[string]string{"agents": "tok-agents", "web": "tok-web"}))
 	t.Cleanup(srv.Close)
-	return &client{t: t, base: srv.URL, token: "tok-agents", dir: dir}
+	return &client{t: t, base: srv.URL, token: "tok-agents", dir: dir, st: st}
 }
 
 func (c *client) as(author string) *client {
@@ -314,7 +330,7 @@ func TestListingLifecycleDedupeMergeSplit(t *testing.T) {
 		t.Fatalf("first upsert = %+v", r1)
 	}
 	car := c.car(r1.CarID)
-	if car.VIN == nil || *car.VIN != "SYN11GC09R1234567" || car.Country == nil || *car.Country != "PT" || *car.Market != "PT" || *car.Year != 2024 {
+	if car.VIN == nil || *car.VIN != "SYN11GC09R1234567" || car.Country == nil || *car.Country != "PT" || *car.Market != "home" || *car.Year != 2024 {
 		t.Fatalf("car specs = vin %v country %v market %v year %v", car.VIN, car.Country, car.Market, car.Year)
 	}
 	if car.Listings[0].URL != "https://www.standvirtual.com/carros/anuncio/mini-countryman-e-favoured-IDsynMn01.html" ||
@@ -563,7 +579,7 @@ func TestMessages(t *testing.T) {
 	c := newServer(t)
 	priv := c.upsert(map[string]any{
 		"url": "https://www.olx.pt/d/anuncio/vw-id3-IDaaa111.html", "make": "VW", "model": "ID.3",
-		"seller": map[string]any{"name": "João", "type": "private", "contacts": []map[string]any{{"kind": "whatsapp", "value": "+351 555 345 678"}}},
+		"seller": map[string]any{"name": "João", "type": "private", "contacts": []map[string]any{{"kind": "whatsapp", "value": "555 345 678"}}}, // national: PT home
 	})
 	at := time.Date(2026, 10, 20, 9, 30, 15, 0, time.UTC)
 	msg := map[string]any{"counterpart": "+351 555345678", "channel": "whatsapp", "direction": "out", "text": "Olá, ainda está disponível?", "at": at}
@@ -648,10 +664,10 @@ func TestPatchMessageLinksPhoto(t *testing.T) {
 	c := newServer(t)
 	r := c.upsert(map[string]any{
 		"url": "https://www.olx.pt/d/anuncio/cupra-born-IDmsg1.html", "make": "Cupra", "model": "Born",
-		"seller": map[string]any{"type": "private", "contacts": []map[string]any{{"kind": "whatsapp", "value": "+351 555 000 222"}}},
+		"seller": map[string]any{"type": "private", "contacts": []map[string]any{{"kind": "whatsapp", "value": "555 000 222"}}},
 	})
 	other := c.upsert(map[string]any{"url": "https://www.olx.pt/d/anuncio/x-IDmsg2.html", "make": "Fiat", "model": "600e"})
-	in := map[string]any{"counterpart": "+351555000222", "channel": "whatsapp", "direction": "in", "text": "Fotos do interior",
+	in := map[string]any{"counterpart": "555000222", "channel": "whatsapp", "direction": "in", "text": "Fotos do interior",
 		"external_id": "wamid.ph1", "attachments": []map[string]any{{"kind": "image", "mime": "image/jpeg"}}}
 	var m api.Message
 	c.call("POST", "/api/v1/messages", in, 201, &m)
@@ -1362,7 +1378,8 @@ func TestListSortAndFilter(t *testing.T) {
 	order("country=DE", d)
 	order("country=pt&country=de&distance_km_max=300&sort=distance_km", a, b)
 	order("market=abroad", d)
-	order("market=PT&sort=km", e, b, a)
+	order("market=home&sort=km", e, b, a)
+	c.call("GET", "/api/v1/cars?market=PT", nil, 400, nil)
 	l := c.list("sort=price&limit=2&offset=1")
 	if l.Total != 4 || !slices.Equal(ids(l), []int64{d, a}) {
 		t.Fatalf("paging: total %d ids %v", l.Total, ids(l))

@@ -753,7 +753,7 @@ func (s *Store) Merge(ctx context.Context, ref string, from []string, author str
 				return err
 			}
 		}
-		out, err = carDetail(tx, target)
+		out, err = s.carDetail(tx, target)
 		return err
 	})
 	return out, err
@@ -853,7 +853,7 @@ func (s *Store) Split(ctx context.Context, ref string, in api.SplitInput, author
 			Data:    map[string]any{"from": id, "listing_ids": in.ListingIDs}}); err != nil {
 			return err
 		}
-		out, err = carDetail(tx, newID)
+		out, err = s.carDetail(tx, newID)
 		return err
 	})
 	return out, err

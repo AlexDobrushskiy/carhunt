@@ -78,7 +78,11 @@ type CarSpecs struct {
 	Country      *string     `json:"country,omitempty"`
 	City         *string     `json:"city,omitempty"`
 	DistanceKm   *int        `json:"distance_km,omitempty"`
-	Market       *string     `json:"market,omitempty"` // read-only
+	Market       *string     `json:"market,omitempty"` // read-only: home | abroad
+	Lat          *float64    `json:"lat,omitempty"`
+	Lon          *float64    `json:"lon,omitempty"`
+	// DistanceSource (read-only): stored = distance_km was written; estimate = great-circle from lat/lon × road factor.
+	DistanceSource *string `json:"distance_source,omitempty"`
 }
 
 type CarInput struct {
@@ -121,6 +125,7 @@ type CarSummary struct {
 	Country                 *string           `json:"country"`
 	City                    *string           `json:"city"`
 	DistanceKm              *int              `json:"distance_km"`
+	DistanceSource          *string           `json:"distance_source"`
 	Market                  *string           `json:"market"`
 	Interior                *string           `json:"interior"`
 	InteriorTone            *string           `json:"interior_tone"`
@@ -159,7 +164,7 @@ type CarSummary struct {
 	GoodDealBy   *string    `json:"good_deal_by"`
 	GoodDealAt   *time.Time `json:"good_deal_at"`
 	DealRank     *string    `json:"deal_rank"`
-	// RemovedListingCount = listings with status removed. Tier = "To rate" tier 1|2|3 (see GET /queue).
+	// RemovedListingCount = listings with status removed. Tier = "To rate" tier from the profile (see GET /queue).
 	RemovedListingCount int `json:"removed_listing_count"`
 	Tier                int `json:"tier"`
 }
@@ -504,18 +509,25 @@ type Queue struct {
 	Items  []QueueItem    `json:"items"`
 }
 
-// QueueItem: Position is 1-based within the selected tiers. TrimScoreSource = fact | options.
-// Fair price = median price of live cars in the same model family + year (n ≥ 3), else the family (n ≥ 3), else none.
+// QueueItem: Position is 1-based within the selected tiers. Score/value/fit/risk/landed/fair_* come from the value
+// model (store rank.go); TrimScoreSource = fact | options.
 type QueueItem struct {
 	Position        int        `json:"position"`
 	Tier            int        `json:"tier"`
 	Car             CarSummary `json:"car"`
-	TrimScore       float64    `json:"trim_score"`
-	TrimScoreSource string     `json:"trim_score_source"`
+	Score           *float64   `json:"score"`
+	Value           *float64   `json:"value"`
+	Fit             float64    `json:"fit"`
+	Risk            float64    `json:"risk"`
+	RiskReasons     []string   `json:"risk_reasons"`
+	Landed          *int       `json:"landed"`
 	FairPrice       *int       `json:"fair_price"`
+	FairLanded      *int       `json:"fair_landed"`
 	FairN           int        `json:"fair_n"`
 	FairBasis       *string    `json:"fair_basis"`
 	PriceGapPct     *float64   `json:"price_gap_pct"`
+	TrimScore       float64    `json:"trim_score"`
+	TrimScoreSource string     `json:"trim_score_source"`
 	Why             string     `json:"why"`
 }
 

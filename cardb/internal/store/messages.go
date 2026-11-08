@@ -202,7 +202,7 @@ func (s *Store) AddMessage(ctx context.Context, in api.MessageInput, author stri
 	if err := validateAttachments(nil, 0, in.Attachments); err != nil {
 		return nil, false, err
 	}
-	cp := NormalizeCounterpart(in.Counterpart)
+	cp := NormalizeCounterpart(in.Counterpart, s.profile.Owner.Home.Country)
 	at := s.now()
 	if in.At != nil && !in.At.IsZero() {
 		at = *in.At
@@ -398,7 +398,7 @@ func counterpartCore(p *string) string {
 	if nu, err := NormalizeURL(f[0]); err == nil && strings.Contains(f[0], "/") {
 		return nu.Key
 	}
-	return strings.ToLower(NormalizeCounterpart(f[0]))
+	return strings.ToLower(NormalizeCounterpart(f[0], "")) // stored values are already normalized
 }
 
 // keyFamily is the logger a caller-given dedupe key came from ("sends:…" → "sends", "call-2" → "call-").

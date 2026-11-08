@@ -429,10 +429,21 @@ func (c *Client) ModelFamilies(ctx context.Context) (api.ModelFamilies, error) {
 }
 
 // Queue fetches the "To rate" queue; empty tiers = server default (1,2); spec "" | confirmed | unknown.
-func (c *Client) Queue(ctx context.Context, tiers []int, spec string, limit, offset int) (api.Queue, error) {
+// Profile fetches GET /profile.
+func (c *Client) Profile(ctx context.Context) (api.Profile, error) {
+	var out api.Profile
+	_, err := c.do(ctx, "GET", "/profile", nil, nil, &out)
+	return out, err
+}
+
+// Queue fetches GET /queue; user = whose verdicts count ("" = owner).
+func (c *Client) Queue(ctx context.Context, tiers []int, spec, user string, limit, offset int) (api.Queue, error) {
 	q := url.Values{}
 	if spec != "" {
 		q.Set("spec", spec)
+	}
+	if user != "" {
+		q.Set("user", user)
 	}
 	for _, t := range tiers {
 		q.Add("tier", strconv.Itoa(t))

@@ -421,13 +421,15 @@ func loadDuplicates(tx *sql.Tx, where string, perspective int64, args ...any) ([
 	return out, nil
 }
 
-func carDetail(tx *sql.Tx, id int64) (*api.CarDetail, error) {
+func (s *Store) carDetail(tx *sql.Tx, id int64) (*api.CarDetail, error) {
 	car, err := loadCar(tx, id)
 	if err != nil {
 		return nil, err
 	}
+	specs := specsStruct(car.Specs)
+	s.rk.locate(&specs)
 	d := &api.CarDetail{
-		CarSpecs:         specsStruct(car.Specs),
+		CarSpecs:         specs,
 		ID:               car.ID,
 		Slug:             strPtr(car.Slug),
 		Title:            car.title(),
@@ -466,7 +468,7 @@ func carDetail(tx *sql.Tx, id int64) (*api.CarDetail, error) {
 			d.DealRank = &v
 		}
 	}
-	d.ModelFamily, _, d.ModelFamilyManual = car.family()
+	d.ModelFamily, _, d.ModelFamilyManual = car.family(s.rk.fam)
 	d.GoodDeal, d.GoodDealNote, d.GoodDealBy, d.GoodDealAt = car.GoodDeal, strPtr(car.GoodDealNote), strPtr(car.GoodDealBy), fromNullTS(car.GoodDealAt)
 	if d.Photos, err = loadPhotos(tx, id); err != nil {
 		return nil, err
@@ -510,7 +512,7 @@ func (s *Store) GetCar(ctx context.Context, ref string) (*api.CarDetail, error) 
 		if err != nil {
 			return err
 		}
-		out, err = carDetail(tx, id)
+		out, err = s.carDetail(tx, id)
 		return err
 	})
 	return out, err

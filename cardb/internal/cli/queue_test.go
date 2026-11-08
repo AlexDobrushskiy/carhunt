@@ -51,7 +51,7 @@ func TestQueueCLI(t *testing.T) {
 	if len(lines) != 6 {
 		t.Fatalf("table:\n%s", table)
 	}
-	for _, col := range []string{"#", "TIER", "DEAL", "ID", "TITLE", "YEAR", "KM", "PRICE", "GAP", "TRIM", "WHY"} {
+	for _, col := range []string{"#", "TIER", "DEAL", "ID", "TITLE", "YEAR", "KM", "PRICE", "LANDED", "GAP", "SCORE", "WHY"} {
 		if !strings.Contains(lines[0], col) {
 			t.Fatalf("header lacks %s: %q", col, lines[0])
 		}
@@ -63,10 +63,11 @@ func TestQueueCLI(t *testing.T) {
 	if !strings.Contains(lines[2], "T1-1") || !strings.Contains(lines[2], id(cc)) {
 		t.Fatalf("row 2: %q", lines[2])
 	}
-	if !strings.Contains(lines[3], "-6%") || !strings.Contains(lines[3], "✓ e-seats · −6 % vs ID.4 2024 (n=4)") || !strings.Contains(lines[3], " 4 ") {
-		t.Fatalf("row 3 (gap, trim, why): %q", lines[3])
+	// a: peers b, c and the rated car (n=3) → fair landed 33 150 vs landed 30 165 (+165: default PT distance).
+	if !strings.Contains(lines[3], "+9%") || !strings.Contains(lines[3], "30 165") || !strings.Contains(lines[3], "✓ e-seats · −9 % vs ID.4 · ~275 hp 2wd (n=3)") {
+		t.Fatalf("row 3 (landed, gap, why): %q", lines[3])
 	}
-	if lines[5] != "1–4 of 4 to rate (T1 3 · T2 1 · T3 1; trim* = trim_score fact)" {
+	if lines[5] != "1–4 of 4 to rate (T1 3 · T2 1 · T3 1; GAP = landed vs peers' fair landed, + = cheaper)" {
 		t.Fatalf("footer: %q", lines[5])
 	}
 
@@ -75,10 +76,37 @@ func TestQueueCLI(t *testing.T) {
 	if list.Total != 2 {
 		t.Fatalf("ls --tier 2,3: %+v", list)
 	}
-	for _, bad := range [][]string{{"queue", "--tier", "4"}, {"queue", "extra"}, {"ls", "--tier", "x"}} {
+	for _, bad := range [][]string{{"queue", "--tier", "0"}, {"queue", "extra"}, {"ls", "--tier", "x"}} {
 		if r := e.run(bad...); r.code != 2 {
 			t.Fatalf("%v: exit %d, want 2 (%s)", bad, r.code, r.stderr)
 		}
+	}
+	// Tiers beyond the profile's are the server's call.
+	if r := e.run("queue", "--tier", "4"); r.code != 1 || !strings.Contains(r.stderr, "tier must be one of 1|2|3") {
+		t.Fatalf("--tier 4: %+v", r)
+	}
+}
+
+func TestProfileCLI(t *testing.T) {
+	e := newE2E(t)
+	out := e.ok("profile")
+	for _, want := range []string{"owner: owner · home Porto PT", "tiers (queue default 1,2):", "T1 VAG 286 hp RWD",
+		"VW ID.4 · 280–290 hp (unknown: pro)", "T3 everything else", "hard filters:", "  - km ≤ 50 000",
+		"options wanted: electric_seats 5, power_tailgate 5, pano 1.67", "must have: electric_seats, power_tailgate", "weights: value 1 · fit 1 · risk 1"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("profile output lacks %q", want)
+		}
+	}
+	if t.Failed() {
+		t.Log(out)
+	}
+	var p api.Profile
+	e.okJSON(&p, "profile")
+	if p.DefaultTier != 3 || len(p.Tiers) != 3 || p.Owner.Home.Country != "PT" {
+		t.Fatalf("profile --json: %+v", p)
+	}
+	if r := e.run("profile", "x"); r.code != 2 {
+		t.Fatalf("profile x: exit %d", r.code)
 	}
 }
 
