@@ -38,7 +38,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     e.add_argument("car", help="cardb id or alias")
     e.add_argument("--write-asks", action="store_true",
                    help="write the next `ask` event(s) for the outreach agent (vet never messages sellers)")
-    e.add_argument("--max-asks", type=int, default=1, help="open asks allowed at once (default 1)")
+    e.add_argument("--max-asks", type=int, help="open asks allowed at once (default: vet.max_open_asks or 1)")
     e.add_argument("--json", action="store_true")
     e.set_defaults(func=_evidence)
 
@@ -114,10 +114,12 @@ def _prcodes(a) -> int:
 
 
 def _evidence(a) -> int:
-    from carhunt.core import db  # needs a running cardb
+    from carhunt.core import config, db  # needs a running cardb
 
-    client = db.Client.from_config()
-    st = evidence_pack.run(client, a.car, write_asks=a.write_asks, max_asks=a.max_asks)
+    cfg = config.load()
+    max_asks = a.max_asks if a.max_asks is not None else int(cfg.get("vet.max_open_asks", 1) or 1)
+    client = db.Client.from_config(cfg)
+    st = evidence_pack.run(client, a.car, write_asks=a.write_asks, max_asks=max_asks)
     _out(st.to_dict(), a.json, evidence_pack.render(st)
          + ("" if a.write_asks or not st.asks else "\n(dry: pass --write-asks to queue them)"))
     return 0 if st.visit_ready else 4
