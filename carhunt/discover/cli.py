@@ -57,7 +57,13 @@ def run(args: argparse.Namespace) -> int:
         db = _env.db_client()
         sweep = runner.Sweep(cfg, db, dry_run=args.dry_run, max_new=args.max,
                              log=lambda m: print(f"sweep: {m}", file=sys.stderr))
-        report = sweep.run(plans)
+        try:
+            report = sweep.run(plans)
+        except Exception as e:
+            if type(e).__name__ != "Unreachable":
+                raise
+            print(f"sweep stopped: {e} (start it: docker compose -f deploy/compose.yaml up -d)", file=sys.stderr)
+            return 1
     if args.json:
         print(json.dumps(report, indent=1, ensure_ascii=False))
     else:
