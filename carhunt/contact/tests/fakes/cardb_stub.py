@@ -47,7 +47,7 @@ class CardbStub:
                 self.wfile.write(b)
 
             def do_GET(self) -> None:
-                u = urllib.parse.urlparse(self.path)
+                u = urllib.parse.urlparse(self.path.removeprefix("/api/v1"))
                 parts = [urllib.parse.unquote(p) for p in u.path.strip("/").split("/")]
                 q = dict(urllib.parse.parse_qsl(u.query))
                 if parts[0] == "cars" and len(parts) == 1:
@@ -75,7 +75,7 @@ class CardbStub:
             def do_POST(self) -> None:
                 n = int(self.headers.get("Content-Length") or 0)
                 body = json.loads(self.rfile.read(n) or b"{}")
-                parts = self.path.strip("/").split("/")
+                parts = self.path.removeprefix("/api/v1").strip("/").split("/")
                 if stub.fail_posts:
                     return self._send(500, {"error": "down"})
                 if parts == ["messages"]:

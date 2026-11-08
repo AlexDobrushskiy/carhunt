@@ -1,7 +1,7 @@
 """`carhunt watch`: one watcher for every inbound channel (WhatsApp, Gmail, site inboxes).
 
 Each new seller message → cardb (verbatim, original language, idempotent on external id) + one
-line in the agent's inbox + one line on stdout. The stdout line is the agent's wake-up signal:
+item in the agent's inbox (core notify inbox) + one line on stdout. The stdout line is the agent's wake-up signal:
 - refuses to run with stdout on /dev/null (EV: lost wake-ups 3 times, 2026-11-0x);
 - run as a tracked background task, never `&`; re-arm on any non-zero exit.
 One cursor store ($CARHUNT_HOME/contact/cursors.json) for all channels, advanced only after the
@@ -17,6 +17,8 @@ import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable
+
+from carhunt.core import notify
 
 from . import deps
 from .channels import get as get_channel
@@ -56,7 +58,7 @@ def _key(channel: str, cp: str, m: Msg) -> str:
 
 
 def inbox_path(agent: str) -> Path:
-    return deps.path("agents", agent, "inbox.jsonl")
+    return notify.inbox(agent).file
 
 
 def pass_once(channels: list[Channel], *, db: deps.Cardb | None, agent: str, cursors: Cursors,
@@ -92,8 +94,7 @@ def pass_once(channels: list[Channel], *, db: deps.Cardb | None, agent: str, cur
                         item["car"] = (r or {}).get("car_id")
                     except deps.CardbError as e:
                         item["cardb_error"] = str(e)[:160]  # unknown counterpart (new number?) still reaches the agent
-                with open(inbox_path(agent), "a", encoding="utf-8") as fh:
-                    fh.write(json.dumps(item, ensure_ascii=False) + "\n")
+                notify.inbox(agent).add({"id": f"{ch.name}:{k}", "source": "contact.watch", **item})
                 out(json.dumps(item, ensure_ascii=False))
                 new.append(item)
                 seen.add(k)

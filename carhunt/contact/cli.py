@@ -111,7 +111,7 @@ def register(sub: Any) -> None:
     p.add_argument("--attach", action="append", help="email: file to attach (repeatable)")
     p.add_argument("--no-db", action="store_true", help="don't use cardb (tests)")
     p.add_argument("--json", action="store_true")
-    p.set_defaults(func=_say)
+    p.set_defaults(func=_say, _parser=p)
 
     p = sub.add_parser("watch", help="watch WhatsApp/Gmail/site inboxes; new seller messages → cardb + inbox + stdout")
     p.add_argument("--channels", help="comma list (default contact.watch.channels)")
@@ -120,7 +120,7 @@ def register(sub: Any) -> None:
     p.add_argument("--until-new", action="store_true", help="block until at least one new message, then exit 0")
     p.add_argument("--interval", type=int, default=60)
     p.add_argument("--no-db", action="store_true")
-    p.set_defaults(func=_watch)
+    p.set_defaults(func=_watch, _parser=p)
 
     p = sub.add_parser("mailroute", help="move car mail out of the inbox (address/domain/thread only)")
     p.add_argument("--window", default="3d", help="search window, e.g. 3d or 60d")
@@ -128,21 +128,21 @@ def register(sub: Any) -> None:
     p.add_argument("--filters", action="store_true", help="print Gmail filter XML for import")
     p.add_argument("--launchd", action="store_true", help="print a launchd plist (every 3 min)")
     p.add_argument("--deep", action="store_true", help="with --launchd: the daily 60-day pass")
-    p.set_defaults(func=_mailroute)
+    p.set_defaults(func=_mailroute, _parser=p)
 
     p = sub.add_parser("ledger", help="show the send ledger / reconcile it into cardb")
     p.add_argument("ledger_cmd", nargs="?", choices=["show", "reconcile"], default="show")
     p.add_argument("--limit", type=int, default=30)
     p.add_argument("--since", type=float, default=0.0, help="unix time (reconcile)")
     p.add_argument("--json", action="store_true")
-    p.set_defaults(func=_ledger)
+    p.set_defaults(func=_ledger, _parser=p)
 
     p = sub.add_parser("asks", help="open vet asks (cardb ask events) / close one")
     p.add_argument("asks_cmd", nargs="?", choices=["list", "close"], default="list")
     p.add_argument("--car")
     p.add_argument("--ask-id")
     p.add_argument("--answer", default="")
-    p.set_defaults(func=_asks)
+    p.set_defaults(func=_asks, _parser=p)
 
 
 def main(argv: list[str] | None = None) -> int:

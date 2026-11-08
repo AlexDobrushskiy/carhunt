@@ -2,21 +2,12 @@
 from __future__ import annotations
 
 import shutil
-from dataclasses import dataclass
 from typing import Any
+
+from carhunt.core.doctor import Check
 
 from . import deps
 from .settings import contact_settings
-
-try:  # pragma: no cover
-    from carhunt.core.doctor import Check  # type: ignore
-except ImportError:
-    @dataclass
-    class Check:  # type: ignore[no-redef]
-        name: str
-        status: str  # ok | warn | fail
-        detail: str = ""
-        fix: str = ""
 
 
 def checks(cfg: dict[str, Any] | None = None) -> list[Check]:

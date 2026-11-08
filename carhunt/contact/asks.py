@@ -27,5 +27,5 @@ def open_asks_all(db: deps.Cardb, statuses: tuple[str, ...] = ("contacted", "tal
 
 
 def close(db: deps.Cardb, car: str, ask_id: str, answer: str) -> dict[str, Any]:
-    return db.event(car, type="ask_answered", summary=answer[:300], data={"ask_event": ask_id},
-                    dedupe_key=f"ask_answered:{ask_id}")
+    return db.event(car, "ask_answered", answer[:300] or "answered", data={"ask_event": ask_id},
+                    key=f"ask_answered:{ask_id}")
