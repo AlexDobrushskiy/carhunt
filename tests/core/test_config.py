@@ -20,9 +20,10 @@ def test_secret_refs_stay_refs(example_config, monkeypatch):
     assert "value-xyz" not in repr(cfg) + str(cfg.as_dict()) + repr(cfg.section("notify"))
 
 
-def test_unknown_key_inside_module_section_is_allowed(write_config):
-    write_config({"owner": {"tz": "UTC"}, "contact": {"brand_new_key": 1}, "notify": {"extra": True}})
-    assert config.load().get("contact.brand_new_key") == 1
+def test_free_form_maps_take_any_key(write_config):
+    write_config({"owner": {"tz": "UTC"}, "sites": {"overrides": {"new-site.example": {"pace": {"min_gap_s": 30}}}},
+                  "search": {"options_wanted": {"any_option": 2}}, "contact": {"persona": {"any_line": "x"}}})
+    assert config.load().get("sites.overrides")["new-site.example"]["pace"]["min_gap_s"] == 30
 
 
 @pytest.mark.parametrize("data, needle", [
@@ -33,6 +34,15 @@ def test_unknown_key_inside_module_section_is_allowed(write_config):
     ({"owner": {"tz": "UTC"}, "notify": {"backend": "pigeon"}}, "notify.backend"),
     ({"owner": {"tz": "UTC"}, "cardb": {"token": "plaintext-token"}}, "cardb.token"),
     ({"owner": {"tz": "UTC"}, "secrets": {"backend": "vault"}}, "secrets.backend"),
+    # strict sections: a typo is an error, not a silently ignored key
+    ({"owner": {"tz": "UTC"}, "contact": {"quiet_hour": "01:30-08:10"}}, "contact"),
+    ({"owner": {"tz": "UTC"}, "notify": {"extra": True}}, "notify"),
+    ({"owner": {"tz": "UTC"}, "browsers": {"captcha": {"enable": True}}}, "browsers.captcha"),
+    ({"owner": {"tz": "UTC"}, "sites": {"overrides": {"mobile.de": {"pace": {"min_gap": 5}}}}}, "sites.overrides.mobile.de.pace"),
+    ({"owner": {"tz": "UTC"}, "search": {"hard_filters": [{"flag": "damaged", "exclude": True}]}}, "search.hard_filters.0"),
+    ({"owner": {"tz": "UTC"}, "search": {"hard_filters": [{"field": "km", "fact": "x", "max": 1}]}}, "search.hard_filters.0"),
+    ({"owner": {"tz": "UTC"}, "contact": {"nudge": {"exclude": [{"field": "tier", "eq": 3, "whyy": "x"}]}}}, "contact.nudge.exclude.0"),
+    ({"owner": {"tz": "UTC"}, "orchestrate": {"schedule": {"sweep": "7am"}}}, "orchestrate.schedule.sweep"),
 ])
 def test_invalid_configs(write_config, data, needle):
     write_config(data)
