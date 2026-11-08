@@ -188,10 +188,10 @@ step_home() {
   info "HOME=$HOME  CARHUNT_HOME=$CH  node $(node -v)  go $(go env GOVERSION 2>/dev/null || echo -)"
 }
 
-BOOT_FLAGS=(--yes --skip-mcp --skip-browsers-launchd --skip-compose --skip-schedule)
 
-home_tree() {  # HOME minus tool caches (brew refreshes its API cache on `brew list`)
-  (cd "$HOME" && find . -path ./Library/Caches -prune -o -path ./.cache -prune -o -path ./.npm -prune -o -print | sort)
+home_tree() {  # HOME minus tool caches/telemetry (brew refreshes its API cache on `brew list`, go writes telemetry)
+  (cd "$HOME" && find . \( -path ./Library/Caches -o -path "./Library/Application Support/go" -o -path ./.cache \
+    -o -path ./.npm \) -prune -o -print | sort)
 }
 BOOT_FLAGS=(--yes --skip-mcp --skip-browsers-launchd --skip-compose --skip-schedule)
 
