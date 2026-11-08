@@ -51,10 +51,16 @@ def open_asks(db: deps.Cardb, car: str) -> list[dict[str, Any]]:
 
 def open_asks_all(db: deps.Cardb, statuses: tuple[str, ...] = STATUSES) -> list[dict[str, Any]]:
     out = []
+    page = 1000  # cardb's list cap
     for st in statuses:
-        for c in db.cars(status=st, limit=1000):
-            for e in open_asks(db, str(c["id"])):
-                out.append({"car": c["id"], **e})
+        off = 0
+        while True:
+            rows = db.cars(status=st, limit=page, offset=off)
+            for c in rows:
+                out += [{"car": c["id"], **e} for e in open_asks(db, str(c["id"]))]
+            if len(rows) < page:
+                break
+            off += page
     return out
 
 
