@@ -5,26 +5,31 @@ set -euo pipefail
 
 usage() {
   cat <<'USAGE'
-usage: scripts/bootstrap [--dry-run] [--yes] [--skip-mcp] [--skip-browsers-launchd] [--skip-compose]
-                         [--extras all|core,...]
+usage: scripts/bootstrap [--dry-run] [--yes] [--skip-mcp] [--skip-browsers-launchd] [--skip-browsers]
+                         [--skip-compose] [--skip-schedule] [--extras all|core,...]
   --dry-run                print every step and the commands it would run; change nothing
   --yes                    no questions (MCP registration counts as "yes" unless --skip-mcp)
   --skip-mcp               don't register MCP servers with Claude Code
   --skip-browsers-launchd  don't install the browsers' launchd jobs
+  --skip-browsers          skip browsers/install entirely (no Agent Chrome clone, no npm ci in browsers/)
   --skip-compose           don't start cardb + web with docker compose
+  --skip-schedule          don't install the carhunt.* launchd day schedule (carhunt schedule install)
   --extras LIST            pip extras to install (default: all)
 env: CARHUNT_HOME (default ~/.carhunt), CLAUDE_CONFIG_DIR (default ~/.claude), CARHUNT_BIN_DIR (default ~/.local/bin)
+--yes answers every question with yes, including the launchd schedule: pass --skip-schedule to keep it off.
 USAGE
 }
 
-DRY=0 YES=0 SKIP_MCP=0 SKIP_LAUNCHD=0 SKIP_COMPOSE=0 EXTRAS=all
+DRY=0 YES=0 SKIP_MCP=0 SKIP_LAUNCHD=0 SKIP_BROWSERS=0 SKIP_COMPOSE=0 SKIP_SCHEDULE=0 EXTRAS=all
 while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run) DRY=1 ;;
     --yes|-y) YES=1 ;;
     --skip-mcp) SKIP_MCP=1 ;;
     --skip-browsers-launchd) SKIP_LAUNCHD=1 ;;
+    --skip-browsers) SKIP_BROWSERS=1 ;;
     --skip-compose) SKIP_COMPOSE=1 ;;
+    --skip-schedule) SKIP_SCHEDULE=1 ;;
     --extras) shift; EXTRAS=${1:?--extras needs a value} ;;
     -h|--help) usage; exit 0 ;;
     *) echo "unknown option: $1" >&2; usage >&2; exit 2 ;;
@@ -34,11 +39,12 @@ done
 
 REPO=$(cd "$(dirname "$0")/.." && pwd)
 CH=${CARHUNT_HOME:-$HOME/.carhunt}
+export CARHUNT_HOME=$CH   # every child (carhunt, cardb, browsers/install) uses the same home
 CLAUDE_DIR=${CLAUDE_CONFIG_DIR:-$HOME/.claude}
 BIN_DIR=${CARHUNT_BIN_DIR:-$HOME/.local/bin}
 VENV=$REPO/.venv
 CARHUNT=$VENV/bin/carhunt
-TOTAL=15 N=0 WARNED=0
+TOTAL=18 N=0 WARNED=0
 
 step() { N=$((N + 1)); printf '\n[%d/%d] %s\n' "$N" "$TOTAL" "$1"; }
 say() { printf '    %s\n' "$*"; }
@@ -97,7 +103,12 @@ else run mkdir -p "$BIN_DIR"; run ln -s "$CARHUNT" "$BIN_DIR/carhunt"; fi
 case ":$PATH:" in *":$BIN_DIR:"*) ;; *) say "add $BIN_DIR to PATH in your shell profile" ;; esac
 
 step "Build cardb (db module: make -C cardb build)"
-if [ -f "$REPO/cardb/Makefile" ]; then run make -C "$REPO/cardb" build
+if [ -f "$REPO/cardb/Makefile" ]; then
+  run make -C "$REPO/cardb" build
+  # agents and the docs call plain `cardb`: link it next to carhunt
+  if [ -L "$BIN_DIR/cardb" ] && [ "$(readlink "$BIN_DIR/cardb")" = "$REPO/cardb/bin/cardb" ]; then say "cardb linked in $BIN_DIR"
+  elif [ -e "$BIN_DIR/cardb" ] || [ -L "$BIN_DIR/cardb" ]; then warn "$BIN_DIR/cardb exists and is not ours: left alone"
+  else run mkdir -p "$BIN_DIR"; run ln -s "$REPO/cardb/bin/cardb" "$BIN_DIR/cardb"; fi
 else warn "cardb/Makefile not found: db module not installed, skipped"; fi
 
 step "Web UI dependencies (npm ci in web/)"
@@ -132,7 +143,12 @@ step "Start cardb + web (docker compose -f deploy/compose.yaml up -d)"
 if [ "$SKIP_COMPOSE" = 1 ]; then say "skipped (--skip-compose)"
 elif [ ! -f "$REPO/deploy/compose.yaml" ]; then warn "deploy/compose.yaml not found: skipped"
 elif ! have docker && [ "$DRY" = 0 ]; then warn "docker missing: skipped"
-else CARHUNT_HOME=$CH run docker compose -f "$REPO/deploy/compose.yaml" up -d; fi
+elif [ ! -x "$CARHUNT" ] && [ "$DRY" = 0 ]; then warn "carhunt not installed (needed to inject the web tokens): skipped"
+else
+  # web reads its per-user cardb tokens from a compose secret fed by env; never written to disk here
+  run "$CARHUNT" secret exec cardb_web_tokens=CARHUNT_SECRET_CARDB_WEB_TOKENS -- \
+    docker compose -f "$REPO/deploy/compose.yaml" up -d --build
+fi
 
 step "Link skills into $CLAUDE_DIR/skills (carhunt-*; never overwrites your own)"
 found=0
@@ -146,7 +162,8 @@ done
 [ "$found" = 1 ] || warn "no skills/carhunt-* yet: skipped"
 
 step "Browsers: agent Chrome, lanes, identity pool, MCP servers (browsers/install)"
-if [ -x "$REPO/browsers/install" ]; then
+if [ "$SKIP_BROWSERS" = 1 ]; then say "skipped (--skip-browsers; later: browsers/install)"
+elif [ -x "$REPO/browsers/install" ]; then
   args=()
   [ "$YES" = 1 ] && args+=(--yes)
   [ "$SKIP_LAUNCHD" = 1 ] && args+=(--skip-launchd)
@@ -155,10 +172,58 @@ if [ -x "$REPO/browsers/install" ]; then
   run "$REPO/browsers/install" ${args[@]+"${args[@]}"}
 else warn "browsers/install not found: browsers module not installed, skipped"; fi
 
+step "Claude Code folder trust for $CH (agents start unattended in $CH/agents/<role>)"
+# Same effect as running `claude` once in $CH and accepting the dialog; an unanswered dialog blocks every agent start.
+CLAUDE_JSON=${CLAUDE_CONFIG_DIR:+$CLAUDE_CONFIG_DIR/.claude.json}
+CLAUDE_JSON=${CLAUDE_JSON:-$HOME/.claude.json}
+if [ "$DRY" = 1 ]; then say "would set projects[\"$CH\"].hasTrustDialogAccepted=true in $CLAUDE_JSON"
+elif [ -x "$VENV/bin/python" ]; then
+  say "$CLAUDE_JSON: $("$VENV/bin/python" - "$CLAUDE_JSON" "$CH" <<'PY'
+import json, os, sys, tempfile
+path = sys.argv[1]
+homes = {os.path.abspath(sys.argv[2]), os.path.realpath(sys.argv[2])}  # /var vs /private/var on macOS
+try:
+    with open(path) as f:
+        d = json.load(f)
+except FileNotFoundError:
+    d = {}
+projects = d.setdefault("projects", {})
+if all(projects.get(h, {}).get("hasTrustDialogAccepted") is True for h in homes):
+    print("trusted already")
+    sys.exit(0)
+for h in homes:
+    projects.setdefault(h, {})["hasTrustDialogAccepted"] = True
+fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path) or ".", prefix=".claude.json.")
+with os.fdopen(fd, "w") as f:  # atomic replace: Claude Code may be reading the file right now
+    json.dump(d, f, indent=2)
+os.chmod(tmp, 0o600)
+os.replace(tmp, path)
+print("trusted")
+PY
+)"
+else warn "no .venv python: folder trust skipped (run claude once in $CH)"; fi
+
+HOOK_ARGS=()
+[ "$YES" = 1 ] && HOOK_ARGS+=(--yes)
 step "Agent guard hooks (carhunt hooks install)"
-if [ "$DRY" = 1 ]; then say "would run: carhunt hooks install (if the orchestrate module is installed)"
-elif [ -x "$CARHUNT" ] && "$CARHUNT" hooks --help >/dev/null 2>&1; then run "$CARHUNT" hooks install
+if [ "$DRY" = 1 ]; then say "would run: carhunt hooks install --dry-run (if the orchestrate module is installed)"
+elif [ -x "$CARHUNT" ] && "$CARHUNT" hooks --help >/dev/null 2>&1; then
+  run "$CARHUNT" hooks install ${HOOK_ARGS[@]+"${HOOK_ARGS[@]}"} || warn "hooks not installed (re-run: carhunt hooks install)"
 else warn "orchestrate module not installed (no 'carhunt hooks'): skipped"; fi
+
+step "Statusline (carhunt hooks statusline: ctx:N% for handovers)"
+if [ "$DRY" = 1 ]; then say "would run: carhunt hooks statusline"
+elif [ -x "$CARHUNT" ] && "$CARHUNT" hooks --help >/dev/null 2>&1; then
+  run "$CARHUNT" hooks statusline ${HOOK_ARGS[@]+"${HOOK_ARGS[@]}"} || warn "statusline not set (re-run: carhunt hooks statusline)"
+else warn "orchestrate module not installed: skipped"; fi
+
+step "Day schedule: launchd jobs carhunt.* (carhunt schedule install)"
+if [ "$SKIP_SCHEDULE" = 1 ]; then say "skipped (--skip-schedule; later: carhunt schedule install)"
+elif [ "$DRY" = 1 ]; then say "would ask, then run: carhunt schedule install"
+elif ! { [ -x "$CARHUNT" ] && "$CARHUNT" schedule --help >/dev/null 2>&1; }; then warn "orchestrate module not installed: skipped"
+elif ask "Install the launchd day schedule (sweep, digests, night pause, learning)?"; then
+  run "$CARHUNT" schedule install || warn "schedule not installed (re-run: carhunt schedule install)"
+else say "not installed (later: carhunt schedule install)"; fi
 
 step "Git privacy hooks (scripts/install-hooks)"
 if git -C "$REPO" rev-parse --git-dir >/dev/null 2>&1; then run "$REPO/scripts/install-hooks"
@@ -166,7 +231,7 @@ else say "not a git checkout: skipped"; fi
 
 step "Doctor"
 if [ "$DRY" = 1 ]; then say "would run: carhunt doctor"
-else CARHUNT_HOME=$CH "$CARHUNT" doctor || say "doctor found problems: fix the FAIL lines above, then re-run scripts/doctor"; fi
+else "$CARHUNT" doctor || say "doctor found problems: fix the FAIL lines above, then re-run scripts/doctor"; fi
 
 printf '\n%s: %d step(s), %d warning(s).\n' "$([ "$DRY" = 1 ] && echo 'dry run done' || echo 'bootstrap done')" "$N" "$WARNED"
 [ "$DRY" = 1 ] || cat <<NEXT

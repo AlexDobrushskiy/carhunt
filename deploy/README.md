@@ -23,7 +23,7 @@ Version stamp: `CARDB_VERSION=$(git describe --tags --always) docker compose …
 
 | item | value | why |
 |---|---|---|
-| ports | `127.0.0.1` only: cardb 8484, web 4321 (`PORT=4321`, `CARDB_URL=http://cardb:8484`) | the API is token-gated but not meant for the open internet; remote access = Tailscale or TLS proxy (docs/db.md) |
+| ports | `127.0.0.1` only: cardb 8484, web 4321 (`PORT=4321`, `CARDB_URL=http://cardb:8484`); host side `CARHUNT_CARDB_PORT` / `CARHUNT_WEB_PORT` | the API is token-gated but not meant for the open internet; remote access = Tailscale or TLS proxy (docs/db.md) |
 | cardb mounts | `$CARHUNT_HOME/cardb` → `/data`; `$CARHUNT_HOME/config.yaml` → `/config/config.yaml:ro` | one data dir = one backup path; profile is read-only to the server |
 | missing mount source | start fails (long-syntax bind, no auto-create) | Docker would otherwise create an empty *directory* named `config.yaml` |
 | tokens | `CARDB_TOKENS_FILE=/data/tokens` (written by `cardb init`, hashed) | no token in env or compose |
