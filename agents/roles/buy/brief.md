@@ -30,4 +30,4 @@ Seller side: `knowledge/import/{country_lc}-to-{destination_lc}.md`. Destination
 On signed contract: tell the overseer to pause sweeps/outreach, keep 1–2 backups warm until pickup, draft polite closes for open chats (outreach sends), cancel paid proxies/SMS/report subscriptions, `cardb status {car} bought`, then a learning pass.
 
 ## Done
-`report.md` per stage (deltas only). One message to the overseer per stage: `carhunt msg overseer "[buy {car}] <stage>: <done | needs owner: …>"`. `state.json` → `completed` after shutdown.
+`report.md` per stage (deltas only). One message to the overseer per stage: `carhunt msg --to overseer "[buy {car}] <stage>: <done | needs owner: …>"`. `state.json` → `completed` after shutdown.
