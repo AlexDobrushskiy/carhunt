@@ -89,23 +89,28 @@ for pair in go:go python@3.12:python3.12 uv:uv gitleaks:gitleaks jq:jq shfmt:shf
   elif have brew || [ "$DRY" = 1 ]; then run brew install "$f"
   else warn "$f: no Homebrew, install it yourself"; fi
 done
-# Node >= 22.19 (web deps: undici 8). Homebrew's node@22 is keg-only (not linked onto PATH): use its bin for this run.
+# Node >= 22.19 (web deps: undici 8). Not on PATH → the first such Node found below, for this run only.
 node_ok() {  # node_ok [NODE]: NODE (default: node on PATH) is >= 22.19
   v=$("${1:-node}" -v 2>/dev/null | sed 's/^v//')
   [ -n "$v" ] && [ "$(printf '%s\n' 22.19.0 "$v" | sort -V | head -1)" = 22.19.0 ]
 }
-brew_node22() { have brew && brew list --versions node@22 >/dev/null 2>&1 && echo "$(brew --prefix node@22)/bin"; }
+# Candidates are checked by version, not by name (a brew keg link can point at another Node).
+node_dirs() {  # bin dirs that may hold a Node: brew's node@22 keg (keg-only, not on PATH), nvm installs newest first
+  have brew && echo "$(brew --prefix node@22 2>/dev/null)/bin"
+  ls -d "${NVM_DIR:-$HOME/.nvm}"/versions/node/v*/bin 2>/dev/null | sort -rV
+}
+find_node() { local d; while IFS= read -r d; do node_ok "$d/node" && { echo "$d"; return 0; }; done < <(node_dirs); return 1; }
 NODE_HINT=
 if node_ok; then say "node: ok ($(command -v node), $(node -v))"
 else
-  nb=$(brew_node22 || true)
-  if [ -z "$nb" ] && have brew; then run brew install node@22; [ "$DRY" = 1 ] || nb=$(brew_node22 || true); fi
-  if [ -n "$nb" ] && node_ok "$nb/node"; then
+  nb=$(find_node || true)
+  if [ -z "$nb" ] && have brew; then run brew install node@22; [ "$DRY" = 1 ] || nb=$(find_node || true); fi
+  if [ -n "$nb" ]; then
     old_node="$(command -v node 2>/dev/null || echo none) $(node -v 2>/dev/null)"
     export PATH="$nb:$PATH" NODE_HINT=$nb
     say "node: $old_node on PATH is older than 22.19; using $nb/node ($("$nb/node" -v)) for this run"
     say "add it to PATH in your shell profile: export PATH=\"$nb:\$PATH\""
-  elif [ "$DRY" = 1 ]; then say "would use \$(brew --prefix node@22)/bin (node on PATH: $(node -v 2>/dev/null || echo none))"
+  elif [ "$DRY" = 1 ]; then say "would use the Node that brew install node@22 provides (node on PATH: $(node -v 2>/dev/null || echo none))"
   else warn "Node >= 22.19 not found (node on PATH: $(node -v 2>/dev/null || echo none)): brew install node@22 and put its bin on PATH"; fi
 fi
 have wacli || say "wacli (WhatsApp CLI) not found: optional, see docs/contact.md"

@@ -37,7 +37,7 @@ E2E_KEEP_GOING=1 E2E_PATCH=/tmp/fix.diff tests/e2e/run.sh   # try an uncommitted
 | `E2E_KEEP_GOING` | `0` | `1` = run every step after a failure (later steps may fail as a consequence) |
 | `E2E_COMPOSE` | `0` | `1` = also build and run cardb with docker compose (own project, port and image names; removed after) |
 | `E2E_CACHES` | `warm` | share the Go/uv/npm/Playwright caches (a missing Chromium revision is downloaded into the real `~/Library/Caches/ms-playwright` once); `cold` = a true first-time machine (slow) |
-| `E2E_NODE_BIN` | Homebrew `node@22` (keg-only), else the newest nvm Node, else `node` on `PATH` | bin dir of a Node >= 22.19 (web deps: undici 8) |
+| `E2E_NODE_BIN` | first Node >= 22.19 among: `$(brew --prefix node@22)/bin`, nvm installs (newest first), `node` on `PATH` | bin dir of a Node >= 22.19 (web deps: undici 8); candidates are checked by version, not name |
 | `E2E_TMP` | `/tmp` | base of the work dir: keep it short, since the agterm socket path must stay under 104 bytes |
 | `KEEP` | `0` | `1` = keep the work dir (clone, `HOME`, logs in `logs/`) |
 
