@@ -749,7 +749,7 @@ func TestImportTimesAndQuietFills(t *testing.T) {
 	var f api.Fact
 	c.call("PUT", "/api/v1/cars/"+car+"/facts/owners", map[string]any{"value": "2", "at": at(2)}, 200, &f)
 	var v api.Verdict
-	c.call("PUT", "/api/v1/cars/"+car+"/verdict", map[string]any{"value": "up", "author": "owner", "at": at(3)}, 200, &v)
+	c.call("PUT", "/api/v1/cars/"+car+"/verdict", map[string]any{"value": "up", "author": "robin", "at": at(3)}, 200, &v)
 	var n api.Note
 	c.call("POST", "/api/v1/cars/"+car+"/notes", map[string]any{"text": "imported note", "at": at(4)}, 201, &n)
 	var d api.CarDetail
@@ -962,14 +962,14 @@ func TestNotesCRUD(t *testing.T) {
 func TestVerdict(t *testing.T) {
 	c := newServer(t)
 	r := c.upsert(map[string]any{"url": "https://www.lacentrale.fr/auto-occasion-annonce-69112345678.html", "make": "Renault", "model": "Megane E-Tech"})
-	owner := c.as("owner")
+	robin := c.as("robin")
 	var v api.Verdict
-	owner.call("PUT", fmt.Sprintf("/api/v1/cars/%d/verdict", r.CarID), map[string]any{"value": "up"}, 200, &v)
-	if v.Value != "up" || v.Author != "owner" {
+	robin.call("PUT", fmt.Sprintf("/api/v1/cars/%d/verdict", r.CarID), map[string]any{"value": "up"}, 200, &v)
+	if v.Value != "up" || v.Author != "robin" {
 		t.Fatalf("verdict = %+v", v)
 	}
-	owner.call("PUT", fmt.Sprintf("/api/v1/cars/%d/verdict", r.CarID), map[string]any{"value": "up"}, 200, nil)
-	owner.call("PUT", fmt.Sprintf("/api/v1/cars/%d/verdict", r.CarID), map[string]any{"value": "down", "note": "too far"}, 200, &v)
+	robin.call("PUT", fmt.Sprintf("/api/v1/cars/%d/verdict", r.CarID), map[string]any{"value": "up"}, 200, nil)
+	robin.call("PUT", fmt.Sprintf("/api/v1/cars/%d/verdict", r.CarID), map[string]any{"value": "down", "note": "too far"}, 200, &v)
 	if v.Note == nil || *v.Note != "too far" {
 		t.Fatalf("verdict note = %+v", v)
 	}
@@ -980,9 +980,9 @@ func TestVerdict(t *testing.T) {
 	if l := c.list("verdict=down"); l.Total != 1 {
 		t.Fatal("verdict filter down")
 	}
-	owner.call("PUT", fmt.Sprintf("/api/v1/cars/%d/verdict", r.CarID), map[string]any{"value": "meh"}, 422, nil)
-	owner.call("DELETE", fmt.Sprintf("/api/v1/cars/%d/verdict", r.CarID), nil, 204, nil)
-	owner.call("DELETE", fmt.Sprintf("/api/v1/cars/%d/verdict", r.CarID), nil, 204, nil)
+	robin.call("PUT", fmt.Sprintf("/api/v1/cars/%d/verdict", r.CarID), map[string]any{"value": "meh"}, 422, nil)
+	robin.call("DELETE", fmt.Sprintf("/api/v1/cars/%d/verdict", r.CarID), nil, 204, nil)
+	robin.call("DELETE", fmt.Sprintf("/api/v1/cars/%d/verdict", r.CarID), nil, 204, nil)
 	if n := len(eventsOfType(c.events(r.CarID), "verdict")); n != 3 {
 		t.Fatalf("verdict events after clear = %d", n)
 	}

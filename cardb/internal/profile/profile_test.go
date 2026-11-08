@@ -71,6 +71,7 @@ search:
   option_keys: [laser]
   hard_filters: [{flag: lease_transfer, exclude: true}]
   sites: [example]
+cardb: {url: http://127.0.0.1:8484, token: secret:cardb_token}
 notify: {backend: none}
 `))
 	if err != nil {
@@ -82,7 +83,7 @@ notify: {backend: none}
 			t.Errorf("warnings lack %q:\n%s", want, joined)
 		}
 	}
-	if strings.Contains(joined, "laser") || strings.Contains(joined, "notify") {
+	if strings.Contains(joined, "laser") || strings.Contains(joined, "notify") || strings.Contains(joined, "token") {
 		t.Errorf("unexpected warning:\n%s", joined)
 	}
 	if p.Owner.Home.Country != "ES" || *p.Search.Ranking.VATReserve.Pct != 21 {

@@ -47,6 +47,7 @@ func (h Home) Located() bool { return h.Lat != nil && h.Lon != nil }
 // Cardb is the server's own config section (secrets are references, never values).
 type Cardb struct {
 	URL     string `yaml:"url"`
+	Token   string `yaml:"token"` // client token reference (secret:<name>); read by package setup, never a value
 	DataDir string `yaml:"data_dir"`
 	Users   []User `yaml:"users"` // viewers (the owner is implicit)
 }

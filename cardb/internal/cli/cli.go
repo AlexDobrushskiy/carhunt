@@ -410,7 +410,7 @@ func needArgs(cmd string, pos []string, min, max int, synopsis string) error {
 // ---- help ----
 
 func printUsage(w io.Writer) {
-	fmt.Fprintln(w, "cardb — used-EV listings database client\n\nusage: cardb [--json] [--server URL] [--token T] [--author A] COMMAND [args] [flags]\n\ncommands:")
+	fmt.Fprintln(w, "cardb — carhunt listings database client\n\nusage: cardb [--json] [--server URL] [--token T] [--author A] COMMAND [args] [flags]\n\ncommands:")
 	for _, c := range commands {
 		fmt.Fprintf(w, "  %-13s %s\n", c.name, c.summary)
 	}
@@ -420,8 +420,9 @@ func printUsage(w io.Writer) {
 	}
 	fmt.Fprintln(w, `
 CAR is a numeric car id or any alias/slug. Flags may follow positional args.
-Config: CARDB_URL, CARDB_TOKEN, CARDB_AUTHOR env, else ~/.config/cardb/config.json.
-Author defaults to $AGTERM_SESSION_ID when set.
+URL: --server > CARDB_URL > ~/.config/cardb/config.json > config cardb.url > http://127.0.0.1:8484.
+Token: --token > CARDB_TOKEN > secret cardb_token (CARHUNT_SECRET_CARDB_TOKEN, then the secrets backend; cardb init).
+Author: --author > CARDB_AUTHOR > config file author > the token name.
 Exit codes: 0 ok, 1 error, 2 usage, 3 not found.`)
 }
 

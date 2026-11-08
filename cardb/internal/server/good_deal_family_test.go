@@ -67,15 +67,15 @@ func TestGoodDeal(t *testing.T) {
 	// Off clears the note even when one is sent; a second off is a no-op.
 	put(c, map[string]any{"good_deal": true, "note": "again"})
 	n := len(dealEvents())
-	gd = put(c.as("owner"), map[string]any{"good_deal": false, "note": "ignored"})
-	if gd.GoodDeal || gd.Note != nil || deref(gd.By) != "owner" || len(dealEvents()) != n+1 || dealEvents()[0].Summary != "good deal cleared" {
+	gd = put(c.as("robin"), map[string]any{"good_deal": false, "note": "ignored"})
+	if gd.GoodDeal || gd.Note != nil || deref(gd.By) != "robin" || len(dealEvents()) != n+1 || dealEvents()[0].Summary != "good deal cleared" {
 		t.Fatalf("off: %+v %+v", gd, dealEvents()[0])
 	}
 	put(c, map[string]any{"good_deal": false})
 	if len(dealEvents()) != n+1 {
 		t.Fatal("second off wrote an event")
 	}
-	if d := c.car(car); d.GoodDeal || d.GoodDealNote != nil || deref(d.GoodDealBy) != "owner" {
+	if d := c.car(car); d.GoodDeal || d.GoodDealNote != nil || deref(d.GoodDealBy) != "robin" {
 		t.Fatalf("detail after off: %+v", d)
 	}
 
@@ -253,12 +253,12 @@ func TestMergeCarriesGoodDealAndFamily(t *testing.T) {
 
 	// A flagged target keeps its own flag/note; a target override wins.
 	target, source = add("t2"), add("s2")
-	c.as("owner").call("PUT", gdPath(target), map[string]any{"good_deal": true, "note": "mine"}, 200, nil)
+	c.as("robin").call("PUT", gdPath(target), map[string]any{"good_deal": true, "note": "mine"}, 200, nil)
 	c.call("PUT", gdPath(source), map[string]any{"good_deal": true, "note": "theirs"}, 200, nil)
 	famPatch(target, "Kia EV6")
 	famPatch(source, "VW ID.4")
 	d = merge(target, source)
-	if !d.GoodDeal || deref(d.GoodDealNote) != "mine" || deref(d.GoodDealBy) != "owner" || deref(d.ModelFamily) != "Kia EV6" {
+	if !d.GoodDeal || deref(d.GoodDealNote) != "mine" || deref(d.GoodDealBy) != "robin" || deref(d.ModelFamily) != "Kia EV6" {
 		t.Fatalf("target kept: %+v %v %v %v", d.GoodDeal, d.GoodDealNote, d.GoodDealBy, d.ModelFamily)
 	}
 
