@@ -35,4 +35,4 @@ Apply `knowledge/residual-risk.md` to this VIN: known flaws for the model/platfo
 `carhunt evidence {car} --write-asks` → visit-ready yes/no + the next ask. Not ready → list what's missing in the report. Ready → `cardb status {car} ready_to_visit --reason "<evidence pack complete: …>"` and tell the overseer.
 
 ## Done
-`report.md` (≤40 lines: verdict line, red flags, what's in, what's asked, residual risk table). One message to the overseer: `carhunt msg overseer "[vet {car}] <visit-ready yes/no> — <top finding>"`. `state.json` → `completed`.
+`report.md` (≤40 lines: verdict line, red flags, what's in, what's asked, residual risk table). One message to the overseer: `carhunt msg --to overseer "[vet {car}] <visit-ready yes/no> — <top finding>"`. `state.json` → `completed`.

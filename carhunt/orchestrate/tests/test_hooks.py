@@ -53,12 +53,54 @@ def test_refuses_malformed(home, tmp_path):
         hooks.plan(p)
 
 
-def test_skips_ours_where_foreign_covers(home):
-    cur = {"PreToolUse": [{"matcher": "mcp__identity.*", "hooks": [{"command": "$HOME/b/pw-identity hook pre"}]}],
-           "Stop": [{"hooks": [{"command": "/x/other-mailbox claude-hook", "asyncRewake": True}]}]}
-    want = hooks.desired(cur, python="/py")
-    cmds = json.dumps(want)
-    assert "identity-pre" not in cmds and "mailbox" not in cmds and "secret-guard" in cmds
+def test_skips_mailbox_where_foreign_receiver(home):
+    stop = {"Stop": [{"hooks": [{"command": "/x/other-mailbox claude-hook", "asyncRewake": True}]}]}
+    for cur, also in ((stop, None), ({}, stop)):  # in the target, or in the user settings (both load)
+        cmds = json.dumps(hooks.desired(cur, python="/py", also=also))
+        assert "carhunt_hook.py mailbox" not in cmds and "secret-guard" in cmds
+    assert "carhunt_hook.py mailbox" in json.dumps(hooks.desired({}, python="/py"))
+
+
+# a personal identity stack on other MCP names (no carhunt prefix): guards other browsers, kept as is
+PERSONAL = {"matcher": "mcp__identity(-[a-d])?__.*",
+            "hooks": [{"type": "command", "command": "$HOME/.claude/browsers/pw-identity hook pre"}]}
+
+
+def test_identity_lease_block_from_browsers(home, tmp_path):
+    from carhunt.access import mcp
+
+    from .conftest import REPO
+    p = tmp_path / "settings.json"
+    p.write_text(json.dumps({"hooks": {"PreToolUse": [PERSONAL]}}))
+    _, new, _ = hooks.plan(p, python="/py")
+    m = mcp.identity_tool_matcher()
+    assert m == "mcp__ch-identity(-[a-h])?__.*"
+    ident = {ev: [h["command"] for g in gs if g.get("matcher") == m for h in g["hooks"]]
+             for ev, gs in new["hooks"].items()}
+    lease = str(REPO / "browsers" / "bin" / "pw-identity")
+    assert ident["PreToolUse"] == [f"{lease} hook pre"]
+    assert ident["PostToolUse"] == ident["PostToolUseFailure"] == [f"{lease} hook post"]
+    assert new["hooks"]["PreToolUse"][0] == PERSONAL, "personal stack untouched and doesn't suppress ours"
+    hooks.write(p, new)
+    assert hooks.plan(p, python="/py")[2] == "", "idempotent"
+    assert any("identity lease" in line for line in hooks.describe(new["hooks"]))
+    _, removed, _ = hooks.plan(p, remove=True)
+    assert removed == {"hooks": {"PreToolUse": [PERSONAL]}}
+
+
+def test_cli_install_targets_agent_settings_only(home, monkeypatch, capsys):
+    from carhunt.cli import main
+    user = hooks.user_settings_path()
+    assert str(user).startswith(str(home.parent)), "tests never see the real ~/.claude"
+    target = home / "claude" / "settings.json"
+    target.unlink()
+    assert main(["hooks", "install", "--yes"]) == 0
+    data = json.loads(target.read_text())
+    assert "secret-guard" in json.dumps(data) and "pw-identity hook pre" in json.dumps(data)
+    assert not user.exists()
+    assert (home / "hooks" / "guards.json").is_file()
+    assert main(["hooks", "show"]) == 0
+    assert "PreToolUse: secret-guard" in capsys.readouterr().out
 
 
 def test_statusline_probe(home, tmp_path):

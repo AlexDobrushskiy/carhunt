@@ -15,12 +15,54 @@ def test_orchestrate_roles_exist():
     assert {"overseer", "learning"} <= set(ROLES)
 
 
-@pytest.mark.parametrize("role", ROLES)
-def test_role_brief_renders_fully(home, config, role):
-    text = launch.compose(role, config, f"carhunt-{role}")
+# per-launch values (`carhunt agent launch ROLE --var k=v`); synthetic
+CAR = ["car=SYN-CAR-1", "vin=SYNVIN0000000001", "country=DE", "destination=PT"]
+LAUNCH_VARS = {
+    "vet": CAR + ["tasks=vin check, options", "options=heat_pump, pano"],
+    "buy": CAR + ["stage=contract"],
+}
+# a role dir with variants runs as <dir>-<variant>
+LAUNCH_ROLES = {"outreach": ["outreach-home", "outreach-abroad"]}
+
+
+def _launches():
+    for d in ROLES:
+        for role in LAUNCH_ROLES.get(d, [d]):
+            yield pytest.param(role, LAUNCH_VARS.get(d, []), id=role)
+
+
+@pytest.mark.parametrize("role,var", list(_launches()))
+def test_role_brief_renders_fully(home, config, role, var):
+    text = launch.compose(role, config, f"carhunt-{role}", extra=launch.parse_vars(var))
     assert launch.unrendered(text) == []
     assert "{agent." not in text and "{owner." not in text
     assert str(home / "agents" / role) in text or role == "learning" or "{agent.dir}" not in text
+
+
+@pytest.mark.parametrize("role", sorted(LAUNCH_VARS))
+def test_per_launch_vars_missing_fail_loudly(home, config, role):
+    with pytest.raises(launch.LaunchError, match=r"unrendered placeholders: .*car.*--var"):
+        launch.compose(role, config, f"carhunt-{role}")
+
+
+def test_parse_vars():
+    assert launch.parse_vars(["country=DE", "agent.x=1"]) == {"country": "DE", "country_lc": "de", "agent.x": "1"}
+    assert launch.parse_vars(["country=DE", "country_lc=deu"])["country_lc"] == "deu"
+    for bad in ("novalue", "Car=1", "=x"):
+        with pytest.raises(launch.LaunchError, match="key=value"):
+            launch.parse_vars([bad])
+
+
+def test_variant_role_uses_base_brief(home, config, dummy_role):
+    brief, variant = launch.resolve_role("dummy-abroad")
+    assert brief.parent.name == "dummy" and variant == "abroad"
+    assert launch.resolve_role("dummy") == (brief, None)
+    with pytest.raises(launch.LaunchError, match="no brief"):
+        launch.resolve_role("nosuch-home")
+
+
+def test_list_of_mappings_renders():
+    assert launch.flatten({"m": [{"make": "A", "tier": 1}, {"make": "B", "tier": 2}]}) == {"m": "make=A tier=1; make=B tier=2"}
 
 
 @pytest.mark.parametrize("tmpl", TEMPLATES, ids=lambda p: p.name)

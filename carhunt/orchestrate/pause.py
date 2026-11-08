@@ -7,7 +7,9 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping
 
-from . import _core
+from carhunt.core import clock, paths
+
+from . import settings
 
 
 class Paused(RuntimeError):
@@ -15,11 +17,11 @@ class Paused(RuntimeError):
 
 
 def paused() -> bool:
-    return _core.pause_file().exists()
+    return paths.pause_file().exists()
 
 
 def info() -> dict | None:
-    p = _core.pause_file()
+    p = paths.pause_file()
     if not p.exists():
         return None
     try:
@@ -29,20 +31,20 @@ def info() -> dict | None:
 
 
 def pause(reason: str = "", by: str | None = None, config: Mapping | None = None) -> dict:
-    p = _core.pause_file()
+    p = paths.pause_file()
     p.parent.mkdir(parents=True, exist_ok=True)
-    data = {"since": _core.now(config).isoformat(timespec="seconds"),
-            "by": by or _core.self_role() or "owner", "reason": reason}
+    data = {"since": clock.now().isoformat(timespec="seconds"),
+            "by": by or settings.self_role() or "owner", "reason": reason}
     p.write_text(json.dumps(data) + "\n")
     return data
 
 
 def unpause(by: str | None = None) -> bool:
     """Remove PAUSE. Refused inside an agent session (CARHUNT_AGENT set) unless it is the schedule."""
-    who = by or _core.self_role()
+    who = by or settings.self_role()
     if who and who not in ("owner", "schedule"):
         raise Paused(f"agent {who!r} may not unpause; only the owner or the schedule does")
-    p = _core.pause_file()
+    p = paths.pause_file()
     if p.exists():
         p.unlink()
         return True

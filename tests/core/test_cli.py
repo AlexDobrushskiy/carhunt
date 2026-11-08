@@ -60,6 +60,13 @@ def test_config_commands(example_config, capsys):
     assert cli.main(["config", "validate"]) == 0
     assert cli.main(["config", "show"]) == 0
     assert "secret:telegram_bot_token" in capsys.readouterr().out
+    assert cli.main(["config", "get", "contact.quiet_hours"]) == 0
+    assert capsys.readouterr().out.strip() == "01:30-08:10"
+    assert cli.main(["config", "get", "notify.telegram.bot_token"]) == 0
+    assert capsys.readouterr().out.strip() == "secret:telegram_bot_token", "a reference, never the value"
+    assert cli.main(["config", "get", "search.countries"]) == 0
+    assert capsys.readouterr().out.strip().startswith('["PT"')
+    assert cli.main(["config", "get", "no.such.key"]) == 1
     example_config.write_text("owner: {tz: Nowhere/Land}\n")
     assert cli.main(["config", "validate"]) == 1
     assert "owner.tz" in capsys.readouterr().out

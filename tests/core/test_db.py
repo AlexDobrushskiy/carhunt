@@ -72,3 +72,15 @@ def test_errors_are_typed(cardb):
     cardb.close()
     with pytest.raises(db.Unreachable):
         c.health()
+
+
+def test_from_config_without_config_file(cardb, monkeypatch):
+    """No config.yaml (fresh setup, one-off scripts): CARDB_URL + the cardb_token secret, no raise."""
+    monkeypatch.setenv("CARDB_URL", cardb.url)
+    monkeypatch.setenv("CARHUNT_SECRET_CARDB_TOKEN", "tok-1")
+    c = db.Client.from_config()
+    assert c.url == cardb.url and c.health() == {"ok": True}
+    assert c.upsert_listing({"url": "https://example.invalid/ad/2"})["listing_id"] == 7
+    monkeypatch.delenv("CARDB_URL")
+    monkeypatch.delenv("CARHUNT_SECRET_CARDB_TOKEN")
+    assert db.Client.from_config().url == db.DEFAULT_URL
