@@ -8,6 +8,9 @@ def make(wmi: str, vds: str, my: str, plant: str, serial: str = "000123") -> str
     return wmi + vds + my + plant + serial
 
 
+SYN_VAG = "WVWZZZ1KZLW000001"  # privacy-check: allow (synthetic VIN)
+
+
 def test_check_digit_hand_computed():
     # S=2*8 Y=8*7 N=5*6 0*5 0*4 0*3 0*2 0*10 | 0*0 | A=1*9 B=2*8 C=3*7 1*6 2*5 3*4 4*3 5*2
     # = 16+56+30 + 9+16+21+6+10+12+12+10 = 198; 198 % 11 = 0
@@ -38,12 +41,12 @@ def test_invalid_check_digit_red_for_north_america():
 
 
 def test_eu_vag_decode_and_flags():
-    v = make("WVG", "ZZZE2Z", "S", "P", "000001")
-    info = vin.decode(v, first_reg="2024-10", ref_year=2026)
+    v = SYN_VAG
+    info = vin.decode(v, first_reg="2020-05", ref_year=2026)
     assert info.valid_format
     assert info.manufacturer.startswith("Volkswagen")
     assert info.country == "Germany" and info.region == "Europe"
-    assert info.model_year == 2025
+    assert info.model_year == 2020
     assert not info.check_digit["mandatory"]
     codes = {f.code for f in info.flags}
     assert "vag_europe" in codes
@@ -52,8 +55,8 @@ def test_eu_vag_decode_and_flags():
 
 
 def test_model_year_mismatch_flag():
-    v = make("WVG", "ZZZE2Z", "S", "P", "000001")
-    info = vin.decode(v, first_reg="2019-01", ref_year=2026)
+    v = SYN_VAG
+    info = vin.decode(v, first_reg="2014-01", ref_year=2026)
     assert "model_year_mismatch" in {f.code for f in info.flags}
 
 
@@ -85,8 +88,8 @@ def test_invalid_format(bad, err):
 
 
 def test_normalize_strips_spaces_and_case():
-    raw = "wvg zzz-e2z s p 000001"
-    assert vin.normalize(raw) == make("WVG", "ZZZE2Z", "S", "P", "000001")
+    raw = "wvw zzz-1kz l w 000001"
+    assert vin.normalize(raw) == SYN_VAG
 
 
 def test_model_year_candidates():
@@ -94,6 +97,9 @@ def test_model_year_candidates():
     assert vin.model_year_candidates("9") == [2009, 2039]
     assert vin.model_year_candidates("Q") == []
 
+
+
+SYN_VAG = "WVWZZZ1KZLW000001"  # privacy-check: allow (synthetic VIN)
 
 def test_vpic_parses_injected_payload():
     payload = b'{"Results":[{"Make":"SYNMAKE","Model":"","ModelYear":"2020","ErrorCode":"0"}]}'

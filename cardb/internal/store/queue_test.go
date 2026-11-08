@@ -223,9 +223,9 @@ func TestScopeExclusion(t *testing.T) {
 	for want, mod := range map[string]func(c *cb){
 		"status bought":        func(c *cb) { c.status = "bought" },
 		"no live listing":      func(c *cb) { c.dead = true },
-		"year < 2023":          func(c *cb) { c.year = 2022 },
-		"price > 42000":        func(c *cb) { c.price = 42001 },
-		"km > 50000":           func(c *cb) { c.km = 50001 },
+		"year < 2021":          func(c *cb) { c.year = 2020 },
+		"price > 40000":        func(c *cb) { c.price = 40001 },
+		"km > 80000":           func(c *cb) { c.km = 80001 },
 		"country CH":           func(c *cb) { c.country = "CH" },
 		"region PT-30":         func(c *cb) { c.city = "Funchal (Madeira)" },
 		"region ES-CN":         func(c *cb) { c.country, c.city = "ES", "Las Palmas De Gran Canaria" },
@@ -247,7 +247,7 @@ func TestScopeExclusion(t *testing.T) {
 		}
 	}
 	for name, mod := range map[string]func(c *cb){
-		"limits inclusive": func(c *cb) { c.price, c.km = 42000, 50000 },
+		"limits inclusive": func(c *cb) { c.price, c.km = 40000, 80000 },
 		"Palmela":          func(c *cb) { c.city = "Palmela" },
 		"deal_flag cheap":  func(c *cb) { c.facts = map[string]string{"deal_flag": "cheap"} },
 		"history Germany": func(c *cb) {
@@ -390,16 +390,16 @@ func TestLandedCost(t *testing.T) {
 	}
 	// Without default_distance_km, an abroad distance comes from the country centroid.
 	r2 := newRanker(mustProfile(t, "owner: {home: {country: PT, lat: 38.72, lon: -9.14}}\n"))
-	if l := r2.car(cb{make: "VW", model: "ID.4", price: 30000, country: "DE"}).landed; l.distKm < 1800 || l.distKm > 2600 || !l.distGuess {
+	if l := r2.car(cb{make: "VW", model: "ID.4", price: 30000, country: "DE"}).landed; l.distKm < 2100 || l.distKm > 2900 || !l.distGuess {
 		t.Fatalf("centroid guess: %+v", l)
 	}
 }
 
 func TestLocate(t *testing.T) {
 	r := evRanker(t)
-	s := api.CarSpecs{Country: sp("ES"), Lat: fp64(42.24), Lon: fp64(-8.72)} // ~120 km great-circle × 1.3
+	s := api.CarSpecs{Country: sp("ES"), Lat: fp64(38.88), Lon: fp64(-6.97)} // ~190 km great-circle × 1.3
 	r.locate(&s)
-	if s.DistanceKm == nil || *s.DistanceKm < 150 || *s.DistanceKm > 170 || deref(s.DistanceSource) != "estimate" || deref(s.Market) != "abroad" {
+	if s.DistanceKm == nil || *s.DistanceKm < 235 || *s.DistanceKm > 255 || deref(s.DistanceSource) != "estimate" || deref(s.Market) != "abroad" {
 		t.Fatalf("estimate: %v %v %v", *s.DistanceKm, deref(s.DistanceSource), deref(s.Market))
 	}
 	s = api.CarSpecs{Country: sp("PT"), Lat: fp64(42.24), Lon: fp64(-8.72), DistanceKm: ip(150)}
@@ -554,8 +554,8 @@ func TestFitAndRisk(t *testing.T) {
 	if !slices.Equal(res.reasons, want) {
 		t.Fatalf("reasons %q", res.reasons)
 	}
-	// fit = 0.80 + (reseller −0.12 + age .005·8 + km .03·(1 − 5000/50000))
-	if res.fit != round(0.80-0.12+0.04+0.027, 3) {
+	// fit = 0.80 + (reseller −0.12 + age .005·8 + km .03·(1 − 5000/80000))
+	if res.fit != round(0.80-0.12+0.04+0.028125, 3) {
 		t.Fatalf("fit %v", res.fit)
 	}
 	if *res.score != round(50*res.fit-res.risk, 2) {
@@ -570,8 +570,8 @@ func TestFitAndRisk(t *testing.T) {
 	if res.risk != 4.5 || !slices.Equal(res.reasons, []string{"thin peers (n=0) +3", "model risk +1.5"}) {
 		t.Fatalf("good risk %v %q", res.risk, res.reasons)
 	}
-	// options (5+5−1.67+1.33)·.03 + private .06 + home .04 + age .005·6 + km .03·.6 + 3 history .045
-	wantFit := round(0.80+(9.66*0.03)+0.06+0.04+0.03+0.018+0.045, 3)
+	// options (5+5−1.67+1.33)·.03 + private .06 + home .04 + age .005·6 + km .03·.75 + 3 history .045
+	wantFit := round(0.80+(9.66*0.03)+0.06+0.04+0.03+0.0225+0.045, 3)
 	if res.fit != wantFit {
 		t.Fatalf("good fit %v, want %v", res.fit, wantFit)
 	}
