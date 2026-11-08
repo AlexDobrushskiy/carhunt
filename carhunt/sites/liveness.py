@@ -353,6 +353,12 @@ def run(*, sites: list[str] | None = None, cars: list[int] | None = None, daily:
         dry: bool = False, proxy_priority: bool = False, db: DB | None = None,
         plugin: Callable[[str], base.BaseSite] = base.get) -> dict:
     db = db or connect_db()
+    with _core.flock("sites-liveness"):   # one run at a time: two runs would double the site loads
+        return _run(db, sites=sites, cars=cars, daily=daily, sample=sample, limit=limit, max_prio=max_prio,
+                    until=until, dry=dry, proxy_priority=proxy_priority, plugin=plugin)
+
+
+def _run(db: DB, *, sites, cars, daily, sample, limit, max_prio, until, dry, proxy_priority, plugin) -> dict:
     st = State(_core.path("sites", "liveness.db"), dry=dry)
     by_site, unsupported = plan(db, st, sites=sites, cars=cars, daily=daily, sample=sample, limit=limit,
                                 max_prio=max_prio)
