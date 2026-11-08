@@ -1,4 +1,4 @@
-// Package client is a typed HTTP client for the ev-listings API (api/openapi.yaml).
+// Package client is a typed HTTP client for the cardb API (api/openapi.yaml).
 package client
 
 import (
@@ -21,7 +21,7 @@ import (
 	"carhunt/cardb/internal/api"
 )
 
-// Client talks to one ev-listings server. Author, when set, is sent as X-Author on every request.
+// Client talks to one cardb server. Author, when set, is sent as X-Author on every request.
 type Client struct {
 	BaseURL string // server root, with or without the /api/v1 suffix
 	Token   string

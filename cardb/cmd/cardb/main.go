@@ -1,4 +1,4 @@
-// Command cardb is the ev-listings server and its CLI client in one binary.
+// Command cardb is the carhunt listings DB server and its CLI client in one binary.
 package main
 
 import (

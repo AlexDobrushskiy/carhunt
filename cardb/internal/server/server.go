@@ -1,4 +1,4 @@
-// Package server is the ev-listings HTTP API (`cardb serve`).
+// Package server is the cardb HTTP API (`cardb serve`).
 //
 // In-process use (tests, e2e):
 //
