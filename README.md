@@ -2,13 +2,9 @@
 
 Find, vet, contact and buy a used car with a team of Claude Code agents. Marketplace sweeps feed a listings DB (cardb) with a phone UI; agents chat with sellers through one guarded send path, check VINs and history, and walk the buy and import steps. An overseer agent runs the team in agterm.
 
-Built from a real 13-day used-EV hunt across 8 EU countries. Every rule keeps its one-line *why*.
-
-Private repository, all rights reserved.
+Helped successfully find the right EV in ~5 days across 8 EU countries.
 
 ## What it looks like
-
-All data below is synthetic ([credits, how they were made](docs/img/CREDITS.md)).
 
 ![Phone web UI: car list, car page, "To rate" queue](docs/img/web-overview.png)
 *Web UI on a phone: cars ranked by landed price vs peers, the hero car's page with verdicts and ads on 3 sites, the "To rate" queue.*
@@ -22,11 +18,13 @@ All data below is synthetic ([credits, how they were made](docs/img/CREDITS.md))
 ![Terminal: sweep, ranked queue, guarded send](docs/img/terminal.png)
 *The same from the CLI: `carhunt sweep`, `cardb queue`, `carhunt say --dry-run`.*
 
+Photo credits: [docs/img/CREDITS.md](docs/img/CREDITS.md).
+
 ## Requirements
 
 | what | needed for |
 |---|---|
-| macOS on Apple Silicon + [Homebrew](https://brew.sh) | the only proven platform (v1) |
+| macOS on Apple Silicon + [Homebrew](https://brew.sh) | supported platform |
 | [agterm](https://github.com/umputun/agterm) — **required** | agent sessions, mailboxes, context readout |
 | [Claude Code](https://docs.anthropic.com/en/docs/claude-code) | the agents |
 | Docker (Desktop) | cardb + web UI (`deploy/compose.yaml`) |
@@ -85,15 +83,3 @@ How the parts talk: [docs/design.md](docs/design.md#interfaces). Agents: `sweep`
 | skills | `skills/carhunt-*` | agent rules: browsers, outreach, vet | [skills](skills/README.md) |
 
 All docs: [docs/index.md](docs/index.md) · design and interfaces: [docs/design.md](docs/design.md).
-
-## Privacy
-
-- **Nothing personal lives in the repo**: code, templates with `{placeholders}`, synthetic fixtures (`SYN…` VINs, `+cc 555…` phones, `example.invalid`) and docs only.
-- **Everything a run produces stays in `$CARHUNT_HOME`**: config, cardb data + photos, ledgers, rendered briefs, agent state, logs, browser profiles. Secrets live in the Keychain (or 1Password / a 0600 file); config holds only `secret:NAME`, and no command prints a value.
-- **Commits are checked**: `scripts/privacy-check` (gitleaks + your own denylist kept outside the repo + regexes) runs as pre-commit and commit-msg hook.
-
-Details: [docs/privacy.md](docs/privacy.md).
-
-## Tests
-
-All suites run offline on synthetic data: `.venv/bin/pytest -p no:cacheprovider` (Python), `make -C cardb test` (Go), `cd web && npm test`. Isolation rules, the web e2e and the clean-clone run `tests/e2e/run.sh`: [docs/testing.md](docs/testing.md).
