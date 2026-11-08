@@ -17,7 +17,7 @@ from collections.abc import Iterator, Mapping
 from pathlib import Path
 from typing import Any
 
-from . import _core
+from carhunt.core import clock, paths
 from .session import Backend
 
 HANDOVER_KEYS = ("open_threads", "unanswered_inbound", "pending_sends", "scheduled", "promises",
@@ -29,7 +29,7 @@ class StateError(RuntimeError):
 
 
 def schema_path() -> Path:
-    return _core.repo_root() / "agents" / "state.schema.json"
+    return paths.repo_root() / "agents" / "state.schema.json"
 
 
 def validate(state: Mapping) -> None:
@@ -49,11 +49,11 @@ def validate(state: Mapping) -> None:
 
 
 def path(role: str) -> Path:
-    return _core.agent_dir(role) / "state.json"
+    return paths.agent_dir(role) / "state.json"
 
 
 def _stamp() -> str:
-    return _core.now().isoformat(timespec="seconds")
+    return clock.now().isoformat(timespec="seconds")
 
 
 def read(role: str) -> dict:
@@ -84,7 +84,7 @@ def edit(role: str, create: bool = False) -> Iterator[dict]:
 
 
 def roles() -> list[str]:
-    root = _core.agents_root()
+    root = paths.agents_root()
     if not root.is_dir():
         return []
     return sorted(d.name for d in root.iterdir() if (d / "state.json").is_file())

@@ -38,6 +38,9 @@ def _seg(v: Any) -> str:
     return quote(str(v), safe="")
 
 
+DEFAULT_URL = "http://127.0.0.1:8484"
+
+
 class Client:
     def __init__(self, url: str, token: str | None = None, *, author: str | None = None, timeout: float = 30):
         self.url = url.rstrip("/")
@@ -51,12 +54,17 @@ class Client:
 
     @classmethod
     def from_config(cls, cfg=None, **kw) -> Client:
+        """URL: $CARDB_URL > cardb.url > DEFAULT_URL. Token: cardb.token > secret `cardb_token` > none.
+
+        No config file is fine (fresh setup, tests, one-off scripts); an invalid one still raises.
+        """
         from carhunt.core import config, secrets
 
-        cfg = cfg or config.load()
-        url = os.environ.get("CARDB_URL") or cfg.get("cardb.url") or "http://127.0.0.1:8484"
+        cfg = cfg if cfg is not None else config.load_or_none()
+        get = cfg.get if cfg is not None else (lambda key, default=None: default)
+        url = os.environ.get("CARDB_URL") or get("cardb.url") or DEFAULT_URL
         try:
-            token = cfg.secret("cardb.token") if cfg.get("cardb.token") else secrets.get("cardb_token")
+            token = cfg.secret("cardb.token") if get("cardb.token") else secrets.get("cardb_token")
         except secrets.SecretNotFound:
             token = None
         return cls(url, token, author=kw.pop("author", None) or os.environ.get("CARDB_AUTHOR"), **kw)
@@ -97,6 +105,8 @@ class Client:
         return self.request("POST", "/listings/upsert", json=listing)
 
     def find_listing(self, url: str | None = None, *, site: str | None = None, site_ref: str | None = None) -> dict:
+        """The listing by URL, or by (site, site_ref). site_ref is cardb's own ref, derived from the ad URL
+        (what upsert stored) — not the site's internal data id; the two differ on standvirtual and olx.pt."""
         res = self.request("GET", "/listings", params={"url": url, "site": site, "site_ref": site_ref})
         items = res.get("items", res) if isinstance(res, dict) and "items" in res else res
         if isinstance(items, list):

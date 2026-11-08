@@ -9,6 +9,6 @@ Agent sessions (agterm), state + handover, launch, messages, pause, digest, lear
 | `state.py` | state.json (locked, schema-checked), handover / takeover / cleanup |
 | `msg.py` · `pause.py` · `digest.py` · `learn.py` · `schedule.py` · `hooks.py` | one CLI group each |
 | `cli.py` · `doctor.py` | `register(subparsers)` · `checks()` |
-| `_core.py` | adapter over `carhunt.core` (fallbacks keep this package testable alone) |
+| `settings.py` | config view: core config + orchestrate defaults (plain dict, briefs render from it) |
 
 Tests: `pytest carhunt/orchestrate` (fake session backend, no network).

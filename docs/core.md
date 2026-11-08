@@ -9,6 +9,7 @@ Shared runtime for every module: config, secrets, owner-local clock, locks, run-
 | `scripts/bootstrap [--dry-run] [--yes] [--skip-mcp] [--skip-browsers-launchd] [--skip-compose] [--extras all]` | clone → ready: brew deps, `.venv`, `carhunt` on PATH, cardb build + init, compose up, skills, browsers, hooks, doctor. Idempotent. |
 | `scripts/doctor` = `carhunt doctor [--json]` | ok / warn / fail per component with a fix line; exit 1 on any fail |
 | `carhunt config show [--json]` | the loaded config; secret refs shown as `secret:NAME`, never resolved |
+| `carhunt config get KEY [--json]` | one value by dotted key (lists/maps as JSON; secret refs as `secret:NAME`); exit 1 if unset |
 | `carhunt config validate [FILE]` | schema + time-zone check |
 | `carhunt config path [--home]` | config file / `$CARHUNT_HOME` |
 | `carhunt secret set\|ls\|check\|rm\|exec` | [secrets.md](secrets.md) |
@@ -29,7 +30,7 @@ Shared runtime for every module: config, secrets, owner-local clock, locks, run-
 
 ## Plugin contract (other modules)
 - CLI: `carhunt/<pkg>/cli.py: register(subparsers)`; set `func=handler` (returns exit code). For a group, `p.set_defaults(_parser=p)` makes `carhunt <group>` alone print its help. A plugin that fails to import or register prints a warning; the rest of the CLI works.
-- Doctor: `carhunt/<pkg>/doctor.py: checks() -> list[Check]`. A crash in it shows as one `fail` line, not a traceback. Modules from design.md that aren't installed show as `warn`.
+- Doctor: `carhunt/<pkg>/doctor.py: checks() -> list[Check]`. A crash in it shows as one `fail` line, not a traceback. Modules from design.md that aren't installed show as `warn`. Core also checks cardb `/healthz` and the web UI `GET 127.0.0.1:4321/health` (`web.url` once the schema has it; down = warn: agents work without it).
 - Bootstrap calls, when present: `make -C cardb build` (→ `cardb/bin/cardb`), `cardb init`, `deploy/compose.yaml`, `npm ci` in `web/`, `skills/carhunt-*` (symlinked), `browsers/install [--yes] [--skip-launchd] [--skip-mcp]`, `carhunt hooks install`, `scripts/install-hooks`.
 
 ## Env
