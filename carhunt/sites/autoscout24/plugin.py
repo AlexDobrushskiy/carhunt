@@ -22,7 +22,7 @@ def _seller_type(s: dict) -> str:
     t = str(s.get("type") or "").lower()
     if s.get("isDealer") or t == "dealer":
         return "dealer"
-    return "private" if t in ("private", "p") else "unknown"
+    return "private" if t.startswith("private") or t == "p" else "unknown"   # live value "PrivateSeller" (11-08)
 
 
 def _reg(v: str | None) -> str | None:
