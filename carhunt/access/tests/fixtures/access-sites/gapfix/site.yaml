@@ -1,3 +1,4 @@
 # Synthetic fixture for carhunt/access tests (not a real site).
+site: gapfix
 name: gapfix.example.invalid
-pace: {min_gap_s: 0.5, per_hour: 100, max_loads_per_run: 100}
+pace: {min_gap_s: 0.5, max_loads_per_hour: 100, max_loads_per_run: 100}

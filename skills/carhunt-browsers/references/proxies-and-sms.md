@@ -40,6 +40,6 @@ Some sites gate by **country**, not reputation: coches.net and milanuncios (same
 | The rental IP matters: sign up from the target country's IP, then that IP is the account's IP forever | foreign-IP signup got stuck at the phone step (leboncoin, 11-02) |
 | Record that the account has **no SMS recovery** in the site row notes | any future SMS challenge = lockout |
 
-Commands: `carhunt sms policy <site>` (exit 0 allowed / 3 refused; reads site.yaml `account.verification`: `sms-once` allows, `sms-every-login` refuses, anything else/unknown refuses = fail closed) · `carhunt sms rent --site <domain> --country <CC> --service <provider id> [--pool P] [--dry-run]`. Python: `sms.rent(country, service, site=)` → `sms.wait_code(rental)` (no code in time → cancelled, refunded).
+Commands: `carhunt sms policy <site>` (exit 0 allowed / 3 refused; reads site.yaml `account.verification`: `sms-once` allows; `sms-own`, `sms-every-login`, anything else/unknown refuse = fail closed) · `carhunt sms rent --site <domain> --country <CC> --service <provider id> [--pool P] [--dry-run]`. Python: `sms.rent(country, service, site=)` → `sms.wait_code(rental)` (no code in time → cancelled, refunded).
 
 Which sites accepted what (Nov 2026): leboncoin — French mobile only, rented FR number OK (verify-once); subito — any SMS-capable phone incl. foreign EU; kleinanzeigen — owner's own number + activation on mobile data; marktplaats / 2dehands — SMS at every login → no rental; coches.net — profile edit wants an ES mobile (not done).

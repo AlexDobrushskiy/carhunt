@@ -15,12 +15,14 @@ caps:
   why: "no phone cap measured: the contacts endpoint answered every call of the sweeps without login (11-01..07)"
 account:
   needed_for: [message]
-  verification: "SMS-verified phone required for any login; a foreign EU mobile was accepted (11-02)"
+  verification: sms-own
+  note: "SMS-verified phone required for any login; a foreign EU mobile was accepted (11-02)"
+  mail_from: "from:(subito.it)"
 phone: reveal
 messaging: "site chat 'Contatta', logged in (inbox areariservata.subito.it/messaggi); a thread survives the ad's removal"
 liveness:
   evidence: "410 = gone; 200 + ad id = live (11-04)"
-cursor: {strategy: newest_first, key: site_ref, why: "site default order is newest first; numeric ids grow"}
+cursor: {strategy: newest_id, why: "site default order is newest first; numeric ids grow"}
 measured: 2026-11-01
 notes:
   - "Phones are national numbers: prefix +39 (stored without it 11-04)"

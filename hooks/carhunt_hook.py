@@ -5,11 +5,11 @@
                   `carhunt secret exec` into a printing command.
   send-guard      PreToolUse: deny direct seller sends (wacli writes, mailers, raw Telegram
                   Bot API, contact channel modules) -> use `carhunt say` / `carhunt notify`.
-  identity-pre    PreToolUse on identity browser tools: lease check via `pw-identity hook pre`.
-  identity-post   PostToolUse on identity browser tools: `pw-identity hook post`.
   mailbox         asyncRewake receiver: delivers agterm mailbox mail to an idle carhunt agent.
 
-Guard config: <home>/hooks/guards.json (written by `carhunt hooks install`).
+Guard config: <home>/hooks/guards.json (written by `carhunt hooks install`). Identity browser
+leases are the browsers module's own hooks (`browsers/bin/pw-identity hook pre|post`), merged by
+the same install.
 Why the secret guard exists: EV run 11-06, a "masked" credential dump missed a pattern and
 ~12 passwords landed in a transcript. Prose rules were not enough.
 """
@@ -187,7 +187,7 @@ def check_send(event: dict, home: Path, guards: dict) -> str | None:
         return None
     cmd = (event.get("tool_input") or {}).get("command") or ""
     if re.search(r"api\.telegram\.org/bot[^\s'\"]*/send", cmd):
-        return ("carhunt send-guard: pushes go through `carhunt notify --kind ask|urgent` so replies route "
+        return ("carhunt send-guard: pushes go through `carhunt notify send --kind ask|urgent` so replies route "
                 "back to you; raw Bot API sends can't be answered (EV run 11-04).")
     if re.search(r"carhunt[./]contact[./]channels", cmd):
         return SEND_MSG + " Don't call channel adapters directly."
@@ -204,17 +204,6 @@ def check_send(event: dict, home: Path, guards: dict) -> str | None:
         if re.search(rule.get("regex", r"(?!)"), cmd):
             return SEND_MSG + (f" {rule['use']}" if rule.get("use") else "")
     return None
-
-
-def delegate_identity(phase: str, raw: str) -> int:
-    """The browsers module owns leases; without pw-identity there is no identity browser to guard."""
-    exe = shutil.which("pw-identity")
-    if not exe:
-        return 0
-    res = subprocess.run([exe, "hook", phase], input=raw, capture_output=True, text=True, check=False)
-    sys.stdout.write(res.stdout)
-    sys.stderr.write(res.stderr)
-    return res.returncode
 
 
 # -- mailbox receiver
@@ -278,7 +267,7 @@ def mailbox(event: dict, home: Path) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="carhunt_hook.py")
-    p.add_argument("hook", choices=["secret-guard", "send-guard", "identity-pre", "identity-post", "mailbox"])
+    p.add_argument("hook", choices=["secret-guard", "send-guard", "mailbox"])
     p.add_argument("--home", default=os.environ.get("CARHUNT_HOME") or "~/.carhunt")
     a = p.parse_args(argv)
     home = Path(os.environ.get("CARHUNT_HOME") or a.home).expanduser()
@@ -287,8 +276,6 @@ def main(argv: list[str] | None = None) -> int:
         event = json.loads(raw or "{}")
     except ValueError:
         event = {}
-    if a.hook in ("identity-pre", "identity-post"):
-        return delegate_identity("pre" if a.hook == "identity-pre" else "post", raw)
     if a.hook == "mailbox":
         try:
             return mailbox(event, home)

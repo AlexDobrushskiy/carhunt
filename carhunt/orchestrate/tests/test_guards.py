@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 import sys
 
@@ -89,9 +90,22 @@ def test_send_patterns_from_guards_json(home):
     assert run_hook("send-guard", bash("my-sms-tool send hi"), home) == "deny"
 
 
-def test_identity_guard_without_pw_identity_is_noop(home):
-    ev = {"tool_name": "mcp__identity-a__browser_navigate", "tool_input": {"url": "https://example.com"}}
-    assert run_hook("identity-pre", ev, home) == "allow"
+def test_installed_identity_lease_hook_runs(home, tmp_path):
+    """The PreToolUse lease command `carhunt hooks install` writes runs the real pw-identity."""
+    from carhunt.orchestrate import hooks
+    p = tmp_path / "settings.json"
+    hooks.write(p, hooks.plan(p, python=sys.executable)[1])
+    pre = [h["command"] for g in json.loads(p.read_text())["hooks"]["PreToolUse"]
+           if "ch-identity" in g.get("matcher", "") for h in g["hooks"]]
+    assert len(pre) == 1
+
+    def run(tool, url):
+        ev = {"session_id": "S1", "tool_use_id": "t1", "tool_name": tool, "tool_input": {"url": url}}
+        return subprocess.run(["/bin/sh", "-c", pre[0]], input=json.dumps(ev), capture_output=True, text=True,
+                              env={**os.environ, "CARHUNT_HOME": str(home)}, timeout=60)
+    assert run("mcp__identity-a__browser_navigate", "https://example.com").returncode == 0, "other stack: ignored"
+    r = run("mcp__ch-identity-b__browser_navigate", "https://accounts.google.com/")
+    assert r.returncode == 2 and "master-only" in r.stderr
 
 
 def test_mailbox_ignores_non_agent_sessions(home):

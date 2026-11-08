@@ -594,6 +594,7 @@ paths:
       parameters:
         - { name: url, in: query, schema: { type: string } }
         - { name: site, in: query, schema: { type: string } }
+        - { name: site_ref, in: query, schema: { type: string }, description: "listing.site_ref as cardb derived it from the URL (may differ from a site's internal data id)" }
         - { name: status, in: query, schema: { $ref: "#/components/schemas/ListingStatus" } }
       responses:
         "200": { description: ok, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Listing" } } } } }
@@ -853,7 +854,7 @@ components:
     CarSummary:
       type: object
       description: One row of the car list.
-      required: [id, title, status, options, good_deal, model_family_manual, removed_listing_count, tier]
+      required: [id, title, status, options, good_deal, model_family_manual, removed_listing_count, tier, version]
       properties:
         id: { type: integer }
         slug: { type: string, nullable: true }
@@ -999,7 +1000,7 @@ components:
             force: { type: boolean, default: false, description: "store a price that fails the sanity check (flagged + event)" }
             listing_status: { $ref: "#/components/schemas/ListingStatus" }
             seen_at: { type: string, format: date-time, description: "default now; imports pass the original time" }
-            car: { type: string, description: "attach a new listing to this car (id/alias)" }
+            car: { type: string, description: "attach a new listing to this car (id/alias; a JSON number id is accepted too)" }
             slug: { type: string }
             aliases: { type: array, items: { type: string } }
             summary: { type: string }
@@ -1133,7 +1134,8 @@ components:
       type: object
       required: [channel, direction, text]
       properties:
-        car: { type: string }
+        car: { type: string, description: "car id or alias (a JSON number id is accepted too); else listing_url, else counterpart resolves the car" }
+        car_id: { type: integer, description: "alias of car (the Message shape); car wins" }
         listing_url: { type: string }
         counterpart: { type: string }
         channel: { $ref: "#/components/schemas/Channel" }

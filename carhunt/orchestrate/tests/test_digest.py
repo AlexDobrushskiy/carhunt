@@ -1,4 +1,5 @@
-from carhunt.orchestrate import _core, digest, launch, state
+from carhunt.core import notify
+from carhunt.orchestrate import digest, launch, state
 
 QUEUE = [
     {"position": 1, "tier": 1, "price_gap_pct": -6.0, "why": "heat pump, 1 owner",
@@ -32,7 +33,7 @@ def test_digest_build(home, config, fake, dummy_role):
 def test_digest_send_consumes_inputs(home, config, fake, dummy_role, monkeypatch):
     setup_agents(home, config, fake, dummy_role)
     sent = []
-    monkeypatch.setattr(_core, "notify", lambda text, **kw: sent.append((text, kw)))
+    monkeypatch.setattr(notify, "send", lambda text, **kw: sent.append((text, kw)))
     digest.send("evening", backend=fake, config=config, dry_run=True, queue=lambda n: [])
     assert sent == [] and (home / "agents" / "dummy" / "digest-input.md").exists()
     digest.send("evening", backend=fake, config=config, queue=lambda n: [])

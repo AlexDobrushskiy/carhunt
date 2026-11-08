@@ -13,14 +13,25 @@ Day = owner's local calendar day (`owner.tz`), not a hardcoded zone.
 Ledger: SQLite `$CARHUNT_HOME/access/pace.sqlite` (WAL; every decision under `BEGIN IMMEDIATE`, so concurrent
 processes never both get the last slot). A broken ledger refuses (fail closed), it never silently allows.
 
-Limits: `carhunt/sites/<site>/site.yaml` (`pace{min_gap_s, max_loads_per_run, per_hour}`,
-`caps{phone_per_day, send_per_day, login_per_day, <kind>_min_gap_s}`), then config `sites.overrides.<site>`, else DEFAULTS.
+Kinds: `load` = a page load; `api` = a JSON/API read that is not a page load (own gap, no load caps: coches.net's
+gateway passed ≥12 s apart while page loads were capped at 2/h, 11-05); `phone`/`send`/`login` = account actions.
+
+Limits: `carhunt/sites/<site>/site.yaml`, then config `sites.overrides.<site>` (one level deep per section):
+- `pace{min_gap_s, max_loads_per_run, max_loads_per_hour, max_loads_per_day}` → kind load;
+  `pace{api_min_gap_s (default min_gap_s), max_api_per_hour}` → kind api.
+- `caps{<kind>_per_day, <kind>_per_hour, <kind>_min_gap_s}` → phone/send/login (and extra day caps for load/api).
+DEFAULTS["pace"] apply only to a site without a `pace` section (unmeasured); DEFAULTS["caps"] always apply unless the
+site sets that key (per-account actions are where accounts get locked).
+
+Ledger key = the site.yaml `site` id whatever name the caller used (`coches_net`, `www.coches.net`, `coches.net`):
+two spellings must never get two budgets.
 """
 from __future__ import annotations
 
 import argparse
 import json
 import os
+import re
 import sqlite3
 import time
 from collections.abc import Mapping
@@ -32,7 +43,7 @@ from typing import Any
 from carhunt.access import _core
 from carhunt.access.errors import PaceExceeded
 
-KINDS = ("load", "phone", "send", "login")
+KINDS = ("load", "api", "phone", "send", "login")
 
 # Conservative defaults for a site nobody has measured yet:
 # - 12 s between loads: ≥10–12 s survived where 6 s got 403s (custojusto after ~50 ads at 6 s, 11-03; leboncoin, mobile.de).
@@ -42,7 +53,7 @@ KINDS = ("load", "phone", "send", "login")
 #   (milanuncios ≤9 reveals/day, leboncoin ≤40/day).
 # - login 3/day: repeated logins trip new-device checks and SMS challenges, which can lock an account (11-02).
 DEFAULTS: dict[str, Any] = {
-    "pace": {"min_gap_s": 12, "per_hour": 30, "max_loads_per_run": 60},
+    "pace": {"min_gap_s": 12, "max_loads_per_hour": 30, "max_loads_per_run": 60},
     "caps": {"phone_per_day": 5, "send_per_day": 10, "login_per_day": 3},
 }
 RUN_WINDOW_S = 3600  # max_loads_per_run counts one `who`'s loads in this window
@@ -70,13 +81,19 @@ def sites_dirs() -> list[Path]:
     return dirs + [REPO_SITES]
 
 
+def _host(site: str) -> str:
+    return re.sub(r"^[a-z]+://", "", site.strip().lower()).split("/")[0].removeprefix("www.")
+
+
 def site_yaml(site: str) -> dict:
     """The site's site.yaml as a dict ({} when no plugin describes it).
 
-    Matches the folder name, or its `name` / `domain` / `domains` keys, ignoring case, dots and dashes.
+    Matches the folder name or its `site` / `name` keys (ignoring case, dots and dashes), else a `hosts` regex
+    on the host (`www.autoscout24.de` → autoscout24).
     """
     import yaml
-    want = _norm(site)
+    want, host = _norm(site), _host(site)
+    by_host: dict | None = None
     for d in sites_dirs():
         if not d.is_dir():
             continue
@@ -85,11 +102,17 @@ def site_yaml(site: str) -> dict:
                 data = yaml.safe_load(f.read_text()) or {}
             except (OSError, yaml.YAMLError):
                 continue
-            names = {f.parent.name, str(data.get("name") or ""), str(data.get("domain") or "")}
-            names |= {str(x) for x in (data.get("domains") or [])}
+            names = {f.parent.name, str(data.get("site") or ""), str(data.get("name") or "")}
             if want in {_norm(n) for n in names if n}:
                 return _plain(data)
-    return {}
+            if by_host is None and any(re.search(rx, host) for rx in data.get("hosts") or []):
+                by_host = _plain(data)
+    return by_host or {}
+
+
+def canonical(site: str) -> str:
+    """Ledger key: the site.yaml `site` id, else the name as given."""
+    return str(site_yaml(site).get("site") or site)
 
 
 def site_config(site: str) -> dict:
@@ -116,7 +139,7 @@ def limits(site: str, kind: str) -> Limits:
     if kind not in KINDS:
         raise ValueError(f"kind must be one of {KINDS}, got {kind!r}")
     cfg = site_config(site)
-    p = {**DEFAULTS["pace"], **(cfg.get("pace") or {})}
+    p = dict(cfg.get("pace") or DEFAULTS["pace"])
     c = {**DEFAULTS["caps"], **(cfg.get("caps") or {})}
 
     def num(v):
@@ -126,8 +149,11 @@ def limits(site: str, kind: str) -> Limits:
         return None if v is None else int(v)
 
     if kind == "load":
-        return Limits(cnt(c.get("load_per_day")), cnt(p.get("per_hour")), cnt(p.get("max_loads_per_run")),
-                      num(p.get("min_gap_s")) or 0.0)
+        return Limits(cnt(p.get("max_loads_per_day", c.get("load_per_day"))), cnt(p.get("max_loads_per_hour")),
+                      cnt(p.get("max_loads_per_run")), num(p.get("min_gap_s")) or 0.0)
+    if kind == "api":
+        return Limits(cnt(c.get("api_per_day")), cnt(p.get("max_api_per_hour")), None,
+                      num(p.get("api_min_gap_s", p.get("min_gap_s"))) or 0.0)
     return Limits(cnt(c.get(f"{kind}_per_day")), cnt(c.get(f"{kind}_per_hour")), None,
                   num(c.get(f"{kind}_min_gap_s")) or 0.0)
 
@@ -254,7 +280,7 @@ def acquire(site: str, kind: str, *, who: str | None = None, wait: bool = False,
     wait=True sleeps until a gap/hourly refusal clears (at most `max_wait_s` in total); day and run caps never wait.
     `via` = exit country when the hit goes through a proxy (separate rate budget, same day caps).
     """
-    who = _who(who)
+    site, who = canonical(site), _who(who)
     deadline = time.monotonic() + max_wait_s
     while True:
         try:
@@ -272,6 +298,7 @@ def acquire(site: str, kind: str, *, who: str | None = None, wait: bool = False,
 
 def check(site: str, kind: str, *, who: str | None = None, via: str | None = None) -> Status:
     """What acquire() would decide now; records nothing."""
+    site = canonical(site)
     c = _connect()
     try:
         return _evaluate(c, site, kind, _who(who), via)
@@ -294,6 +321,7 @@ release = refund
 
 def reset_day(site: str, kind: str | None = None) -> int:
     """Owner override: void today's hits for site (and kind). Returns how many."""
+    site = canonical(site)
     day = _now().date().isoformat()
     c = _connect()
     try:

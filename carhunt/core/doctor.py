@@ -81,7 +81,8 @@ def render(checks: list[Check]) -> str:
     mark = {"ok": "ok  ", "warn": "WARN", "fail": "FAIL"}
     lines = []
     for c in checks:
-        lines.append(f"{mark[c.status]}  {c.name}" + (f": {c.detail}" if c.detail else ""))
+        detail = " · ".join(x.strip() for x in c.detail.splitlines() if x.strip())  # one line per check
+        lines.append(f"{mark[c.status]}  {c.name}" + (f": {detail}" if detail else ""))
         if c.fix and c.status != "ok":
             lines.append(f"      fix: {c.fix}")
     n = {s: sum(c.status == s for c in checks) for s in STATUSES}
@@ -137,6 +138,7 @@ def checks() -> list[Check]:
     if cfg is not None:
         out += _notify_checks(cfg)
         out += _cardb_checks(cfg)
+        out.append(_web_check(cfg))
 
     p = paths.pause_file()
     out.append(Check("pause", "ok", f"PAUSED ({p})" if p.exists() else "not paused"))
@@ -185,9 +187,26 @@ def _secret_exists(name: str) -> bool:
 def _cardb_checks(cfg) -> list[Check]:
     from carhunt.core import db
 
-    url = cfg.get("cardb.url") or "http://127.0.0.1:8484"
+    client = db.Client.from_config(cfg, timeout=3)  # CARDB_URL > cardb.url
     try:
-        db.Client.from_config(cfg, timeout=3).health()
-        return [Check("cardb", "ok", url)]
+        client.health()
+        return [Check("cardb", "ok", client.url)]
     except db.ApiError as e:
-        return [Check("cardb", "warn", f"{url}: {e}", "docker compose -f deploy/compose.yaml up -d")]
+        return [Check("cardb", "warn", f"{client.url}: {e}", "docker compose -f deploy/compose.yaml up -d")]
+
+
+WEB_URL = "http://127.0.0.1:4321"  # web/astro.config.mjs + deploy/compose.yaml
+
+
+def _web_check(cfg) -> Check:
+    """The owner's UI (web/, no Python package): GET /health. Down = warn, agents work without it."""
+    import urllib.error
+    import urllib.request
+
+    url = (cfg.get("web.url") or WEB_URL).rstrip("/") + "/health"
+    try:
+        with urllib.request.urlopen(url, timeout=3) as r:
+            ok = r.status == 200
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        return Check("web", "warn", f"{url}: {getattr(e, 'reason', e)}", "docker compose -f deploy/compose.yaml up -d web")
+    return Check("web", "ok" if ok else "warn", url, "docker compose -f deploy/compose.yaml logs web")

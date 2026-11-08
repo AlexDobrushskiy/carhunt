@@ -6,6 +6,7 @@
     code = sms.wait_code(r)                             # no code in time → cancelled (refund)
 
 Policy (site.yaml `account.verification`): rent only for **verify-once** sites (`sms-once`).
+- `sms-own` (the site needs a phone that stays reachable): refused, use the owner's own mobile.
 - Never for SMS-2FA-at-every-login sites (`sms-every-login`, e.g. marktplaats/2dehands): the rented number dies
   and the next login locks the account (11-02).
 - A rented number dies right after its one SMS: the site can't change the phone later without a code to the dead
@@ -32,6 +33,7 @@ from carhunt.access import _core, pace
 
 VERIFY_ONCE = {"sms-once", "verify-once", "sms_once"}
 SMS_EVERY_LOGIN = {"sms-every-login", "sms-2fa", "sms_2fa", "sms-each-login"}
+SMS_OWN = {"sms-own"}
 
 # transport(method, url, form) -> (status, json-decoded body)
 Transport = Callable[[str, str, "dict | None"], tuple[int, Any]]
@@ -64,7 +66,10 @@ def policy(site: str) -> Policy:
     if v in SMS_EVERY_LOGIN:
         return Policy(site, False, "SMS 2FA at every new-device login: a rented number dies and the next login "
                                    "locks the account (11-02). Use the owner's own mobile or skip the site.", v)
-    if v in {"none", "email", "email-link", "email-code"}:
+    if v in SMS_OWN:
+        return Policy(site, False, "the site needs a phone that stays reachable (login/recovery SMS): use the owner's "
+                                   "own mobile, never a rented one-time number.", v)
+    if v in {"none", "email", "email-link", "email-code", "google"}:
         return Policy(site, False, f"verification is {v!r}: no phone needed", v)
     return Policy(site, False, f"account.verification is {v!r} in site.yaml; renting needs an explicit "
                                "`sms-once` (fail closed)", v)

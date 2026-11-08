@@ -19,7 +19,7 @@ Names below are the defaults `carhunt browser mcp-config` prints (prefix `browse
 | `plain-chrome` | Agent Chrome launched like a person (debug port only, headed off-screen); attach after the first load | Akamai / DataDome sites that block Playwright-*launched* Chrome; `--profile` = on an identity profile |
 | `camoufox` | anti-detect Firefox (optional install) | Imperva sites behind a country proxy (send/phone steps) |
 
-Scripts: `from carhunt.access.session import tab` → `with tab("plain-chrome", site="mobile.de") as t: t.goto(url); t.html()`; `country="ES"` adds a fail-closed proxy (http, lane, camoufox; plain/identity refuse a country unless a geo lease). Per-site route: [references/site-table.md](references/site-table.md) (generated from `carhunt/sites/*/site.yaml`; seed evidence: `docs/browsers/site-walls.md`). **The site row wins over the ladder** (e.g. Imperva: never Playwright).
+Scripts: `from carhunt.access.session import tab` → `with tab("plain-chrome", site="mobile.de") as t: status = t.goto(url); t.content()` (paced + wall-checked; on browser routes `t` is also the Playwright page); `country="ES"` adds a fail-closed proxy (http, lane, camoufox; plain/identity refuse a country unless a geo lease). Per-site route: [references/site-table.md](references/site-table.md) (generated from `carhunt/sites/*/site.yaml`; seed evidence: `docs/browsers/site-walls.md`). **The site row wins over the ladder** (e.g. Imperva: never Playwright).
 
 ## Blocked? Escalation ladder — never settle for "blocked"
 Move up after **ONE** blocked hit per rung. Why: every blocked hit raises the site's bot score; ~10 test hits in an hour got the home IP flagged on lacentrale.fr (10-25).
@@ -43,7 +43,7 @@ Never answer from other data because a site blocked you; name every site you cou
 - WAF home pages can be stricter than data URLs: don't warm up on `/` where the site row says so (marktplaats 403, 11-01); others need the home page first (lacentrale `--warm`).
 
 **Pacing** (shared IP = shared budget)
-- Before every load/phone/send/login on a classified: `carhunt pace take <site> <kind> [--via <CC>]` (Python `pace.acquire`). Exit 3 / `PaceExceeded` → stop and come back at `retry_at` (or `--wait` for a short gap), don't retry. Why: another agent's two checks silently ate a sender's slot (coches ≤2 loads/rolling hour for everyone, 11-02).
+- Before every load/api/phone/send/login on a classified: `carhunt pace take <site> <kind> [--via <CC>]` (Python `pace.acquire`). Exit 3 / `PaceExceeded` → stop and come back at `retry_at` (or `--wait` for a short gap), don't retry. Why: another agent's two checks silently ate a sender's slot (coches ≤2 loads/rolling hour for everyone, 11-02).
 - Bursts kill: leboncoin hard ban for hours after fast search bursts (10-30); coches 5th load at 10 s = bot page (11-03, twice); mobile.de ~25 fast loads per profile, home IP 403 after ~41 sweep loads (11-06); custojusto 403 after ~50 ads at 6 s (11-03).
 - Day caps (phone reveals, sends) are taken **before** the action and reset at local midnight; missing caps in site.yaml → conservative default.
 
@@ -57,7 +57,7 @@ Never answer from other data because a site blocked you; name every site you cou
 **Accounts & secrets** — details: [references/logins-and-accounts.md](references/logins-and-accounts.md)
 - Agents log in and sign up **themselves**; only a code that goes to the owner's phone goes to the owner, **batched** into one ask. Why: "agents should not be blocked by anything they can do themselves" (owner, 10-21).
 - **Never print a credential** — not `cat`/`grep`/`head` on a secrets dir, not "masked". Read secrets only inside the script that types them; never snapshot/screenshot a sign-in page with a password typed. Why: one `grep` leaked ~12 passwords into a transcript (11-06).
-- Codes and confirm links: email first (`accounts.wait_code(site, since=t0)` / `wait_link`, t0 taken before the site sends), even for "texted" codes (one arrived by email, 10-31).
+- Codes and confirm links: email first (`t0=$(date +%s)` before the site sends, then `carhunt email-code <site> --since $t0` [`--link REGEX`]; Python `accounts.wait_code` / `wait_link`), even for "texted" codes (one arrived by email, 10-31).
 - Never type the owner's Google password for "Continue with Google" on a third-party site; use guest forms.
 - Never fake domestic data a form demands (local mobile, postcode): stop and report (coches.net, 11-05).
 

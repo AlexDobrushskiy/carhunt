@@ -16,13 +16,15 @@ pace:
 caps: {}
 account:
   needed_for: [message]
-  verification: "email + password (Keycloak, invisible reCAPTCHA passes in a plain Chrome); new-device login = email code"
+  verification: email-code
+  note: "email + password (Keycloak, invisible reCAPTCHA passes in a plain Chrome); new-device login = email code"
+  mail_from: "from:(wallapop.com)"
 phone: page
 messaging: "logged-in site chat es.wallapop.com/app/chat?itemId=<hash id>; ≤300 chars per message (longer text is cut silently)"
 liveness:
   sold_text: '"flags":\{[^}]*"sold":true'
   evidence: "page 404 = gone; 200 + legacy id = live; sold flag in the page JSON = gone (measured 11-04)"
-cursor: {strategy: newest_first, key: site_ref, why: "order_by=newest; bumped rows are older → never a cursor"}
+cursor: {strategy: newest_id, why: "order_by=newest; bumped rows are older → never a cursor"}
 measured: 2026-11-06
 notes:
   - "Private sellers have no phone (chat only); professionals carry extra_info.phone_number in the public user API"

@@ -56,7 +56,7 @@ Health: `GET /healthz` (server root) and `GET /api/v1/health` — same handler, 
 ## Config (cardb + search sections)
 
 Read at server start (restart after editing; an invalid profile refuses to start with the key path in the error, unknown
-keys only warn). `cardb profile` / `GET /api/v1/profile` show the effective profile with defaults. `owner` and `secrets`
+keys only warn). `cardb profile` / `GET /api/v1/profile` show the effective profile with defaults; `cardb profile check FILE` validates a config offline (exit 1 on errors, warnings printed). `search.max_distance_km` and `search.models[].match` are discover's keys: known to cardb, not used by it. `owner` and `secrets`
 are shared with core; `search.private_sellers_abroad` and `search.price.gross` are read by discover, not cardb.
 
 ```yaml
@@ -204,8 +204,8 @@ every flag: `cardb help COMMAND`.
 |---|---|---|
 | record an ad | `cardb upsert --url U --price … --fuel bev --opt k=v:src` | `POST /listings/upsert` |
 | photos | `cardb photo add CAR FILE --listing ID` | `POST /cars/{car}/photos` |
-| find by URL | `cardb find-listing URL` (exit 3 = none) | `GET /listings?url=` |
-| log a message | `cardb msg --to CONTACT --channel C --dir in\|out TEXT` | `POST /messages` |
+| find by URL | `cardb find-listing URL` (exit 3 = none) | `GET /listings?url=` (any slug of the same ad) · `?site=&site_ref=` (cardb's URL-derived ref, not a site's internal data id) |
+| log a message | `cardb msg --to CONTACT --channel C --dir in\|out TEXT` | `POST /messages` (car = id/alias, string or number; `car_id` accepted as alias; else `listing_url`, else `counterpart`). Response = the Message (`car_id` top level): 201 new, 200 + `matched_by` on dedupe |
 | facts / options | `cardb fact CAR k=v:src` · `cardb opt CAR k=v:src` | `PUT /cars/{car}/facts/{key}` |
 | edit safely | `cardb show CAR --json` → `cardb set CAR … --if-version N` · `--red-flag-add T` | `PATCH /cars/{car}` + `If-Match` |
 | status / flags | `cardb status CAR S --if-version N` · `needs-owner CAR "why"` · `deal CAR on` | `POST …/status` · `PUT …/good-deal` |

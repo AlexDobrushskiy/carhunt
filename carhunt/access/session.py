@@ -2,10 +2,16 @@
 
     from carhunt.access import session
     with session.tab("http", site="autoscout24") as t:
-        t.goto(url)                      # pace.acquire(site, "load") first; Blocked on a bot wall
-        data = t.html()
-    with session.tab("plain-chrome", site="mobile.de") as t: ...
-    with session.tab("http", country="es", site="coches.net") as t: ...   # proxied, exit verified first
+        status = t.goto(url)             # pace.acquire(site, "load") first; Blocked on a bot wall
+        data = t.content()
+    with session.tab("plain-chrome", site="mobile.de", fresh=True) as t: ...   # throwaway profile
+    with session.tab("http", country="es", site="coches.net") as t: ...       # proxied, exit verified first
+
+Handle = a Playwright sync Page on browser routes: anything not defined here (locator, keyboard, context, url,
+wait_for_timeout, on, …) goes to the page. Differences: `goto` returns the HTTP status (0 = no response; the first
+plain-chrome load happens before Playwright attaches, so there is no Response object), paces and raises Blocked when
+`site` is given; `goto(..., paced=False)` for callers that took the pace slot themselves (sites' Net).
+The http route has goto/content/html/fetch/url/wait_for_timeout only.
 
 Routes (pick the lowest that works; move up after ONE blocked hit — every blocked hit raises the bot score):
   http          urllib (curl_cffi Chrome impersonation when installed). Most sites ship full data in
@@ -97,17 +103,25 @@ _TITLE = re.compile(r"<title[^>]*>(.*?)</title>", re.I | re.S)
 
 # ---------- Tab ----------
 
+PACE_WAIT_S = 180  # wait this long for a gap/hourly slot, then PaceExceeded (day/run caps never wait)
+
+
 class Tab:
     """Common page handle. `goto` returns the HTTP status (0 = no response) and raises only Blocked/PaceExceeded,
     and those only when `site` is given."""
 
-    def __init__(self, route: str, *, site: str | None = None, country: str | None = None):
+    def __init__(self, route: str, *, site: str | None = None, country: str | None = None,
+                 pace_wait_s: float = PACE_WAIT_S):
         self.route, self.site, self.country = route, site, country
         self.page: Any = None
+        self.pace_wait_s = pace_wait_s
         self._closers: list[Callable[[], Any]] = []
 
     def _pace(self) -> pace.Ticket | None:
-        return pace.acquire(self.site, "load", via=self.country) if self.site else None
+        if not self.site:
+            return None
+        return pace.acquire(self.site, "load", via=self.country, wait=self.pace_wait_s > 0,
+                            max_wait_s=self.pace_wait_s)
 
     def _check(self, url: str, status: int, text: str, headers: dict | None = None) -> None:
         if self.site:
@@ -115,11 +129,15 @@ class Tab:
             if sig:
                 raise Blocked(sig, site=self.site, url=url, detail=f"HTTP {status}")
 
-    def goto(self, url: str, *, wait: str = "domcontentloaded") -> int:
+    def goto(self, url: str, *, wait_until: str = "domcontentloaded", timeout: float | None = None,
+             paced: bool = True) -> int:
         raise NotImplementedError
 
     def html(self) -> str:
         raise NotImplementedError
+
+    def content(self) -> str:
+        return self.html()
 
     def title(self) -> str:
         m = _TITLE.search(self.html() or "")
@@ -188,6 +206,7 @@ class HttpTab(Tab):
         super().__init__("http", **kw)
         self._t = transport
         self._last = FetchResult(0)
+        self.url = "about:blank"
 
     def _request(self, method: str, url: str, headers: dict | None, body: str | bytes | None,
                  paced: bool) -> FetchResult:
@@ -198,9 +217,15 @@ class HttpTab(Tab):
         self._check(url, r.status, r.text, r.headers)
         return r
 
-    def goto(self, url: str, *, wait: str = "domcontentloaded") -> int:
-        self._last = self._request("GET", url, None, None, True)
+    def goto(self, url: str, *, wait_until: str = "domcontentloaded", timeout: float | None = None,
+             paced: bool = True) -> int:
+        self._last = self._request("GET", url, None, None, paced)
+        self.url = url
         return self._last.status
+
+    @staticmethod
+    def wait_for_timeout(ms: float) -> None:
+        time.sleep(ms / 1000)
 
     def html(self) -> str:
         return self._last.text
@@ -227,8 +252,18 @@ class BrowserTab(Tab):
         super().__init__(route, **kw)
         self.page, self._opener = page, opener
 
-    def goto(self, url: str, *, wait: str = "domcontentloaded") -> int:
-        ticket = self._pace()
+    def __getattr__(self, name: str) -> Any:
+        """Everything else is the Playwright page's (locator, keyboard, context, url, wait_for_timeout, …)."""
+        if name.startswith("_"):
+            raise AttributeError(name)
+        page = self.__dict__.get("page")
+        if page is None:
+            raise RuntimeError(f"tab.{name}: goto() first (this route opens the browser on the first URL)")
+        return getattr(page, name)
+
+    def goto(self, url: str, *, wait_until: str = "domcontentloaded", timeout: float | None = None,
+             paced: bool = True) -> int:
+        ticket = self._pace() if paced else None
         status = 0
         if self.page is None:
             if self._opener is None:
@@ -244,7 +279,8 @@ class BrowserTab(Tab):
                     "() => (performance.getEntriesByType('navigation')[0] || {}).responseStatus || 0"))
         else:
             try:
-                resp = self.page.goto(url, wait_until=wait)
+                kw = {"timeout": timeout} if timeout is not None else {}
+                resp = self.page.goto(url, wait_until=wait_until, **kw)
                 status = resp.status if resp else 0
             except Exception:
                 status = 0
@@ -375,11 +411,11 @@ def _open_lane(t: BrowserTab, proxy_server: str | None) -> None:
 
 
 def _plain_opener(t: BrowserTab, stack: contextlib.ExitStack, profile: Path | str | None,
-                  open_tab: Callable[..., Any] | None = None) -> Callable[[str], Any]:
+                  open_tab: Callable[..., Any] | None = None, *, fresh: bool = False) -> Callable[[str], Any]:
     def opener(url: str) -> Any:
         if open_tab is None:
             from carhunt.access import plainchrome
-            fn = lambda u: plainchrome.open_tab(u, profile=profile)  # noqa: E731
+            fn = lambda u: plainchrome.open_tab(u, profile=profile, fresh=fresh)  # noqa: E731
         else:
             fn = open_tab
         _browser, page = stack.enter_context(fn(url))
@@ -394,7 +430,9 @@ def _open_camoufox(t: BrowserTab, stack: contextlib.ExitStack, proxy_url: str | 
         raise RuntimeError("camoufox not installed: uv pip install --python .venv/bin/python 'camoufox[geoip]' "
                            "&& .venv/bin/python -m camoufox fetch") from None
     import urllib.parse
-    kw: dict[str, Any] = {"headless": True, "os": "macos"}  # a random Windows identity turns on canvas noise (11-03)
+    # os=macos: a random Windows identity turns on canvas noise (11-03). main_world_eval: an "mw:"-prefixed
+    # evaluate runs in the page's own JS world (coches.net's XHR timeout patch must reach the site's code, 11-03).
+    kw: dict[str, Any] = {"headless": True, "os": "macos", "main_world_eval": True}
     if proxy_url:
         u = urllib.parse.urlsplit(proxy_url)
         kw["proxy"] = {"server": f"{u.scheme}://{u.hostname}:{u.port}",
@@ -409,18 +447,24 @@ def _open_camoufox(t: BrowserTab, stack: contextlib.ExitStack, proxy_url: str | 
 
 @contextlib.contextmanager
 def tab(route: str, *, country: str | None = None, site: str | None = None,
-        profile: Path | str | None = None) -> Iterator[Tab]:
+        profile: Path | str | None = None, fresh: bool = False, pace_wait_s: float = PACE_WAIT_S) -> Iterator[Tab]:
     """One page handle on `route`; everything opened here is closed on exit, on failure too.
 
     country → residential exit in that country, verified (fail closed) before the first site request:
     http/lane/camoufox use the proxy directly; plain-chrome uses the country's geo lease; identity refuses.
+    fresh → throwaway browser profile (Akamai counts bursts per profile, mobile.de 11-04). Lane, camoufox and http
+    are fresh anyway; identity and geo profiles are persistent by design, so fresh refuses there.
     """
     if route not in ROUTES:
         raise ValueError(f"route must be one of {ROUTES}, got {route!r}")
     if country and route == "identity":
         # identity profiles live on the home IP; a foreign-IP login there would mix IPs on one account (11-02)
         raise ValueError("identity + country is not allowed: use route plain-chrome with country (geo lease)")
+    if fresh and (route == "identity" or (route == "plain-chrome" and (country or profile))):
+        raise ValueError("fresh=True needs a route whose profile is throwaway (plain-chrome without country/profile, "
+                         "lane, camoufox, http)")
     country = country.lower() if country else None
+    kw = {"site": site, "pace_wait_s": pace_wait_s}
     with contextlib.ExitStack() as stack:
         t: Tab
         if route == "http":
@@ -428,25 +472,25 @@ def tab(route: str, *, country: str | None = None, site: str | None = None,
             if country:
                 purl = proxy.get(country)
                 proxy.verify_exit(purl, country)
-            t = HttpTab(_http_transport(purl), site=site, country=country)
+            t = HttpTab(_http_transport(purl), country=country, **kw)
         elif route == "lane":
             server = None
             if country:
                 fwd = stack.enter_context(proxy.Forwarder(proxy.get(country)))
                 proxy.verify_exit(fwd.url, country)  # through the forwarder = what Chrome will use
                 server = fwd.url
-            t = BrowserTab("lane", site=site, country=country)
+            t = BrowserTab("lane", country=country, **kw)
             stack.callback(t.close)  # Chrome stops before the forwarder
             _open_lane(t, server)
         elif route == "plain-chrome":
-            t = BrowserTab("plain-chrome", site=site, country=country)
+            t = BrowserTab("plain-chrome", country=country, **kw)
             stack.callback(t.close)
             if country:
                 from carhunt.access import geo
                 g = stack.enter_context(geo.lease(country, _holder()))
                 t._opener = _plain_opener(t, stack, g.profile, g.open_tab)
             else:
-                t._opener = _plain_opener(t, stack, profile)
+                t._opener = _plain_opener(t, stack, profile, fresh=fresh)
         elif route == "identity":
             from carhunt.access import identity
             holder = _holder()
@@ -455,11 +499,11 @@ def tab(route: str, *, country: str | None = None, site: str | None = None,
             from carhunt.access import plainchrome
             # clean browser close before the release: cookies flush and sync back to the pool (a kill loses ~30 s)
             stack.callback(plainchrome.close, lease.profile)
-            t = BrowserTab("identity", site=site)
+            t = BrowserTab("identity", **kw)
             stack.callback(t.close)
             t._opener = _plain_opener(t, stack, lease.profile)
         else:  # camoufox
-            t = BrowserTab("camoufox", site=site, country=country)
+            t = BrowserTab("camoufox", country=country, **kw)
             stack.callback(t.close)
             purl = None
             if country:

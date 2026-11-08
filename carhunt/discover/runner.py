@@ -12,6 +12,8 @@ Rules (EV run):
 - Focus families (tiers in `discover.detail_tiers`) get a detail read + full gallery; the rest are card-only:
   market picture without spending the load budget.
 - Scope prefilter on the search card before any detail load; every drop is logged with its reason.
+- Cardb lookups go by URL (cardb derives its own ad id from the URL); in-run dedupe and the price memory go by the
+  card's `site_ref` (the site's data id), which on standvirtual / olx.pt differs from the URL token.
 """
 from __future__ import annotations
 
@@ -56,6 +58,7 @@ class SiteResult:
     unchanged: int = 0
     gone: int = 0
     rejected: int = 0
+    price_held: int = 0             # stored without price: cardb refused the ask (x100 / range / net) → check the ad
     dropped: Counter = field(default_factory=Counter)
     queries_done: int = 0
     queries: int = 0
@@ -140,6 +143,11 @@ def query_key(q: SearchQuery) -> str:
     return f"{q.country or '*'}|{q.make}|{q.model}|{q.seller}"
 
 
+def _ref(card: Card) -> str:
+    """Dedupe / price-memory key: the site's data id, else the URL."""
+    return f"{card.site}:{card.site_ref}" if card.site_ref else card.url
+
+
 class Sweep:
     def __init__(self, cfg: dict, db: Any, *, dry_run: bool = False, max_new: int | None = None,
                  geo: Geo | None = None, site_factory: Callable[[str], Any] | None = None,
@@ -152,15 +160,16 @@ class Sweep:
         self.log = log or (lambda s: None)
         self.now = now or _env.now
         self.store = Store(_env.path("discover", "cursors.json"))
-        self.seen_path = _env.path("discover", "seen.json")     # url → the site's own ask at the last sweep
+        self.seen_path = _env.path("discover", "seen.json")     # site:site_ref → the site's own ask at the last sweep
         self.seen: dict[str, int | None] = json.loads(self.seen_path.read_text()) if self.seen_path.exists() else {}
         self.created = 0
         self.writes: list[dict] = []        # dry-run payloads / write results, for the report
         self.detail_tiers = self.disc.get("detail_tiers")   # None = every tier gets detail reads
 
     # --- bookkeeping ------------------------------------------------------------
-    def _disposition(self, res: SiteResult, url: str, reason: str) -> None:
-        res.dropped[reason.split(":")[0]] += 1
+    def _disposition(self, res: SiteResult, url: str, reason: str, *, count: bool = True) -> None:
+        if count:
+            res.dropped[reason.split(":")[0]] += 1
         rec = {"at": self.now().isoformat(timespec="seconds"), "site": res.site, "url": url, "reason": reason}
         if not self.dry_run:
             with open(_env.path("discover", "dispositions.jsonl"), "a", encoding="utf-8") as fh:
@@ -226,9 +235,9 @@ class Sweep:
             if cur.stop(card):
                 break
             cur.observe(card)
-            if card.url in seen:
+            if _ref(card) in seen:
                 continue
-            seen.add(card.url)
+            seen.add(_ref(card))
             self._card(site, res, card, model, budget)
         if not self.dry_run:
             self.store.put(res.site, key, cur.committed(self.now().isoformat(timespec="seconds")))
@@ -250,7 +259,7 @@ class Sweep:
             return
         existing = self.ingest.known(card.url)
         if existing:
-            last = self.seen.get(card.url)
+            last = self.seen.get(_ref(card))
             changed = last is not None and card.price is not None and card.price != last
             if changed and (self.detail_tiers is None or (lst.tier or model.tier) in self.detail_tiers):
                 try:
@@ -261,7 +270,9 @@ class Sweep:
                     return
             r = self.ingest.sighting(lst, existing, price_changed=changed)
             self._count(res, r)
-            self.seen[card.url] = card.price
+            if r.action == "rejected":
+                self._disposition(res, card.url, f"cardb_rejected: {r.reason}", count=False)
+            self.seen[_ref(card)] = card.price
             return
         if self.max_new is not None and self.created >= self.max_new:
             raise RunCapReached()
@@ -287,8 +298,12 @@ class Sweep:
         quality.assess(lst, self.cfg)
         r = self.ingest.write(lst)
         self._count(res, r)
+        if r.action == "rejected" or (r.reason and "price held" in r.reason):
+            self._disposition(res, card.url, f"cardb_rejected: {r.reason}", count=False)
+        if r.reason and "price held" in r.reason:
+            res.price_held += 1
         if r.action in ("created", "linked", "updated"):
-            self.seen[card.url] = card.price
+            self.seen[_ref(card)] = card.price
         if r.action in ("created", "linked", "would_create"):
             self.created += 1
         self.writes.append({**r.to_dict(), "summary": lst.summary()} if not self.dry_run

@@ -16,7 +16,7 @@ from the table falls back to `text=<make> <model>` (filter the titles afterwards
 
 ## Cookie (transport)
 The plugin sends `Cookie: datadome=<v>` and keeps the rotated value from each `Set-Cookie` for the run. Source:
-`Plugin(cookie=...)` (value or callable), default `carhunt.access.jar.cookie("leboncoin.fr", "datadome")`. No
+`Plugin(cookie=...)` (value or callable), default `carhunt.access.jar.get("leboncoin.fr", "datadome")`. No
 cookie → `Blocked("datadome-no-cookie")` before any request: one real-browser home-page load (no login) fills the jar.
 
 ## Rules (why)

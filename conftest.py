@@ -4,7 +4,10 @@ Each test gets a temp $CARHUNT_HOME and the file secrets backend; the real macOS
 unless the test is marked `keychain` and CARHUNT_TEST_KEYCHAIN=1 (a builder's run once wrote to it).
 """
 import os
+import shutil
+import subprocess
 import tempfile
+from pathlib import Path
 
 import pytest
 
@@ -19,6 +22,19 @@ def pytest_configure(config: pytest.Config) -> None:
             del os.environ[k]
     os.environ["CARHUNT_HOME"] = tempfile.mkdtemp(prefix="carhunt-test-home-")
     os.environ["CARHUNT_SECRETS_BACKEND"] = "file"
+    _cardb_bin()
+
+
+def _cardb_bin() -> None:
+    """Real-cardb tests skip without CARDB_BIN; build the repo's cardb so they run (a skipped one hid a sweep crash)."""
+    if os.environ.get("CARDB_BIN") or not shutil.which("go"):
+        return
+    repo = Path(__file__).resolve().parent
+    r = subprocess.run(["make", "-s", "-C", str(repo / "cardb"), "build"], capture_output=True, text=True)
+    if r.returncode == 0:
+        os.environ["CARDB_BIN"] = str(repo / "cardb" / "bin" / "cardb")
+    else:
+        print(f"conftest: cardb build failed, real-cardb tests will skip:\n{r.stderr[-2000:]}")
 
 
 def pytest_collection_modifyitems(config, items):

@@ -116,6 +116,9 @@ func (p *Profile) Validate() error {
 	if s.DefaultTier < 1 {
 		bad("search.default_tier", "must be ≥ 1")
 	}
+	if s.MaxDistanceKm < 0 {
+		bad("search.max_distance_km", "must be ≥ 0 (0 = off)")
+	}
 	for i, m := range s.Models {
 		path := fmt.Sprintf("search.models[%d]", i)
 		if strings.TrimSpace(m.Make) == "" {

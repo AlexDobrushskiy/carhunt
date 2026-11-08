@@ -21,16 +21,16 @@ caps:
   why: "≤40 reveals/day on one account (11-05): accounts verified with a rented SMS number have no recovery"
 account:
   needed_for: [phone, message]
-  verification: >-
-    signup needs a French mobile + SMS (foreign SMS never arrives); the account lives on ONE French IP — a login from
-    another IP or a slider solved in an automated browser → hard block (11-01)
+  verification: sms-once
+  note: "signup needs a French mobile + SMS (foreign SMS never arrives); the account lives on ONE French IP — a login from another IP or a slider solved in an automated browser → hard block (11-01)"
+  mail_from: "from:(leboncoin.fr)"
 phone: reveal-login
 messaging: "logged in, French IP only: 'Envoyer un message' → /reply/<id> (2500 chars); from a foreign IP silently dropped"
 liveness:
   gone_text: 'Annonce introuvable'
   evidence: "410 + title 'Annonce introuvable' = gone (11-04); 200 + ad in page data = live; status != active = gone"
 proxy: {sticky_minutes: 55}
-cursor: {strategy: newest_first, key: site_ref, why: "sort=time desc; list_id is monotonic (never the first row: promoted rows)"}
+cursor: {strategy: newest_id, why: "sort=time desc; list_id is monotonic (never the first row: promoted rows)"}
 measured: 2026-11-06
 notes:
   - "Reads: plain HTTP + a good `datadome` cookie (taken once from a real browser's trust jar); DataDome rotates it on every response — keep the newest for the run"

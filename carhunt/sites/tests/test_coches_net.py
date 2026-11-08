@@ -1,12 +1,14 @@
 """coches.net: query builders (page URL + gateway body), gateway + __INITIAL_PROPS__ parsers (synthetic fixtures),
 ProxyUnavailable fallback, page budget, phone reveal, Blocked/Gone, liveness."""
 import json
+import os
 import urllib.parse
+from pathlib import Path
 
 import pytest
 
 from carhunt.access.errors import PaceExceeded, ProxyUnavailable
-from carhunt.sites import base
+from carhunt.sites import _net, base
 from carhunt.sites._net import Response
 from carhunt.sites.model import RawAd, SearchQuery
 from carhunt.sites.testing import FakeNet, fixture
@@ -110,12 +112,19 @@ def test_search_falls_back_to_page_route_without_es_proxy():
     assert s.net.loads == 1     # totalPages 1 → one load
 
 
-def test_page_budget_two_per_hour():
-    s = site({r"/segunda-mano/\?": fixture(__file__, "coches_net/search.html")}, net_cls=NoProxyNet)
-    list(s.search(SearchQuery(make="Volkswagen", model="ID.4")))
-    list(s.search(SearchQuery(make="Volkswagen", model="ID.4")))
-    with pytest.raises(PaceExceeded):
-        list(s.search(SearchQuery(make="Volkswagen", model="ID.4")))
+def test_page_budget_two_per_hour_shared_ledger(monkeypatch):
+    """Real Net + pace ledger, no ES proxy (page route): the 3rd page load in an hour is refused, also when another
+    agent's plugin instance asks — the budget belongs to the IP, not to one run (11-03)."""
+    html = fixture(__file__, "coches_net/search.html")
+    monkeypatch.setattr(_net, "http", lambda url, **kw: Response(200, url, html))
+    home = Path(os.environ["CARHUNT_HOME"])
+    home.mkdir(parents=True, exist_ok=True)
+    (home / "config.yaml").write_text("owner: {tz: UTC}\nsites:\n  overrides:\n    coches.net: {pace: {min_gap_s: 0}}\n")
+    for _ in range(2):
+        list(base.get("coches.net").search(SearchQuery(make="Volkswagen", model="ID.4")))
+    with pytest.raises(PaceExceeded) as e:
+        list(base.get("coches.net").search(SearchQuery(make="Volkswagen", model="ID.4")))
+    assert "2/rolling hour" in e.value.reason
 
 
 def test_gateway_ad_dealer_and_private():

@@ -10,11 +10,13 @@ country_ip: null
 pace:
   min_gap_s: 6
   why: "not measured; lane reads passed (11-02)"
-account: {needed_for: [], verification: "none"}
+account:
+  needed_for: []
+  verification: none
 phone: none
 messaging: "none: an aggregator — contact the seller on the source site"
 liveness: {supported: false, evidence: "aggregator rows point at source ads: check the source site"}
-cursor: {strategy: full, key: site_ref, why: "aggregator, filters only via JS; no measured order"}
+cursor: {strategy: full, why: "aggregator, filters only via JS; no measured order"}
 measured: 2026-11-02
 notes:
   - "French aggregator (leboncoin, La Centrale, ParuVendu, AutoScout24.fr, ev-market): finds cross-posts of one car; misses part of leboncoin"

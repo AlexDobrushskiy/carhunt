@@ -1,95 +1,211 @@
 # carhunt config — copy to $CARHUNT_HOME/config.yaml (bootstrap does this) and edit.
 # Worked example: a buyer in Portugal looking for a used electric SUV in PT + 7 EU countries.
 # Secrets are never written here: use `secret:NAME` and `carhunt secret set NAME`.
-# Section owners: see docs/design.md. Builders extend their section; core validates the schema.
+# Check: `carhunt config validate <file>`. Unknown keys are errors (typo guard): carhunt/core/config.schema.json.
+# Most keys have defaults; the values below are the defaults unless the comment says "example".
+# Section owners: docs/design.md. Full key docs: docs/<module>.md "Config".
 
 owner:
-  name: owner                 # shown in cardb/web as the human ("needs owner", author)
-  languages: [en, pt]         # languages the owner reads; sellers are answered in theirs
-  tz: Europe/Lisbon
-  home: {city: Lisbon, country: PT, lat: 38.72, lon: -9.14}
+  name: owner                 # the human in cardb/web ("Needs owner", author of web writes); renaming keeps verdicts
+  languages: [en, pt]         # example; languages the owner reads (briefs); sellers are answered in theirs
+  tz: Europe/Lisbon           # example; required. Every window below is read in this zone
+  home: {city: Lisbon, country: PT, lat: 38.72, lon: -9.14}   # example; market home|abroad, distance, phone code, VAT rate
 
-search:                       # buyer profile: read by cardb (queue/ranking) and discover (scope)
-  countries: [PT, ES, FR, DE, BE, NL, LU, IT]
+secrets:
+  backend: keychain           # keychain | op | file (default keychain on macOS, file elsewhere); env CARHUNT_SECRET_<NAME> always wins
+  keychain_service: carhunt   # Keychain service name
+  op_vault: carhunt           # 1Password vault for backend op
+
+notify:
+  backend: none               # telegram | stdout | none (setup: docs/notify.md)
+  telegram:
+    bot_token: secret:telegram_bot_token
+    chat_id: secret:telegram_chat_id
+    # api_base: https://api.telegram.org
+  quiet_hours: "21:30-09:30"  # example; pushes in this window wait or go silent (per kind below)
+  quiet: {digest: hold, ask: hold, urgent: silent}
+  default_agent: overseer     # inbox for owner lines that name no agent
+
+cardb:
+  url: http://127.0.0.1:8484  # client fallback (after --server, CARDB_URL, ~/.config/cardb/config.json)
+  token: secret:cardb_token   # written by `cardb init`
+  # data_dir: cardb           # default $CARHUNT_HOME/cardb; keep it relative (an absolute path pins one home). CARDB_DATA_DIR wins
+  # users:                    # viewers (the owner is implicit); each gets secret cardb_token_<name> + a web identity
+  #   - {name: partner, role: viewer}
+
+search:                       # buyer profile: cardb (queue, ranking) + discover (query scope)
+  countries: [PT, ES, FR, DE, BE, NL, LU, IT]   # example; ISO-2, empty = any
   private_sellers_abroad: false   # abroad = dealers only (real-owner test is hard remotely)
-  exclude_regions: [PT-20, PT-30, ES-CN]   # islands: transport cost + paperwork
-  price: {max_eur: 40000, gross: true}     # always compare gross (incl. VAT)
-  year_min: 2021
-  km_max: 80000
-  powertrain: [BEV]
-  models:                     # make/model families; tier 1 = first to contact
-    - {make: Volkswagen, model: "ID.4", tier: 1}
+  exclude_regions: [PT-20, PT-30, ES-CN]   # example; islands: transport cost + paperwork (ISO 3166-2)
+  exclude_places: []          # extra city words to exclude
+  price:
+    max_eur: 40000            # example; the only queue price filter (0 = none)
+    min_eur: 1500             # write-time floor: below = monthly rate / deposit, refused
+    cap_eur: 2000000          # write-time ceiling: catches ×100 prices
+    gross: true               # always compare gross (incl. VAT); net asks are converted
+    currency: EUR
+  year_min: 2021              # example (0 = off)
+  km_max: 80000               # example (0 = off); also the fit km reference
+  powertrain: [bev]           # example; bev phev hev mhev petrol diesel lpg cng hydrogen (empty = any)
+  max_distance_km: 2500       # example; discover drops cars farther (road km; 0 = off)
+  road_factor: 1.3            # great-circle → road km
+  models:                     # example; first match wins; tier 1 = first to contact
+    - {make: Volkswagen, model: ID.4, tier: 1}
     - {make: Skoda, model: Enyaq, tier: 1}
-    - {make: Audi, model: "Q4 e-tron", tier: 2}
+    - {make: Audi, model: Q4 e-tron, tier: 2}
     - {make: BMW, model: iX1, tier: 2}
-    - {make: Toyota, model: bZ4X, tier: 3}
-  hard_filters:
-    - {fact: battery_net_kwh, min: 70}
-    - {flag: lease_transfer, exclude: true}
-    - {flag: damaged, exclude: true}
-  options_wanted:             # key: weight (keys = cardb option vocabulary)
+    - {make: Toyota, model: bZ4X, tier: 3, label: backup, match: 'bz ?4 ?x'}   # match: discover's regex on folded make/model/title (cardb ignores it)
+    # fields: label, base_fit (0…2), risk (points), match (regex), when: {power_hp: [min, max], drive: [rwd],
+    #   variant_any: [pro], variant_none: [gtx], year_min, year_max, battery_net_kwh: [min, max], fuel: [bev]}
+  default_tier: 4             # tier for unmatched cars (0 = highest model tier + 1)
+  queue_default_tiers: [1, 2, 3]   # tiers `cardb queue` shows by default
+  tier_labels: {1: first to contact, 2: alternative, 3: backup}
+  hard_filters:               # queue exclusions; exactly one of field / fact(s) / flag per rule
+    - {field: powertrain.battery_net_kwh, min: 70, label: small battery}   # example; numeric field out of range (missing passes)
+    - {fact: deal_flag, words: [suspect], label: suspect ad}               # fact contains a whole word
+    - {facts: [origin, import, history_report], mentions_country: [PL, LT], label: high-risk history}   # example
+    - {flag: lease_transfer}  # truthy fact or price flag
+    - {flag: damaged}
+  options_wanted:             # example; option key → weight (keys = cardb option vocabulary, GET /profile option_keys)
     heat_pump: 3
     pano: 2
     camera_360: 1
     power_tailgate: 1
     heated_seats: 1
-  weights: {value: 1.0, fit: 1.0, risk: 1.0}
-
-cardb:
-  url: http://127.0.0.1:8484
-  token: secret:cardb_token
-  data_dir: ~/.carhunt/cardb
-
-secrets:
-  backend: keychain           # keychain | op | file   (env CARHUNT_SECRET_<NAME> always wins)
-
-notify:
-  backend: none               # telegram | stdout | none
-  telegram: {bot_token: secret:telegram_bot_token, chat_id: secret:telegram_chat_id}
-  quiet_hours: "21:30-09:30"  # pushes during these hours go silent or wait
-  digests: ["09:30", "20:00"]
+  option_labels: {}           # option key → short label in `why`
+  must_have: [heat_pump]      # example; unknown = risk points; ?spec=confirmed|unknown filter
+  option_keys: []             # extra option vocabulary
+  penalties:                  # example; numeric field hit → fit and trim score down
+    - {field: wheels_in, min: 21, weight: 2, label: '{v}" wheels'}
+  weights: {value: 1.0, fit: 1.0, risk: 1.0}   # score = value·v·fit − risk·r
+  ranking:                    # peer pricing, landed cost, VAT reserve, fit and risk points: all keys + defaults in docs/db.md
+    landed_cost:
+      default_distance_km: {PT: 250, ES: 800, FR: 1500, other: 2000}   # example; country → km when a car has no distance
 
 browsers:
   chrome_app: /Applications/Google Chrome.app
-  identity_pool: 4            # logged-in profile copies (identity-a…d)
-  lanes: 4                    # logged-out MCP lanes (pw-lane-a…d)
-  captcha: {enabled: false}   # local solver needs Ollama + a VLM (GBs)
+  lanes: 4                    # logged-out lanes ch-lane-a… (one isolated MCP server)
+  identity_pool: 4            # logged-in profile copies ch-identity-a…
+  headless: true              # MCP servers; plain-chrome is always headed (off-screen)
+  ports: {mcp_base: 18931, debug_base: 19331, plain_debug: 19341}   # clear of a personal stack on 8931/9331
+  launchd_prefix: carhunt.
+  mcp_name_prefix: ch-        # identity lease hooks match these MCP names
+  idle_release_s: 180         # identity lease released + browser closed after this idle
+  reaper_max_age_h: 6         # throwaway browsers older than this count as leaked
+  identity_reseed_hours: 24   # pool copies older than this are re-seeded from the master
+  captcha:
+    enabled: false            # image grids need Ollama + a VLM (GBs); sliders need only OpenCV
+    model: qwen3.5:4b
+    ollama_url: http://127.0.0.1:11434   # env OLLAMA_HOST when unset
+    owlv2: false              # 4x4 grids via the OWLv2 detector (PyTorch, GBs)
+    hcaptcha_vlm: false       # hCaptcha canvas tasks: 0/3 measured
+    max_attempts: 2           # per run: every failed try raises the site's bot score
+    site_budget: 6            # attempts per site per site_window_h
+    site_window_h: 6
+    screenshots: true         # $CARHUNT_HOME/access/captcha-shots/
 
 net:
   proxy:
-    provider: none            # decodo | none
+    provider: none            # decodo | none; country-IP steps fail closed without one
     credentials: secret:proxy_credentials
+    # gateway: gate.decodo.com:7000
+    # echo_url: <IP-echo endpoint for the fail-closed exit check>
+  geo: {}                     # per country {tz, locale} for geo browsers, e.g. fr: {tz: Europe/Paris, locale: fr-FR}
 
 accounts:
-  sms: {provider: none, api_key: secret:sms_api_key}
-  gmail: {oauth_client: secret:gmail_oauth_client, token: secret:gmail_token, plus_address: cars}
+  email: you@example.com      # site signups (agents); codes are read from this mailbox
+  sms: {provider: none, api_key: secret:sms_api_key}   # smspool | none; each rental needs the owner's OK
+  gmail: {oauth_client: secret:gmail_oauth_client, token: secret:gmail_token, plus_address: cars}   # signups use you+cars@…
 
 sites:
-  enabled: [autoscout24, mobile.de, standvirtual.com, olx.pt, kleinanzeigen.de, leboncoin.fr, coches.net, wallapop.com, subito.it, marktplaats.nl]
+  enabled: [autoscout24, mobile.de, standvirtual.com, olx.pt, kleinanzeigen.de, leboncoin.fr, coches.net, wallapop.com, subito.it, marktplaats.nl]   # `carhunt site list`
+  overrides: {}               # per-site tweaks on top of carhunt/sites/<pkg>/site.yaml:
+  #   mobile.de: {pace: {min_gap_s: 30}, country_ip: DE}
+  # keys: country_ip, route, tab_home, accept_language, proxy.sticky_minutes, pace.*, caps.*, liveness.*, account.*, geo
 
 discover:
-  windows: {morning: "07:00-09:00", afternoon: "14:00-16:00"}
+  windows: {morning: "07:00-09:00", afternoon: "14:00-16:00"}   # may not cross midnight; morning = sites without pace.read_after
+  max_loads_per_site: 60      # per run; min() with site.yaml pace.max_loads_per_run (home IP got a 403 after 41)
+  max_pages: 5                # per query
+  detail_tiers: [1, 2]        # tiers that get detail reads + gallery (null = all)
+  max_photos: 40
+  cursor: {coches.net: full}  # per-site strategy override: newest_id | first_seen | full
+  price_sanity: {min_eur: 1000, max_eur: 250000}
+  thin: {min_photos: 8, min_info: 3}
+  heuristics: [vag_meb]       # example; plug-ins in carhunt/discover/heuristics/ (null = all)
+  distance: {geocoder: nominatim, router: null, user_agent: "carhunt/1.0 (you@example.com)"}   # geocoder none = offline
 
 contact:
-  channels: [whatsapp, email, site]
-  quiet_hours: "01:30-08:10"  # no sends at all
-  opener_window: "09:30-21:30"   # first messages only (seller-local time)
-  caps: {whatsapp: {per_hour: 12, openers_per_day: 15, min_gap_s: 180}}
-  persona: {signoff: "", payment_line: "Payment at handover by bank transfer, no deposit."}
+  variant: home               # home (private sellers, home market) | abroad (dealers abroad): picks the brief section
+  quiet_hours: "01:30-08:10"  # owner tz: no sends at all
+  opener_window: "09:30-21:30"   # seller-local: first messages only
+  seller_hours:               # seller-local; nudges + channels with seller_hours: true
+    dealer: {mon-fri: "08:30-19:00", sat: "08:30-13:00", sun: "10:00-19:00"}
+    private: {mon-sun: "10:00-20:00"}
+  limits:                     # shared across agents; replace the whole list to change one (docs/contact.md "Limits")
+    - {name: chat-spacing, channels: [whatsapp, sites], min_gap_s: 180}
+    - {name: chat-hourly, channels: [whatsapp, sites], per: hour, max: 12}
+    - {name: openers-daily, channels: "*", kind: opener, per: day, max: 20, reserve: {role: outreach-home, slots: 4, until: "15:00"}}
+    - {name: opener-spacing, channels: "*", kind: opener, min_gap_s: 600}
+    - {name: email-spacing, channels: [email], min_gap_s: 300}
+    - {name: site-spacing, channels: [sites], per_channel: true, min_gap_s: 600}
+    - {name: followups-daily, channels: "*", kind: nudge, per: day, max: 15}
+  reply: {min_seller_age_s: 180, owner_backoff_min: 15}   # instant replies read as a bot; owner typing = his chat
+  opener: {max_chars: 280, max_questions: 2}   # long openers got 4/18 replies vs ~13/13 short
+  nudge:
+    after_h: 48
+    statuses: [new, to_contact, contacted, talking]
+    qualify: [{field: tier, eq: 1}, {field: verdict.value, eq: up}, {field: good_deal, eq: true}]
+    exclude:                  # example
+      - {field: model_family, in: [Toyota bZ4X], why: "goes quiet even with a thumbs-up"}
+  channels:                   # per channel (whatsapp, email, sites, or a site id)
+    whatsapp: {max_len: 500}
+    email: {seller_hours: true}
+    wallapop.com: {max_len: 300}
+  default_phone_cc: "351"     # example; prefix for bare national numbers
+  whatsapp: {account: null}   # wacli named account, if any
+  email:
+    from_name: Owner          # example
+    from_address: secret:gmail_address
+    plus_tag: cars            # Reply-To owner+cars@…
+    label: cars
+    oauth_client: secret:gmail_oauth_client
+    token: secret:gmail_token
+  mailroute:
+    domains: [autoscout24.com, mobile.de, dealer.example]   # example; marketplaces + dealers whose mail is car mail
+    never_touch: [family.example, work.example]             # example; addresses or domains never moved
+    freemail: []              # extra freemail hosts (address-only matching)
+  watch: {channels: [whatsapp, email, wallapop.com]}   # wallapop has no email alerts: poll it
+  persona:                    # rendered into the outreach skill + brief (English; agents translate). All example
+    home: "Lisbon, Portugal"
+    family_line: "for myself and my family"
+    travel_line: "since I'd travel to see it, I want everything clear before the trip"
+    health_report: "a recent battery health report (SoH)"
+    spec_line: "Does it have a heat pump and a panoramic roof?"
+    payment_line: "I'd pay at handover by instant bank transfer, banker's draft or cash; no deposit before."
+    signoff: ""               # email only: a first name at most
+    name: ""                  # site forms that require a name
+    email: ""                 # site forms: use the plus-address
+    aliases: []               # names a site shows for your account (OLX: tells our messages apart)
+  # sites: {olx.pt: {selectors: {box: textarea}}}   # pin a sender selector without a code change (docs/contact.md)
 
 vet:
-  destination_country: PT     # registration/import guide used: knowledge/import/<dest>.md
+  destination_country: PT    # example; selects knowledge/import/<dest>-registration.md + <seller>-to-<dest>.md
+  max_open_asks: 1            # evidence pack: open asks per car at once
 
 orchestrate:
   session_backend: agterm
   agent_cli: claude           # claude | codex
-  handover_ctx_pct: 50
-  schedule:
-    sweep: "07:00"
-    unpause: "08:10"
-    digest: ["09:30", "20:00"]
-    pause: "23:00"
-    learning: "23:15"
-
-privacy:
-  denylist: ~/.config/carhunt/privacy-denylist.txt
+  agent_args:                 # extra CLI args per agent CLI; no --dangerously-* unless you add it
+    claude: ["--allowedTools", "Bash(carhunt:*)", "Bash(cardb:*)"]
+    codex: []
+  handover_ctx_pct: 50        # hand over at measured context >= this
+  cycle_minutes: 20           # overseer check cycle
+  mailbox: carhunt            # carhunt (our receiver hook) | external (your own) | off (always type)
+  workspace: ""               # agterm workspace for new agent sessions ("" = current)
+  digest_strong_cars: 8
+  schedule: {sweep: "07:00", unpause: "08:10", digest: ["09:30", "20:00"], pause: "23:00", learning: "23:15"}   # owner tz
+  schedule_commands: {}       # job → carhunt argv override, e.g. {sweep: [sweep, --window, morning]}
+  hooks:
+    secret_globs: ["{home}/secrets/**", "**/.env", "**/*.secret"]   # agents can't read these
+    send_patterns: []         # [{regex: '\bmy-sms-tool send\b', use: "Use carhunt say."}]

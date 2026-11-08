@@ -183,6 +183,9 @@ func attachExternalID(tx *sql.Tx, m *api.Message, in api.MessageInput) error {
 
 // AddMessage handles POST /messages. created=false when it already existed.
 func (s *Store) AddMessage(ctx context.Context, in api.MessageInput, author string) (*api.Message, bool, error) {
+	if in.Car == "" && in.CarID != nil {
+		in.Car = api.CarRef(itoa(*in.CarID))
+	}
 	in.Channel = strings.TrimSpace(in.Channel)
 	if in.Channel == "" {
 		return nil, false, invalidf("channel is required")
@@ -251,7 +254,7 @@ func (s *Store) AddMessage(ctx context.Context, in api.MessageInput, author stri
 		var err error
 		switch {
 		case in.Car != "":
-			if carID, err = resolveCar(tx, in.Car); err != nil {
+			if carID, err = resolveCar(tx, string(in.Car)); err != nil {
 				return err
 			}
 		case in.ListingURL != "":
