@@ -25,7 +25,7 @@ if [ -z "${_E2E_INNER:-}" ]; then
   # Node: E2E_NODE_BIN, else Homebrew's keg-only node@22, else the newest nvm Node, else node on PATH (each >= 22.19)
   NODE_BIN=
   cands=("${E2E_NODE_BIN:-}")
-  command -v brew >/dev/null && brew list --versions node@22 >/dev/null 2>&1 && cands+=("$(brew --prefix node@22)/bin")
+  command -v brew >/dev/null && cands+=("$(brew --prefix node@22 2>/dev/null)/bin")   # version-checked below
   for d in $(ls -d "$REAL_HOME"/.nvm/versions/node/v*/bin 2>/dev/null | sort -rV); do cands+=("$d"); done
   command -v node >/dev/null && cands+=("$(dirname "$(command -v node)")")
   for d in "${cands[@]}"; do [ -n "$d" ] && node_ok "$d" && { NODE_BIN=$d; break; }; done
@@ -106,6 +106,26 @@ wait_http() {  # wait_http URL PIDFILE WHAT [SECONDS]
     sleep 0.2; i=$((i + 1))
   done
   die "$3 not up at $1 after ${4:-30}s"
+}
+# set_url SECTION URL: rewrite SECTION.url in the config in place (keeps comments), then check it parses + validates
+set_url() {
+  venv python - "$CH/config.yaml" "$1" "$2" <<'PY' || die "could not set $1.url in config.yaml"
+import re, sys, yaml
+path, section, url = sys.argv[1:]
+lines, out, inside, done = open(path).read().splitlines(keepends=True), [], False, False
+for ln in lines:
+    if re.match(r"^\S", ln):
+        inside = ln.startswith(section + ":")
+    m = re.match(r"^(  url:\s*)(\S+)(.*)$", ln, re.S) if inside and not done else None
+    if m:
+        ln, done = f"{m.group(1)}{url}{m.group(3)}", True
+    out.append(ln)
+if not done:
+    sys.exit(f"no {section}.url key")
+open(path, "w").write("".join(out))
+assert (yaml.safe_load(open(path)) or {})[section]["url"] == url
+PY
+  carhunt config validate >/dev/null || die "config invalid after setting $1.url"
 }
 # cars_field FIELD: FIELD of the first car in $LOGS/cars.json (`cardb ls --json`: {"cars": [...]}, or a list)
 cars_field() {
@@ -260,8 +280,7 @@ step_cardb() {
   echo $! >"$W/state/cardb.pid"
   wait_http "http://127.0.0.1:$port/healthz" "$W/state/cardb.pid" "cardb serve"
   # Point the config at this port, as a user with a busy 8484 would.
-  sed -i '' -E "/^cardb:/,/^[^ ]/ s#^(  url: ).*#\\1http://127.0.0.1:$port#" "$CH/config.yaml"
-  grep -q "url: http://127.0.0.1:$port" "$CH/config.yaml" || die "could not set cardb.url in config.yaml"
+  set_url cardb "http://127.0.0.1:$port"
   setstate CARDB_URL "http://127.0.0.1:$port"
   info "cardb serve on 127.0.0.1:$port ($(curl -fsS "http://127.0.0.1:$port/healthz"))"
 }
@@ -293,9 +312,7 @@ step_doctor() {
   carhunt doctor >"$LOGS/doctor.txt" 2>&1 || rc=$?
   carhunt doctor --json >"$LOGS/doctor.json" 2>/dev/null || true
   cat "$LOGS/doctor.txt"
-  local allowed=("${DOCTOR_ALLOWED_WARN[@]}")
-  [ "${WEB_URL_SET:-1}" = 1 ] || allowed+=("web")   # web runs on a free port the config can't name yet
-  venv python - "$LOGS/doctor.json" "${allowed[@]}" <<'PY'
+  venv python - "$LOGS/doctor.json" "${DOCTOR_ALLOWED_WARN[@]}" <<'PY'
 import json, sys
 rows = json.load(open(sys.argv[1]))
 allowed = tuple(sys.argv[2:])
@@ -351,11 +368,8 @@ step_web_live() {  # this web on the swept cardb: /health + the list page shows 
   done
   [ -n "$found" ] || die "no web page shows the swept model '$model' (tried /, /queue, /cars/$CAR_ID)"
   info "swept car '$model' visible on $found"
-  # point doctor's web check at this port: config web.url, if the schema accepts it yet (else doctor's web warn is allowed)
-  cp "$CH/config.yaml" "$W/state/config.bak"
-  printf '\nweb:\n  url: http://127.0.0.1:%s\n' "$port" >>"$CH/config.yaml"
-  if carhunt config validate >/dev/null 2>&1; then setstate WEB_URL_SET 1; info "config web.url = 127.0.0.1:$port"
-  else cp "$W/state/config.bak" "$CH/config.yaml"; setstate WEB_URL_SET 0; info "config schema has no web.url yet: doctor's web warn allowed"; fi
+  set_url web "http://127.0.0.1:$port"   # doctor's web check targets this instance
+  info "config web.url = http://127.0.0.1:$port"
 }
 
 step_say() {  # dry run decides and shows the payload; wacli is a logging stub that would record any send
