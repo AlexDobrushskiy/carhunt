@@ -47,16 +47,16 @@ search:                       # buyer profile: cardb (queue, ranking) + discover
   year_min: 2021              # example (0 = off)
   km_max: 80000               # example (0 = off); also the fit km reference
   powertrain: [bev]           # example; bev phev hev mhev petrol diesel lpg cng hydrogen (empty = any)
-  # max_distance_km: 2500     # discover only: drop cars farther (road km); cardb warns on it until it knows the key
+  max_distance_km: 2500       # example; discover drops cars farther (road km; 0 = off)
   road_factor: 1.3            # great-circle → road km
   models:                     # example; first match wins; tier 1 = first to contact
     - {make: Volkswagen, model: ID.4, tier: 1}
     - {make: Skoda, model: Enyaq, tier: 1}
     - {make: Audi, model: Q4 e-tron, tier: 2}
     - {make: BMW, model: iX1, tier: 2}
-    - {make: Toyota, model: bZ4X, tier: 3, label: backup}
-    # fields: label, base_fit (0…2), risk (points), when: {power_hp: [min, max], drive: [rwd], variant_any: [pro],
-    #   variant_none: [gtx], year_min, year_max, battery_net_kwh: [min, max], fuel: [bev]}; discover also takes match: <regex>
+    - {make: Toyota, model: bZ4X, tier: 3, label: backup, match: 'bz ?4 ?x'}   # match: discover's regex on folded make/model/title (cardb ignores it)
+    # fields: label, base_fit (0…2), risk (points), match (regex), when: {power_hp: [min, max], drive: [rwd],
+    #   variant_any: [pro], variant_none: [gtx], year_min, year_max, battery_net_kwh: [min, max], fuel: [bev]}
   default_tier: 4             # tier for unmatched cars (0 = highest model tier + 1)
   queue_default_tiers: [1, 2, 3]   # tiers `cardb queue` shows by default
   tier_labels: {1: first to contact, 2: alternative, 3: backup}

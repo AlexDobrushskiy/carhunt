@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"carhunt/cardb/internal/api"
+	"carhunt/cardb/internal/profile"
 )
 
 func cmdProfile(e *env, args []string) error {
@@ -16,8 +17,11 @@ func cmdProfile(e *env, args []string) error {
 	if err != nil {
 		return err
 	}
+	if len(pos) == 2 && pos[0] == "check" {
+		return profileCheck(e, pos[1])
+	}
 	if len(pos) > 0 {
-		return usageErrorf("usage: cardb profile [--json]")
+		return usageErrorf("usage: cardb profile [--json] | cardb profile check FILE")
 	}
 	cl, err := e.client()
 	if err != nil {
@@ -28,6 +32,28 @@ func cmdProfile(e *env, args []string) error {
 		return err
 	}
 	return e.emit(p, func(w io.Writer) { printProfile(w, p) })
+}
+
+// profileCheck loads a config file the way the server does (owner/search/cardb sections): errors → exit 1,
+// warnings (unknown keys / option names) are printed and exit 0. No server needed.
+func profileCheck(e *env, path string) error {
+	p, err := profile.Load(path)
+	if err != nil {
+		return err
+	}
+	out := struct {
+		OK       bool     `json:"ok"`
+		Warnings []string `json:"warnings"`
+	}{true, p.Warnings}
+	if out.Warnings == nil {
+		out.Warnings = []string{}
+	}
+	return e.emit(out, func(w io.Writer) {
+		for _, warn := range p.Warnings {
+			fmt.Fprintf(w, "warning: %s\n", warn)
+		}
+		fmt.Fprintf(w, "ok: %s (%d warning(s))\n", path, len(p.Warnings))
+	})
 }
 
 func printProfile(w io.Writer, p api.Profile) {
