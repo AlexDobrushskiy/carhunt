@@ -40,7 +40,7 @@ No config.yaml section: labels, tiers, option keys, home city and time zone come
 
 ## Rules (with why)
 
-- **The browser never sees a token.** Tokens live in env; the browser holds only a user name cookie; `/ui/*` adds the token server-side. A `?token=` on photo URLs leaked into history and logs in the EV run.
+- **The browser never sees a token.** Tokens live in env; the browser holds only a user name cookie; `/ui/*` adds the token server-side. A `?token=` in a URL ends up in history and logs.
 - **`/ui/*` is an allowlist** (verdict, notes, status, needs flag, good deal, merge, reject duplicate); everything else → 405. Viewers get verdict only (cardb enforces it too → 403). A UI bug must not become an arbitrary API write.
 - **Author is forced to the viewer** (`author` + `X-Author` = token name; `user` too on verdicts). A client cannot write as someone else, and every write is attributable.
 - **Cross-site writes are refused** (`Origin`/`Sec-Fetch-Site` vs `Host`/`X-Forwarded-Host`). The identity cookie would otherwise ride along on a forged POST.
@@ -48,17 +48,17 @@ No config.yaml section: labels, tiers, option keys, home city and time zone come
 - **Per-user verdicts:** reads pass `?user=<viewer>` (only for names in `/profile` users; cardb 422s on others), so lists, the queue and "To review" are the viewer's own. Other users' verdicts show beside yours.
 - **Edits send the car `version`** (status, needs flag): a stale page gets "changed by someone else, reload" (412) instead of silently undoing an agent's write.
 - **Unknown ≠ no.** A missing option row is `?`, never ✗; filters offer `✓ or ?`. A wrong ✗ hides a good car.
-- **Gzip HTML in middleware.** A 230-car list went 760 KB → 42 KB on a phone. No JS framework on the list; islands only on the car page.
+- **Gzip HTML in middleware**: a long list is ~20× smaller on a phone. No JS framework on the list; islands only on the car page.
 - **Times in `owner.tz`**, whatever zone the server runs in.
 - **Price gap sign:** cardb's `price_gap_pct` is positive when cheaper; the chip shows the price relative to fair (−12 % = 12 % under).
-- **e2e never touches a non-local URL** and never real data: global setup starts its own cardb on a temp dir with synthetic cars (`example.invalid`, `SYN…` VIN, `+351 555…`), and `fixtures.ts` refuses a non-loopback base URL. The EV run's first e2e wrote test events into a real car.
+- **e2e never touches a non-local URL**: global setup starts its own cardb on a temp dir, and `fixtures.ts` refuses a non-loopback base URL.
 - **e2e helpers must not depend on DOM order**; select by `data-testid` / roles.
 
 ## e2e
 
 `npm run e2e` → `e2e/global-setup.ts` → `e2e/stack.ts`:
 1. cardb binary: `CARDB_BIN`, else `go build ../cardb`, else `cardb` on PATH.
-2. Temp `CARHUNT_HOME` with a synthetic profile (owner `Sam`, viewer `Kim`, tiers by model, `must_have: [electric_seats]`), `cardb serve` on a free loopback port with three random tokens; the child gets a minimal env (no inherited `CARDB_*`/`CARHUNT_*`).
+2. Temp `CARHUNT_HOME` with a test profile (owner `Sam`, viewer `Kim`, tiers by model, `must_have: [electric_seats]`), `cardb serve` on a free loopback port with three random tokens; the child gets a minimal env (no inherited `CARDB_*`/`CARHUNT_*`).
 3. Seeds 4 cars over REST (BEV with photos/options/facts/needs flag, diesel, two queue cars).
 4. `npm run build` (skip: `E2E_SKIP_BUILD=1`), starts the web on another free port; teardown kills both and removes the temp dir and `dist/` (its server key trips gitleaks).
 
@@ -70,7 +70,7 @@ Specs (`e2e/web.spec.ts`): list → fuel filter → car page (powertrain block, 
 
 ## Dependencies
 
-- Top-level versions are pinned exactly; `npm audit` was 0 on 2026-11-08 after moving off the Astro 5 line (1 critical + 5 high in the runtime graph). `vite` is a direct dev dependency so vitest and Astro share one Vite 8.
+- Top-level versions are pinned exactly. `vite` is a direct dev dependency so vitest and Astro share one Vite 8.
 - Engines: Node ≥ 22.12 (the image pins 22.23.4).
 
 ## Gaps

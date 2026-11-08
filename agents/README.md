@@ -1,6 +1,6 @@
 # agents
 
-Role briefs and templates that `carhunt agent launch ROLE` renders into `$CARHUNT_HOME/agents/ROLE/brief.md`. Owner: orchestrate (role briefs: the module named in [roles/](roles/README.md)). Doc: [docs/orchestrate.md](../docs/orchestrate.md).
+Role briefs and templates that `carhunt agent launch ROLE` renders into `$CARHUNT_HOME/agents/ROLE/brief.md`. Doc: [docs/orchestrate.md](../docs/orchestrate.md).
 
 | path | what |
 |---|---|

@@ -1,6 +1,6 @@
 # Other seller countries → Portugal (LU, NL, IT; AT and the rest not researched)
 
-> Snapshot: researched Oct–Nov 2026 (EV run). Prices, laws and tool behaviour drift — re-check anything you act on.
+> Snapshot: researched Oct–Nov 2026. Prices, laws and tool behaviour drift — re-check anything you act on.
 
 Tags: **V** verified (official/primary) · **A** anecdotal/forum/commercial · **I** inferred. Shorter research than DE/FR/ES/BE. Destination side: [pt-registration.md](pt-registration.md). Universal rules (VAT, originals, buyer named): [README.md](README.md).
 

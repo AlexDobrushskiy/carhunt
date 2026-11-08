@@ -15,9 +15,9 @@
 or `maxAllowedPageNumber`.
 
 ## Rules (why)
-- Never warm up on `/` (or any home page): CloudFront 403s it to scripts while the API passes (11-01).
-- Messaging-site read budget: ≤60 loads/run and only after 12:00 on the home IP — read bursts got the home IP
-  403'd on other messaging sites (11-06).
+- Never warm up on `/` (or any home page): CloudFront 403s it to scripts while the API passes.
+- Messaging-site read budget: ≤60 loads/run and only after 12:00 on the home IP — read bursts get the home IP
+  403'd on other messaging sites.
 - Search rows carry no seller type: `seller_type` is set only when the query filtered on it.
 - `constructionYear` is the year only → `first_registration = "YYYY"`; discover must not invent a month.
 - 2dehands and 2ememain show the same ads (same `m…` id): dedupe on `site_ref`.
@@ -26,7 +26,7 @@ or `maxAllowedPageNumber`.
 - 404/410 = gone (skip, continue); 403/429 = blocked (stop the site).
 
 ## Gaps
-- No reader for search-row sponsored flags or thumbnails (not in the source); `created` comes only from the ad page
+- No reader for search-row sponsored flags or thumbnails; `created` comes only from the ad page
   (`stats.since`), search rows have a relative date label.
-- No phone reveal and no sender (login with SMS 2FA never completed).
+- No phone reveal and no sender (needs the SMS-2FA login).
 - Fuel filter codes exist only for BEV; other fuels are left unfiltered.

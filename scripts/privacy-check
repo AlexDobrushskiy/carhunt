@@ -192,7 +192,7 @@ def main(argv):
     path, terms = load_denylist()
     if not terms:
         print(f"privacy-check: no denylist at {path} - set CARHUNT_DENYLIST "
-              "(see docs/privacy.md)", file=sys.stderr)
+              "(one term per line)", file=sys.stderr)
 
     findings = []
     for label, text in items:

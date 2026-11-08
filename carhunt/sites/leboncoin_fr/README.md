@@ -20,26 +20,26 @@ The plugin sends `Cookie: datadome=<v>` and keeps the rotated value from each `S
 cookie → `Blocked("datadome-no-cookie")` before any request: one real-browser home-page load (no login) fills the jar.
 
 ## Rules (why)
-- ≥10–12 s pace, stop at the first 403/429/challenge, don't retry the same hour: fast search bursts hard-banned the IP
-  and the cookie for hours (10-30).
-- ≤150 ad reads per run: DataDome 403'd after ~160 reads on one IP and ~189 on the FR route (11-03).
-- 404/410 (title "Annonce introuvable") or a non-`active` status = the ad is gone → `Gone`, skip it, keep going. Two
-  runs stopped on a 410 and left ~200 ads undone (11-04/05).
-- A block can live in the **cookie**, not the IP: a banned `datadome` cookie in the shared jar blocked every browser
-  until its row was deleted (11-01). On a 403: test a fresh browser; if it passes, delete the jar's leboncoin row.
+- ≥10–12 s pace, stop at the first 403/429/challenge, don't retry the same hour: fast search bursts hard-ban the IP
+  and the cookie for hours.
+- ≤150 ad reads per run: DataDome 403s at ~160+ reads per IP.
+- 404/410 (title "Annonce introuvable") or a non-`active` status = the ad is gone → `Gone`, skip it, keep going
+  (stopping on a 410 leaves the rest of the run undone).
+- A block can live in the **cookie**, not the IP: a banned `datadome` cookie in the shared jar blocks every browser
+  until its row is deleted. On a 403: test a fresh browser; if it passes, delete the jar's leboncoin row.
 - "Access (is) temporarily restricted" = hard block → stop for hours (`datadome-hard-block`).
 - A slider on the refresh page: solve it once in that same non-automated browser; solving it in an automated
-  (Playwright) browser → hard block (11-01).
-- Reads after the messaging window, or from another exit IP: sweep reads 403'd the IP used for messaging (11-05).
+  (Playwright) browser → hard block.
+- Reads after the messaging window, or from another exit IP: sweep reads get the messaging IP 403'd.
 - Logged-in actions (phone, message) live on ONE French IP: the account was created with a rented SMS number, so a
   new SMS challenge = lockout. ≤40 reveals/day, take the slot before the click (a 403 still counts).
-- Residential exit: one sticky session per run, ≤8 loads/55 min, ≥60 s apart — a new IP per load got a slider on the
-  3rd load (11-06). Datacenter VPN IPs got a messaging soft block (11-05).
+- Residential exit: one sticky session per run, ≤8 loads/55 min, ≥60 s apart — a new IP per load gets a slider within
+  a few loads. Datacenter VPN IPs get a messaging soft block.
 - Never "Faire une offre": a price offer is the owner's decision.
 
 ## Gaps
-- `u_car_brand`/`owner_type=pro` values mirror the ads' own attribute values; the filters themselves were not measured.
-  Sort by price: not measured (site default order).
-- Promoted rows (`options.booster`/`sub_toplist`) are not flagged as `sponsored`: their effect on order was never
-  measured. Use the numeric `list_id` (monotonic) as the cursor, not the first row.
+- `u_car_brand`/`owner_type=pro` values mirror the ads' own attribute values; the filters themselves are unverified.
+  Sort by price: unverified (site default order).
+- Promoted rows (`options.booster`/`sub_toplist`) are not flagged as `sponsored`: their effect on order is unknown.
+  Use the numeric `list_id` (monotonic) as the cursor, not the first row.
 - Only the electric `fuel=4` code is known.

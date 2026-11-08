@@ -1,7 +1,7 @@
 # cardb — design reference
 
 Contract: `api/openapi.yaml` (wire types in `internal/api/types.go`). This file covers what the spec doesn't.
-Operator guide (run modes, config keys, remote access, backups, backfills, migration): [`docs/db.md`](../docs/db.md).
+Operator guide (run modes, config keys, remote access, backups, backfills): [`docs/db.md`](../docs/db.md).
 
 ## Binary
 One Go binary `cardb` (`cmd/cardb`), pure Go (`modernc.org/sqlite`, CGO off, `-tags nodynamic` for static builds):
@@ -45,7 +45,7 @@ schema, queries, dedupe, merge/split, price sanity, versions, ranking (`rank.go`
   shared one (portal call centre, group switchboard) sits on every seller whose ad prints it. Upsert resolves a seller by
   an own contact only when the names don't conflict; a contact seen with a differently named seller becomes shared on
   both. Shared contacts never pick a seller, route a message (`--to`) or count as duplicate evidence. WHY: shared dealer
-  numbers merged unrelated sellers (6 contact-owner conflicts in the EV run). Phones: digits with country code; a
+  numbers would merge unrelated sellers. Phones: digits with country code; a
   national-format number gets the calling code of `owner.home.country` (its dialing plan). Emails lowercased.
 - `listings`: id, car_id, url (normalized) UNIQUE, site, site_ref, title, status, price, price_note, price_vat
   (gross|net|margin|unknown), price_flags JSON, seller_id, first/last_seen_at, removed_at, raw JSON. `price_points`: listing_id, price, at, note.
@@ -67,11 +67,11 @@ schema, queries, dedupe, merge/split, price sanity, versions, ranking (`rank.go`
 - **Upsert fills only empty car fields unless `overwrite`; `status` applies only on car creation.** Several agents describe
   the same car; a later sloppy ad must not clobber a confirmed value. Powertrain fills field by field the same way.
 - **Re-upserting a removed/sold ad relists it only if `seen_at` is later than the removal.** Replaying old sightings without
-  `seen_at` resurrected dead ads.
+  `seen_at` would resurrect dead ads.
 - **Message near-duplicate guard:** same car+channel+direction+normalized text (+ attachment kinds, agreeing counterpart)
   within 5 min under another key returns the existing row (`matched_by: near_duplicate`). Not when both carry different
   external ids, failed ≠ failed, or two different caller keys of one family (prefix before the first non-letter).
-  `allow_duplicate` logs a deliberate repeat. WHY: a history import and a catch-up script logged 16 first contacts twice.
+  `allow_duplicate` logs a deliberate repeat. WHY: an import and a catch-up logger can both log the same message.
 - **Message delete is soft** (keys kept, `message_deleted` event, `msg restore`). A logger re-posting can't resurrect it.
 - **Log incoming messages verbatim, in the original language, when read.** Paraphrases can't be re-checked; translations go in a note.
 - **Never overwrite a strong evidence source with a weak one** (photo/agent_inference never replaces seller_said,
@@ -79,7 +79,7 @@ schema, queries, dedupe, merge/split, price sanity, versions, ranking (`rank.go`
   a wrong `no` hides a good car.
 - **Unknown ≠ no everywhere** (filters `yes_or_unknown`, `?` icons, `? km` in the queue). Missing data must not drop a car.
 - **Powertrain input:** nested `powertrain{…}` is the contract; flat `battery_net_kwh`/`battery_gross_kwh` on upsert and
-  POST /cars are still folded in (422 when they disagree with the nested value). WHY: pre-v2 clients lost the value
+  POST /cars are still folded in (422 when they disagree with the nested value). WHY: flat-field clients must not lose the value
   silently. Fuel/gearbox take ad words in PT/ES/FR/DE/IT/NL/EN (`elétrico`→bev, `plug-in`→phev, `gasóleo`→diesel,
   `GPL`→lpg, `DSG`/`automático`→automatic, …); an unrecognised word is 400.
 - **API changes stay additive** while agents write all day; avoid long migration locks.
@@ -97,7 +97,7 @@ Failures, most severe first; the first one is the 422 `{error, reason, price, ex
 
 `force: true` stores the price anyway: `price_flags` on the listing (and `CarSummary.price_flags`), a
 `price_sanity_override` event; the ranking drops the car from the comparable pool and adds `risk.price_forced`.
-WHY: 10 prices were stored ×100 in the EV run and sorted as bargains; lease and net prices skewed fair prices.
+WHY: ×100 prices sort as bargains; lease and net prices skew fair prices.
 
 ## Versions (optimistic locking)
 - `cars.version` is an **opaque** counter: it rises (by ≥ 1) on any write that changes the car row or anything shown on
@@ -126,7 +126,7 @@ Runs when upsert creates a car and whenever VIN/plate/seller contacts/photos cha
   is ignored. ≥ 2 distinctive matches covering ≥ ½ of the smaller set attach a NEW listing (`linked_by: photos`) only if
   make and model family agree, no known spec contradicts (year, km apart > max(5000, 15 %), plate, phones with none shared),
   the car is not closed/dropped/bought and no second car matches. Two existing cars are never merged on photos (proposal,
-  score 0.9). WHY: dealer stock photos once auto-merged 4 different cars into one (one car collected 29 listings; 47 repaired).
+  score 0.9). WHY: dealer stock photos would auto-merge different cars into one.
 - **Never the same car** unless VIN/plate say so: different VINs, different make, different model family (first word of
   the model), two different known fuels (`mhev` stays compatible with petrol/diesel/hev). WHY: a BEV and the petrol
   version of the same model share photos and model names.
@@ -157,7 +157,7 @@ Runs when upsert creates a car and whenever VIN/plate/seller contacts/photos cha
 
 ## Ranking (GET /queue, `cardb queue`, GET /cars?sort=score)
 One pure function of (cars, facts, profile, now) in `internal/store/rank.go`, shared by API, CLI and web; nothing is
-stored. WHY: one answer everywhere (a recomputation over the live EV queue found 0 order violations). Every number below
+stored. WHY: one answer everywhere. Every number below
 is a `search.ranking.*` default (docs/db.md has the full key list).
 
 1. **Eligible** (per user, default owner): no verdict from that user; status not closed/dropped/bought; ≥ 1 live listing;
@@ -211,7 +211,7 @@ hit, the gap vs peers, then unknown must-haves and missing core fields.
 - Verdict user = body `user` > `?user=` > the token's user > the owner (unknown user 422). GET /cars, /cars/{car},
   /stats, /queue take `?user=` (unknown 400) and always return `verdicts` for every user.
 - **Legacy owner rewrite** (each start, idempotent): option/fact `source`, message `sender_kind` and note `author_kind`
-  equal to lower(`owner.name`) become `owner`; skipped when the name is itself a vocabulary word. WHY: the EV-era DB
-  stored the buyer's first name as an identity.
+  equal to lower(`owner.name`) become `owner`; skipped when the name is itself a vocabulary word. WHY: older data
+  stored the owner's first name as an identity.
 - The web UI holds one token per user (`cardb_web_tokens`), so its writes carry that user's name and rights; the
   browser never sees a token. `/healthz`, `/api/v1/health`, `/api/v1/openapi.yaml` need no token.

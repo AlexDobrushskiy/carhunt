@@ -9,12 +9,12 @@ Facts about one car → evidence pack → visit-ready gate → buy → import. K
 
 ## Hard rules (why in brackets)
 - **Never message a seller, dealer or brand yourself.** Missing evidence → `carhunt evidence CAR --write-asks` writes `ask` events; the outreach agent sends them and closes them with `ask_answered`. (Vet agents are read-only; one channel owner per seller avoids double messages.)
-- **Own free checks first, then ask; one ask per message, fixed order; skip what the ad or photos already show.** (Short asks get answers; a 4-question opener got none, 2026-11-03.)
-- **Control lookup before trusting any checker:** fake VIN, VIN ±1 digit, a known-positive VIN in the same session. (A brand recall tool said "not affected" for a fake VIN; a history preview showed records for a made-up VIN, 2026-10-31.)
-- **No paid report or paid option decode without the owner's OK for that car.** Paid reports only for finalists, bought in bulk on the cheapest market site. (€25 × dozens of cars; owner ruling 2026-11-05.)
-- **Never create site accounts with the owner's email or keep passwords in files.** Credentials only via `carhunt secret` / the creds helper, never printed. (A subagent stored a decoder password in a scratchpad, 2026-11-04.)
-- **Never overwrite a stronger source.** `seller_said`, `vin_pr_code`, `inspection`, owner > `photo` > `ad_text`/`ad_spec` > `agent_inference`. On conflict keep the value and write a `<key>_conflict` fact. When in doubt, `unknown`. (A wrong "no" hides a good car, 2026-11-04.)
-- **Every number you relay is re-derived with its date math and assumptions; every technical claim carries its source.** (A wrong 11 kW claim spread into 3 briefs, 2026-11-03.)
+- **Own free checks first, then ask; one ask per message, fixed order; skip what the ad or photos already show.** (Short asks get answers; long ones get none.)
+- **Control lookup before trusting any checker:** fake VIN, VIN ±1 digit, a known-positive VIN in the same session. (Some recall tools say "not affected" and some history previews show records for a made-up VIN.)
+- **No paid report or paid option decode without the owner's OK for that car.** Paid reports only for finalists, bought in bulk on the cheapest market site. (€25 × dozens of cars.)
+- **Never create site accounts with the owner's email or keep passwords in files.** Credentials only via `carhunt secret` / the creds helper, never printed. (A password in a file or transcript is a leaked password.)
+- **Never overwrite a stronger source.** `seller_said`, `vin_pr_code`, `inspection`, owner > `photo` > `ad_text`/`ad_spec` > `agent_inference`. On conflict keep the value and write a `<key>_conflict` fact. When in doubt, `unknown`. (A wrong "no" hides a good car.)
+- **Every number you relay is re-derived with its date math and assumptions; every technical claim carries its source.** (One wrong number spreads into every brief that cites it.)
 - **Personal documents** (contracts, IDs, signatures, registration scans) stay in the scratchpad, never in the repo, cardb notes or chat logs.
 
 ## Tools

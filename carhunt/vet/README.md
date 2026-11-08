@@ -1,6 +1,6 @@
 # carhunt/vet
 
-VIN / registry / PR-code tools and the per-car evidence pack. Owner: vetbuy. Docs: [docs/vetbuy.md](../../docs/vetbuy.md); playbooks: [knowledge/](../../knowledge/README.md); skill: `skills/carhunt-vet`.
+VIN / registry / PR-code tools and the per-car evidence pack. Docs: [docs/vetbuy.md](../../docs/vetbuy.md); playbooks: [knowledge/](../../knowledge/README.md); skill: `skills/carhunt-vet`.
 
 | file | what |
 |---|---|

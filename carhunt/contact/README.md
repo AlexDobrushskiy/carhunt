@@ -1,13 +1,13 @@
 # carhunt/contact
 
-Seller contact: one guarded send path (`carhunt say`), channel adapters, one ledger, one watcher, Gmail routing. Owner: contact. Full doc: [docs/contact.md](../../docs/contact.md).
+Seller contact: one guarded send path (`carhunt say`), channel adapters, one ledger, one watcher, Gmail routing. Full doc: [docs/contact.md](../../docs/contact.md).
 
 | file | what |
 |---|---|
 | `say.py` | `carhunt say`: flock → guard → send → verify → ledger → cardb |
 | `guard.py` | every send rule (pause, caller, target, text, quiet hours, limits, opener/nudge/reply, seller hours, duplicate) — pure |
 | `ledger.py` | append-only JSONL of all send attempts; `reconcile` into cardb |
-| `settings.py` | defaults (EV-run values) merged with `config.yaml` `contact:` |
+| `settings.py` | defaults merged with `config.yaml` `contact:` |
 | `channels/` | `base.py` contract, `whatsapp.py` (wacli), `email.py` (Gmail API), `sites/<site>.py` marketplace chats |
 | `watch.py` | `carhunt watch`: inbound → cardb + agent inbox + stdout |
 | `mailroute.py`, `gmail.py` | `carhunt mailroute`: car mail out of the inbox; filter XML; launchd template |

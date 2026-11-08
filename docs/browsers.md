@@ -1,6 +1,6 @@
 # browsers / access
 
-Agent Chrome, MCP lanes + identity pool, plain-chrome, reaper, captcha, proxies, pacing, accounts. Agent rules (which browser, escalation ladder, per-site table): [`skills/carhunt-browsers/SKILL.md`](../skills/carhunt-browsers/SKILL.md). Wall evidence per site: [`browsers/site-walls.md`](browsers/site-walls.md).
+Agent Chrome, MCP lanes + identity pool, plain-chrome, reaper, captcha, proxies, pacing, accounts. Agent rules (which browser, escalation ladder, per-site table): [`skills/carhunt-browsers/SKILL.md`](../skills/carhunt-browsers/SKILL.md).
 
 Code: `browsers/bin/` (shell tools), `browsers/` (MCP + launchd templates), `carhunt/access/` (Python). State: `$CARHUNT_HOME/browsers/` (profiles, leases, pid records, jar, logs) — never in the repo.
 
@@ -48,7 +48,7 @@ Python: `access.session.tab(route, country=, site=, fresh=)`, `access.pace.acqui
 | key | site.yaml `site` id, whatever the caller's spelling (dir name, domain, host) — one budget per site |
 | `via=CC` | proxied request: own rate budget (`<site>@cc`), same day caps |
 | `load` | site.yaml `pace{min_gap_s, max_loads_per_hour, max_loads_per_run, max_loads_per_day}` |
-| `api` | JSON read, not a page load: `pace.api_min_gap_s` (default `min_gap_s`), `pace.max_api_per_hour`; no load caps (coches gateway ≥12 s ran clean while pages were capped at 2/h) |
+| `api` | JSON read, not a page load: `pace.api_min_gap_s` (default `min_gap_s`), `pace.max_api_per_hour`; no load caps |
 | `phone` `send` `login` | `caps{<kind>_per_day, <kind>_per_hour, <kind>_min_gap_s}` |
 | defaults | `pace` 12 s / 30 h / 60 run only for a site without a `pace` section; `caps` phone 5 · send 10 · login 3 per day unless the site sets them |
 
@@ -60,7 +60,7 @@ Python: `access.session.tab(route, country=, site=, fresh=)`, `access.pace.acqui
 | Python 3.12 venv | bootstrap (`pip install -e .`) | `carhunt.access` |
 | Docker (optional) | Docker Desktop / colima | only for a VPN-in-container country exit (proxy provider is preferred) |
 | Camoufox (optional) | `pip install camoufox && python -m camoufox fetch` | `camoufox` route: Imperva sites behind a country proxy |
-| Ollama + VLM (optional) | `brew install ollama && ollama pull qwen3.5:4b`; OWLv2 downloads on first use (~GBs, PyTorch/MPS) | captcha image grids; sliders/checkboxes need no model. Measured on M1 Max 32 GB; smaller Macs unknown |
+| Ollama + VLM (optional) | `brew install ollama && ollama pull qwen3.5:4b`; OWLv2 downloads on first use (~GBs, PyTorch/MPS) | captcha image grids; sliders/checkboxes need no model. Tested on an M1 Max 32 GB |
 
 `browsers/install [--yes] [--skip-launchd] [--skip-mcp] [--dry-run]` (bootstrap calls it) runs: `npm ci` → `agent-chrome` → launchd jobs (`<launchd_prefix>lanes`, `…identity`, `…identity-a…`, `…agent-chrome-refresh`, `…identity-seed`, `…browser-reaper`; `carhunt browser launchd install`) → MCP registration + hooks (asks) → `carhunt doctor`.
 
@@ -71,8 +71,8 @@ Python: `access.session.tab(route, country=, site=, fresh=)`, `access.pace.acqui
 4. **MCP:** `carhunt browser mcp-config` → review → run the lines (bootstrap asks first). Identity-lease hooks: `carhunt hooks install` ([orchestrate.md](orchestrate.md#guard-hooks-hookscarhunt_hookpy-stdlib-only)).
 5. `carhunt doctor`.
 
-## Coexistence with an existing personal browser stack
-Ports and labels are chosen not to collide with a typical personal setup on 8931/9331 and `com.<user>.*`:
+## Coexistence with other browser setups
+Ports and labels avoid the usual Playwright MCP / Chrome debug ports (8931/9331) and `com.<user>.*` labels:
 
 | | default | config |
 |---|---|---|
@@ -83,17 +83,17 @@ Ports and labels are chosen not to collide with a typical personal setup on 8931
 | MCP names | `ch-lane`, `ch-lane-a…`, `ch-identity`, `ch-identity-a…` | `browsers.mcp_name_prefix` |
 | profiles, jar, logs | `$CARHUNT_HOME/browsers/` | `CARHUNT_HOME` |
 
-`browser-reaper` only touches pids with a carhunt pid record, so it never kills the other stack's browsers.
+`browser-reaper` only touches pids with a carhunt pid record, so it never kills other browsers.
 
 ## Proxy provider
 - Needed only if your target sites gate steps by country (site rows with `country_ip`). Requirements: **residential**, country targeting, sticky sessions ≥ 30 min, HTTP(S) user:pass gateway, pay-as-you-go per GB.
-- Proven: Decodo residential PAYG (adapter `decodo`); others untested — add an adapter in `carhunt/access/proxy.py`.
+- Supported: Decodo residential PAYG (adapter `decodo`); others untested — add an adapter in `carhunt/access/proxy.py`.
 - `carhunt secret set proxy_credentials` → `net.proxy.provider: decodo` → `carhunt proxy test ES` (expect `country: ES`, residential). Fail-closed: a wrong/unknown exit raises `ProxyUnavailable` before any site request.
-- Free VPNs (VPN Gate) and datacenter VPN ranges: don't (flagged on first load / soft-blocked messaging, 11-02/05).
+- Free VPNs (VPN Gate) and datacenter VPN ranges: don't (flagged on first load, messaging soft-blocked).
 
 ## SMS provider
 - Only for sites that verify a phone **once** at signup and accept rented numbers. Enforced by `carhunt sms policy|rent --site`: allowed only when the site's `account.verification` is `sms-once`; `sms-own` (owner's own number), `sms-every-login` or unknown → refused (fail closed).
-- Proven: SMSPool (adapter `smspool`, prepaid balance). Choose the pool by per-service success rate (cheap pools return recycled numbers).
+- Supported: SMSPool (adapter `smspool`, prepaid balance). Choose the pool by per-service success rate (cheap pools return recycled numbers).
 - Site kinds: **verify-once, domestic-only** (e.g. leboncoin: FR mobile) → rent; **accept foreign numbers** (e.g. subito) → use your own; **SMS 2FA every login** (marktplaats/2dehands) → never rent, use your own or skip; **IP-gated activation** (kleinanzeigen) → open the link on mobile data.
 
 ## Site accounts (generic)
@@ -107,19 +107,19 @@ Ports and labels are chosen not to collide with a typical personal setup on 8931
 Keys live in `config.example.yaml` (`browsers`, `net`, `accounts`, `sites.overrides`); schema `carhunt/core/config.schema.json` is strict (unknown key = error).
 | key | read by | note |
 |---|---|---|
-| `browsers.*` (ports, prefixes, pool sizes, captcha) | `access.settings`, `mcp`, `captcha` | ports clear of a personal stack on 8931/9331 |
+| `browsers.*` (ports, prefixes, pool sizes, captcha) | `access.settings`, `mcp`, `captcha` | defaults avoid 8931/9331 |
 | `net.proxy.{provider, credentials, gateway, echo_url}` | `access.proxy` | sticky session = 30 min (Decodo's max); per site: `sites.overrides.<site>.proxy.sticky_minutes` or site.yaml `proxy.sticky_minutes` |
 | `net.geo.<cc>.{tz, locale}` | `access.geo` | geo browser TZ/locale |
 | `accounts.{email, sms, gmail}` | `accounts.*` | Gmail: read-only OAuth |
-| `sites.overrides.<site>.{pace, caps, account, proxy, …}` | `access.pace`, sites | one level deep per section; key names as in site.yaml. Tighten only: site.yaml numbers are measured ceilings, e.g. `mobile.de: {pace: {min_gap_s: 20, max_loads_per_hour: 20}}` (measured: 12 s, 403 after ~41 loads) |
+| `sites.overrides.<site>.{pace, caps, account, proxy, …}` | `access.pace`, sites | one level deep per section; key names as in site.yaml. Tighten only: site.yaml numbers are measured ceilings, e.g. `mobile.de: {pace: {min_gap_s: 20, max_loads_per_hour: 20}}` |
 
 ## macOS-only bits
 APFS clones (`cp -c`) for Agent Chrome + pool seeding · `codesign` ad-hoc re-sign · launchd jobs · `open -g` + window positioning for plain-chrome · Keychain secrets backend · `--use-mock-keychain`. Linux would need systemd units, a non-clone Chrome path and plain copies.
 
 ## Gaps
-- Only one proxy provider (Decodo) and one SMS provider (SMSPool) measured; costs per site per month unknown beyond one campaign (66 MB ≈ $0.33).
-- All wall measurements are from one PT residential IP; which sites need which country IP depends on where you live.
+- One proxy provider (Decodo) and one SMS provider (SMSPool) have adapters.
+- Wall data is from a PT residential IP; which sites need which country IP depends on where you live.
 - Identity leases are enforced by Claude Code hooks only; other agent CLIs must call `pw-identity acquire`.
-- Tests: `pytest carhunt/access` (offline); real-Chrome smoke tests are opt-in with `CARHUNT_TEST_CHROME=1`. Isolation: [testing.md](testing.md#isolation-rules-every-test).
-- Site limits drift (mobile.de tightened three times in two weeks); `measured` dates in site.yaml are the staleness signal.
-- Captcha VLM benchmarked on one machine; hCaptcha image tasks unsupported.
+- Tests: `pytest carhunt/access` (offline); real-Chrome tests are opt-in with `CARHUNT_TEST_CHROME=1`.
+- Site limits drift; `measured` dates in site.yaml are the staleness signal.
+- Captcha: hCaptcha image tasks unsupported.

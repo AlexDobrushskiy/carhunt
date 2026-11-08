@@ -1,6 +1,6 @@
 # Deposit & payment
 
-> Snapshot: researched Oct–Nov 2026 (EV run). Prices, laws and tool behaviour drift — re-check anything you act on.
+> Snapshot: researched Oct–Nov 2026. Prices, laws and tool behaviour drift — re-check anything you act on.
 
 Tags: **V** verified from a primary/official source · **A** anecdotal/forum/secondary · **I** inferred.
 Siblings: [contract-checklist.md](contract-checklist.md) · [pickup-day.md](pickup-day.md) · [doc-verify.md](doc-verify.md) · [../coverage-rules.md](../coverage-rules.md)
@@ -9,8 +9,7 @@ Siblings: [contract-checklist.md](contract-checklist.md) · [pickup-day.md](pick
 
 - Agents answer any payment question with: **"I pay at handover by instant transfer; no deposit before."** No escalation needed for that line.
 - A seller who **insists on a deposit** → escalate to the owner (money is owner-only). Agents never name amounts, never pay.
-- Don't offer bank-app screenshots as proof of funds: it exposes finances and buys nothing (EV run 2026-11-02).
-- WHY: the line was approved twice and then made standing (EV run 2026-11-02/03).
+- Don't offer bank-app screenshots as proof of funds: it exposes finances and buys nothing.
 
 ## 2. If the owner agrees to a deposit
 
@@ -45,7 +44,7 @@ DE law on deposits (consumer from dealer), all **V** (BGB, gesetze-im-internet) 
 | IBAN | Usually not published | Phone read-back only |
 | Reputation | Portal dealer ratings, search "<dealer> Betrug/scam" | No scam reports |
 
-WHY: one run verified a dealer this way in one pass — all mail passed SPF/DKIM/DMARC but the domain had DMARC p=none, and the dealer sold for two entities (EV run 2026-11-06).
+WHY: mail can pass SPF/DKIM/DMARC while the domain still runs DMARC p=none, and a dealer may sell for two entities — only the full table catches both.
 
 ## 4. Paying the balance
 
@@ -76,9 +75,9 @@ WHY: one run verified a dealer this way in one pass — all mail passed SPF/DKIM
 | Fake transfer screenshot | (Against sellers) a "paid" screenshot | Seller side only — note it when you sell your old car |
 | Too cheap on thin comparables | Price far below a median of few comps | Treat as scam-level until papers, SoH and who-is-selling check out |
 
-WHY: one leboncoin listing was a textbook deposit scam (car "stored in Germany", 30 % transfer, a relay contact) (EV run 2026-11-04); BE 2dehands fake ads asking half upfront to a foreign IBAN with transport delivery (**V**, VRT 2024/2026).
+Seen on: leboncoin (car "stored in Germany", 30 % transfer, a relay contact); BE 2dehands fake ads asking half upfront to a foreign IBAN with transport delivery (**V**, VRT 2024/2026).
 
-**Sellers fear scams too.** Disarming line: *"I ask for nothing — no links, no payments, no codes. I'll come in person."* A private seller who had asked "how do I know you're not a phisher?" answered "come and see it any time" within 2 minutes (EV run 2026-11-06).
+**Sellers fear scams too.** Disarming line: *"I ask for nothing — no links, no payments, no codes. I'll come in person."* It usually turns a wary private seller around fast.
 
 ## 6. Seller ≠ owner (top private-sale trap)
 

@@ -18,15 +18,15 @@ origin, seller, sort, engine labels, keywords per model). No fuel or max-year fi
   from a search row seen by the same instance, else one item-page load (3 loads per ad cold, 2 warm).
 - `engine=electric_hybrid` on the item API means battery-electric (site quirk) → `fuel: electric`; the raw code
   stays in `extra.engine`.
-- hp comes as `"299.0"`: a decimal, not thousands (an old parser read 2990, fixed 11-04).
+- hp comes as `"299.0"`: a decimal, not thousands.
 - Bumped rows (`bump.type` city/country) are older than the page around them → `sponsored`, never a cursor.
 - A sold/reserved flag in API JSON is informational (`status`); only `is_live` removes an ad — an ad-hoc `"sold"`
-  string match marked 2 live cars removed (11-04).
+  string match marks live cars removed.
 - Liveness: page 404 = gone; sold flag in the page JSON = gone; 200 + legacy id = live.
 - Chat silently cuts messages at 300 chars → senders split (contact module).
-- Messaging-site read budget: ≤60 loads/run and only after 12:00 on the home IP (11-06 rule for messaging sites).
+- Messaging-site read budget: ≤60 loads/run and only after 12:00 on the home IP (rule for messaging sites).
 
 ## Gaps
-- Item `flags` (sold/reserved) are read defensively; the source only proves them in the page JSON.
-- The item API's creation date is not mapped (not in the source); cards carry `created_at`.
+- Item `flags` (sold/reserved) are read defensively; they are verified only in the page JSON.
+- The item API's creation date is not mapped; cards carry `created_at`.
 - No login/sender here (login + chat belong to the browsers + contact modules).

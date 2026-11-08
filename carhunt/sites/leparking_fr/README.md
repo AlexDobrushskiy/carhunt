@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | wall | Cloudflare |
-| route | lane ✓ (11-02) |
-| pace | ≥6 s (not measured) |
+| route | lane ✓ |
+| pace | ≥6 s (unverified) |
 | phone / messaging | none: contact the seller on the source site |
 | readers | query builder + filter JS only — `search`/`ad`/`is_live` raise `Unsupported` |
 
@@ -21,6 +21,6 @@ private-seller filters have no URL params, only in-page JS (`filter_js(q)`):
   route (plain HTTP + cookie / plain-chrome), never in the lane — an automated browser there gets the slider.
 
 ## Gaps
-- No search reader: the result rows were never captured; the slug rule beyond the measured example, pagination and
-  other filter ids (dealer, other countries) are unknown.
+- No search reader: the result row shape, the slug rule beyond the known examples, pagination and other filter ids
+  (dealer, other countries) are unknown.
 - No liveness: rows point at source ads; check those.

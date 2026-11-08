@@ -4,11 +4,11 @@ Reference for the `carhunt-browsers` skill. State lives under `$CARHUNT_HOME/bro
 
 ## Agent Chrome (`agent-chrome`)
 - The installed Chrome APFS-cloned to `$CARHUNT_HOME/browsers/agent-chrome/` under its own bundle id, ad-hoc re-signed, rebuilt when Chrome updates (server start + a periodic launchd refresh). Same binary → sites see plain Chrome. `agent-chrome` prints the executable path; `CARHUNT_CHROME` overrides.
-- Scripts pass that path as `executable_path`, never `channel="chrome"` (that's the owner's Chrome: macOS confuses the two, 10-16).
-- Any launch on a persistent profile adds `--use-mock-keychain --password-store=basic`. Why: without them a plain launch on the identity profile wiped every login (10-25).
+- Scripts pass that path as `executable_path`, never `channel="chrome"` (that's the owner's Chrome: macOS confuses the two).
+- Any launch on a persistent profile adds `--use-mock-keychain --password-store=basic`. Why: without them a plain launch on the identity profile wipes every login.
 
 ## plain-chrome
-Agent Chrome started like a person starts it (only `--remote-debugging-port`, headed, off-screen, no focus steal); Playwright/CDP attaches only after the first load committed, then may keep navigating that tab. Why: Akamai/DataDome block Playwright-*launched* Chrome (its launch switches + live CDP during the first load) but pass this one (mobile.de, lacentrale, 10-25).
+Agent Chrome started like a person starts it (only `--remote-debugging-port`, headed, off-screen, no focus steal); Playwright/CDP attaches only after the first load committed, then may keep navigating that tab. Why: Akamai/DataDome block Playwright-*launched* Chrome (its launch switches + live CDP during the first load) but pass this one (e.g. mobile.de, lacentrale).
 
 | command | does |
 |---|---|
@@ -21,18 +21,18 @@ Agent Chrome started like a person starts it (only `--remote-debugging-port`, he
 
 Opts: `--profile DIR` (persistent profile, e.g. an identity copy after `pw-identity acquire`), `--fresh` (throwaway profile, still jar-seeded; only to test whether the IP is flagged), `--warm URL` (load the site home first; some DataDome sites captcha a cold deep link), `--wait S` (settle time, default 10, first load 15), `--headless` (loses the advantage on Akamai/DataDome; only where the site row says ✓), `--out DIR`.
 
-- **Shared persistent profile** (`profiles/plain`): a second caller gets a new tab in the running browser, not a second browser. Why: two browsers = two captchas (owner solved one twice, 10-26).
-- Off-screen window: macOS clamps it to the top-left behind other windows; Playwright `.click()` may fail → `el.evaluate(e => e.click())` or Enter. A visible window once exposed a filled form → close forms at once.
+- **Shared persistent profile** (`profiles/plain`): a second caller gets a new tab in the running browser, not a second browser. Why: two browsers = two captchas.
+- Off-screen window: macOS clamps it to the top-left behind other windows; Playwright `.click()` may fail → `el.evaluate(e => e.click())` or Enter. A filled form can end up in a visible window → close forms at once.
 
 ## Trust-cookie jar (`jar/jar.sqlite`)
 - Holds **bot-check cookies only** (`datadome`, `_abck`/`bm_*`, `cf_clearance`, `reese84`, `_px*`), never logins.
-- Written from every plain-chrome on clean close and from identity profiles at launch; seeded into every plain-chrome/identity launch. So one solve (agent or owner) carries to all browsers (verified 10-26: shared, `--fresh` and concurrent runs passed with the seeded cookie).
+- Written from every plain-chrome on clean close and from identity profiles at launch; seeded into every plain-chrome/identity launch. So one solve (agent or owner) carries to all browsers.
 - Python: `carhunt.access.jar` `get(domain, name)` lets plain-HTTP helpers reuse a browser-minted DataDome cookie (leboncoin reads).
-- Poisoned entry (every browser blocked, `--fresh` passes) → `plain-chrome cookies --delete <domain> <name>` (leboncoin, 11-01).
+- Poisoned entry (every browser blocked, `--fresh` passes) → `plain-chrome cookies --delete <domain> <name>`.
 
 ## DataDome 403 + "slide right" on the first request
-- (a) Playwright launched the browser → plain-chrome passes (10-25).
-- (b) IP flagged (fresh plain-chrome blocked too; lacentrale after ~10 blocked test hits, 10-25) → solve in that browser (ladder rung 6); fails → owner once via `pw-identity login <url>`.
+- (a) Playwright launched the browser → plain-chrome passes.
+- (b) IP flagged (fresh plain-chrome blocked too) → solve in that browser (ladder rung 6); fails → owner once via `pw-identity login <url>`.
 - Lanes carry no jar cookie → they stay blocked: these sites go to plain-chrome / identity.
 
 ## Captcha solver (`carhunt captcha`, optional)
@@ -41,12 +41,12 @@ Local only: no paid service, never pings anyone. Needs `browsers.captcha.enabled
 | command | does |
 |---|---|
 | `carhunt captcha solve --cdp http://127.0.0.1:PORT --target T` | solve on a plain-chrome tab |
-| `carhunt captcha solve --lane --url PART` / `--identity[-x] --url PART` | solve on a tab you opened with MCP tools (attaches via the server's debug port; the MCP session keeps working, 10-27) |
+| `carhunt captcha solve --lane --url PART` / `--identity[-x] --url PART` | solve on a tab you opened with MCP tools (attaches via the server's debug port; the MCP session keeps working) |
 | `plain-chrome open URL` then `carhunt captcha solve --plain --url PART` | open + solve; tab stays open → `plain-chrome close` |
 | `carhunt captcha stats` | attempts / successes per site and kind |
 
 - Prints one JSON line: `solved` / `failed` / `hard-block` (ban, nothing to solve) / `unsupported` (e.g. hCaptcha image tasks) / `budget`.
-- Handles: DataDome slider (incl. retry), GeeTest/puzzle sliders (OpenCV), Turnstile / reCAPTCHA / hCaptcha checkbox, reCAPTCHA 3×3/4×4 grids (23/25 on a labelled bench, M1 Max), PerimeterX hold.
+- Handles: DataDome slider (incl. retry), GeeTest/puzzle sliders (OpenCV), Turnstile / reCAPTCHA / hCaptcha checkbox, reCAPTCHA 3×3/4×4 grids, PerimeterX hold.
 - Budget: 2 attempts per run, 6 per site per 6 h. Why: each failed attempt raises the bot score.
 - After a solve: `plain-chrome close` so the new cookie reaches the jar.
 - Not used: reCAPTCHA audio (Google rejects answers from these browsers).

@@ -1,10 +1,10 @@
 # Shutdown (deal signed → hunt closed)
 
-> Snapshot: researched Oct–Nov 2026 (EV run). Prices, laws and tool behaviour drift — re-check anything you act on.
+> Snapshot: researched Oct–Nov 2026. Prices, laws and tool behaviour drift — re-check anything you act on.
 
 Siblings: [contract-checklist.md](contract-checklist.md) · [pickup-day.md](pickup-day.md) · [deposit-payment.md](deposit-payment.md)
 
-WHY this exists: after the contract was signed, ~45 active chats ended on an inbound message, one reply sat 31 h unanswered after an agent handover, and paid services kept running (EV run 2026-11-06). The approved plan: stop sweeps on signing, keep backups warm until the car is in hand, then one thanks/close line to every open chat (EV run 2026-11-06, owner ruling).
+WHY this exists: once a contract is signed, dozens of chats are left ending on an inbound message, replies go stale across agent handovers, and paid services keep running. The plan: stop sweeps on signing, keep backups warm until the car is in hand, then one thanks/close line to every open chat.
 
 ## 1. On signing (contract sent back)
 
@@ -18,7 +18,7 @@ WHY this exists: after the contract was signed, ~45 active chats ended on an inb
 
 ## 2. Keeping backups warm
 
-- Honest holding line: *"I'm closing another option; I'll tell you in a few days."* A seller's "otherwise I sell to a dealer" is a pressure line — this answer got "OK, I'll wait" (EV run 2026-11-06).
+- Honest holding line: *"I'm closing another option; I'll tell you in a few days."* A seller's "otherwise I sell to a dealer" is a pressure line — this answer usually gets "OK, I'll wait".
 - No promises, no price talk, no viewing dates. If a backup sells meanwhile, fine.
 - Release backups (thanks/close line) once the car is picked up and the lift check passed ([pickup-day.md](pickup-day.md)) — or keep one until the DE withdrawal window is clearly not needed.
 

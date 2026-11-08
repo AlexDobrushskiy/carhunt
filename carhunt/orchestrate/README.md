@@ -1,6 +1,6 @@
 # carhunt/orchestrate
 
-Agent sessions (agterm), state + handover, launch, messages, pause, digest, learning, launchd schedule, hook install. Owner: orchestrate. Docs: [docs/orchestrate.md](../../docs/orchestrate.md).
+Agent sessions (agterm), state + handover, launch, messages, pause, digest, learning, launchd schedule, hook install. Docs: [docs/orchestrate.md](../../docs/orchestrate.md).
 
 | file | what |
 |---|---|

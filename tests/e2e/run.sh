@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # carhunt end-to-end on a clean checkout and a temp HOME: "a stranger can clone and run it".
 # clone → bootstrap (twice) → cardb serve → doctor → sweep (fake site) → web → say --dry-run → evidence → agent launch.
-# Knobs, what each step proves, expected warns: docs/testing.md.
+# Knobs: docs/testing.md.
 set -euo pipefail
 
 SELF_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)

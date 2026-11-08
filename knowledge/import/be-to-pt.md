@@ -1,6 +1,6 @@
 # Belgium → Portugal: seller-country side
 
-> Snapshot: researched Oct–Nov 2026 (EV run). Prices, laws and tool behaviour drift — re-check anything you act on.
+> Snapshot: researched Oct–Nov 2026. Prices, laws and tool behaviour drift — re-check anything you act on.
 
 Tags: **V** verified (official/primary) · **A** anecdotal/forum/commercial · **I** inferred. The BE part applies to any destination except where it says PT (proof of PT residence, PT insurer, the 30-day window vs PT's inspection). Destination side: [pt-registration.md](pt-registration.md). Payment: [../buy/deposit-payment.md](../buy/deposit-payment.md).
 
@@ -18,7 +18,7 @@ Tags: **V** verified (official/primary) · **A** anecdotal/forum/commercial · *
 | Original purchase invoice + proof not financed/leased | Practical proof of free title (see §5) | I |
 | Service book/invoices, all keys + key code | Consumer-org handover list | A |
 
-**No inspection for the sale or export** if the car is <4 years old and still will be at plate expiry ("pas de contrôle technique"). The second-hand inspection is for Belgian re-registration (Flanders abolishes it for domestic sales from 1 Jan 2027; Wallonia/Brussels keep it) — irrelevant to export. One agent asking for a CT valid 31+ days conflicts with the official rule. **V**
+**No inspection for the sale or export** if the car is <4 years old and still will be at plate expiry ("pas de contrôle technique"). The second-hand inspection is for Belgian re-registration (Flanders abolishes it for domestic sales from 1 Jan 2027; Wallonia/Brussels keep it) — irrelevant to export. Some agents ask for a CT valid 31+ days; that conflicts with the official rule. **V**
 
 ## 2. Who de-registers, and when
 
@@ -58,7 +58,7 @@ Tags: **V** verified (official/primary) · **A** anecdotal/forum/commercial · *
 
 ## 5. BE-specific traps
 
-1. **Company or lease car.** The CIM is not proof of ownership: a financed/leased car is registered to the **user**. Fleet trims ("Pro Business"-style in the VW range, 2026 example) are often company/lease cars. If C.1 ≠ seller, or he can't show the original invoice in his name, he can't sell it — buy from the lessor/employer (their invoice) or walk away. **V/A** (EV run 2026-11-05: a "private" ad's photos were taken on a brand-dealer lot.)
+1. **Company or lease car.** The CIM is not proof of ownership: a financed/leased car is registered to the **user**. Fleet trims ("Pro Business"-style in the VW range, 2026 example) are often company/lease cars. If C.1 ≠ seller, or he can't show the original invoice in his name, he can't sell it — buy from the lessor/employer (their invoice) or walk away. A "private" ad photographed on a brand-dealer lot is a tell. **V/A**
 2. **No Belgian non-gage certificate.** The pledge register (Pandregister, SPF Finances) needs a **Belgian eID/itsme** to search and registration is optional — the seller can search and show the result; incomplete. Proof of free title = original invoice in the seller's name + lender's payoff/release letter for a loan + C.1 matching the seller's ID. **V/I**
 3. **Trader on a private account:** ask for an invoice; a trader owes the legal guarantee and a Car-Pass, may charge margin-scheme VAT (fine). **A**
 4. **Odometer fraud** concentrates in **cars imported used**: Car-Pass 2025: 1,466 fraud cases, 543 on used imports, avg rollback ~80k km. A Car-Pass history starts only at the Belgian import inspection — a short history on an older car is a flag. **V**

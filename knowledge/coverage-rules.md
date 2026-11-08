@@ -1,6 +1,6 @@
 # Coverage rules: what pays when a used car breaks (EU)
 
-> Snapshot: researched Oct–Nov 2026 (EV run). Prices, laws and tool behaviour drift — re-check anything you act on.
+> Snapshot: researched Oct–Nov 2026. Prices, laws and tool behaviour drift — re-check anything you act on.
 
 **Tags:** **V** = verified from a primary/official source (EU Commission, statute text, court/arbitration decision, brand T&Cs) or ≥2 independent outlets · **A** = anecdotal (forum, single secondary source) · **I** = inferred (our reading, not stated by a source).
 **Scope:** EU/EEA buyer, used car 1–4 years old, bought from a dealer or private seller, possibly in another member state. PT- and DE-specific rows are marked. Applying this per car: [residual-risk.md](residual-risk.md). Recall/VIN lookups: [vin-sources.md](vin-sources.md). Battery evidence: [battery-soh.md](battery-soh.md). Contract wording: [buy/contract-checklist.md](buy/contract-checklist.md).
@@ -25,8 +25,6 @@
 - the remedy is an **interim restriction with no fix date** (charge cap at 80 %, "park outdoors", "don't charge indoors"), or parts are back-ordered for months, or
 - the recall is serious enough to **fail the buyer-country inspection** (PT since 1 Mar 2026) and can't be fixed before registration.
 
-WHY: an EV run hit both an SUV with a battery-swap recall under an 80 % cap / outdoor-parking interim and a Toyota with an undisclosed open recall that turned out to be a free fix (EV run 2026-10-31, 2026-11-02).
-
 **Checking:** dealer VIN printout of open campaigns > brand VIN checker (**with control lookups**: VIN ±1 digit, a fake VIN, a known-positive VIN; one brand checker answered "not affected" even for a fake VIN) > national DB by VIN > model-level DBs (KBA Rückrufdatenbank, EU Safety Gate, NHTSA for the same hardware). A brand checker may say "a recall is open" without naming it; ask the dealer for the campaign code. See [vin-sources.md](vin-sources.md).
 
 ---
@@ -39,7 +37,7 @@ WHY: an EV run hit both an SUV with a battery-swap recall under an 80 % cap / ou
 | Servicing at an independent garage does **not** void the warranty. The brand may refuse a claim only if the failure is causally linked to a non-OE part. Basis: MVBER 461/2010 + Supplementary Guidelines, extended by Reg. 2023/822 to 31 May 2028. | V |
 | Exception: **voluntary extension/goodwill programmes may require network servicing** (Toyota Relax, Peugeot Allure Care/Peugeot Care). | V (brand T&Cs) |
 | Manufacturer warranties are vehicle-bound and pass to the next owner, given proof of the service schedule. Get the **digital service record printed** by a dealer; many brands keep it online only. | V for Kia; A as a general rule |
-| Warranty start = handover/first registration as the brand recorded it, which can differ from the registration date in the documents. Ask the brand for the end dates by VIN; don't compute them. | V (EV run 2026-11-04: brand's battery-warranty end date implied a start ~1 month after first registration) |
+| Warranty start = handover/first registration as the brand recorded it, which can differ from the registration date in the documents. Ask the brand for the end dates by VIN; don't compute them. | V (a brand's battery-warranty end date can imply a start ~1 month after first registration) |
 | Brand programmes tied to a country list (e.g. Peugeot Allure Care: the car must stay registered in a listed country). | V (PT T&Cs via snippet) |
 
 ### Typical warranty lengths by brand (dated: ADAC 7/2025 for DE; PT where known)
@@ -68,7 +66,7 @@ The vehicle warranty and the HV-battery warranty are separate. "Status" = a DE-s
 | Conditions that void it: deep discharge / left at 0 % >14 days (BMW, Nissan), chip tuning (Mercedes), not following the service schedule. | V / A |
 | **What it does NOT cover:** it is the cells and pack only. Audi's list is "exclusively" cell modules, housing, cooling elements, module connectors. **Not covered:** onboard charger (OBC), DC-DC converter (incl. combined units like Hyundai/Kia ICCU or VW "OCDC"), drive motor, inverter, heat pump, 12 V battery, charging cables. Those fall under the normal vehicle warranty, then self-insured. | V (Audi Garantie 11/2024, VW terms) |
 
-WHY this matters: a typical out-of-warranty OBC/DC-DC repair is ~€1.5–3.5k, a heat-pump compressor ~€2k, so on a 2-yr-warranty brand the money risk sits in these parts, not in the pack (EV run 2026-10-31; prices A).
+WHY this matters: a typical out-of-warranty OBC/DC-DC repair is ~€1.5–3.5k, a heat-pump compressor ~€2k, so on a 2-yr-warranty brand the money risk sits in these parts, not in the pack (prices A).
 
 ---
 
@@ -87,16 +85,16 @@ WHY this matters: a typical out-of-warranty OBC/DC-DC repair is ~€1.5–3.5k, 
 
 Some brands extend the warranty by 12 months / 15k km at **each scheduled service at an authorised workshop** (Toyota Relax: up to 10 yr / 200k km; Toyota battery: yearly BEV check; Peugeot Allure/Care: network servicing after the base warranty).
 
-| Fact (Toyota Relax PT T&Cs, read 2026-11-02) | Tag |
+| Fact (Toyota Relax PT T&Cs, Nov 2026) | Tag |
 |---|---|
 | Follows the car whoever owns it; any official brand workshop in PT or EU activates it; a car sold new by any official European Toyota entity is eligible (only cars not sold by them are excluded). | V |
 | A lapsed cover restarts 30 days after the next service. | V |
 | Excluded: hire/taxi/ride-hailing use, parts covered by recalls, EV charging cables, **traction battery cells** (those have their own battery warranty, §2). | V |
-| A battery health check done at a dealer counted as the activating service for an imported car: the brand's system showed Relax active for 12 months / +15k km from that check date. | V (EV run 2026-11-04, brand email) |
+| A battery health check done at a dealer counted as the activating service for an imported car: the brand's system showed Relax active for 12 months / +15k km from that check date. | V (brand email) |
 
 **How to verify for one VIN (in this order):**
 1. Ask the seller for the service history and every health-check printout; check the interval chain is unbroken (≤12 months / ≤15k km between services).
-2. Online eligibility simulator, if the brand has one — **with a control**. Toyota PT's public simulator page sends `makeFullValidations=false` and so tells *every* plate "eligible"; only the full-validation mode (same API, `=true`, needs the page's own token, so call it from inside the page) gave real answers, and a known PT-sold control plate had to pass for the result to mean anything. WHY: the default "eligible" was a generic message (EV run 2026-11-02).
+2. Online eligibility simulator, if the brand has one — **with a control**. Toyota PT's public simulator page sends `makeFullValidations=false` and so tells *every* plate "eligible"; only the full-validation mode (same API, `=true`, needs the page's own token, so call it from inside the page) gave real answers, and a known PT-sold control plate had to pass for the result to mean anything. WHY: the default "eligible" is a generic message.
 3. A written answer from the brand (see §7) with the end date and km cap for that VIN. That is the only result to count.
 
 ---
@@ -118,8 +116,8 @@ Some brands extend the warranty by 12 months / 15k km at **each scheduled servic
 - **§476(2):** used-car liability can be cut from 2 years to **1 year** only if the consumer is specifically told **before** contracting and it is **expressly and separately agreed** (a separate tick box or signature, not small print). Push for 2 years. **V**
 - **§476(1):** core defect rights can't be excluded against a consumer. Agreeing a worse condition than normal for such a car needs specific notice plus a separate agreement. **V**
 - **§477:** for **1 year** after handover any defect is presumed to have existed at handover. **V**
-- Writing an inspection report into the order ("condition as per report X") makes everything recorded as OK an agreed condition: it helps the buyer. Read the report before signing. **I** (EV run 2026-11-06)
-- Dealer terms may require repairs at the dealer's premises or with its prior consent; from abroad that makes the second year of liability worth little. **V** (dealer AGB read 2026-11-06)
+- Writing an inspection report into the order ("condition as per report X") makes everything recorded as OK an agreed condition: it helps the buyer. Read the report before signing. **I**
+- Dealer terms may require repairs at the dealer's premises or with its prior consent; from abroad that makes the second year of liability worth little. **V** (dealer AGB)
 
 ### PT dealer (DL 84/2021, in force 1 Jan 2022) — PT only
 - Guarantee **3 years** from delivery (art. 12 n.º 1); for used goods reducible to **18 months by express agreement** (art. 12 n.º 3). **V**
@@ -139,12 +137,12 @@ These are **contracts or insurance products**, not the statutory liability (§5)
 
 | Check | Why / tag |
 |---|---|
-| Get the **written terms**: issuer (brand, dealer, or an insurer behind it), term, km cap, excess, component list. A dealer cover page that names a "Gebrauchtwagengarantie" with no provider or term is not a guarantee yet. | EV run 2026-11-06: certified-used order named the product, gave no terms. V |
+| Get the **written terms**: issuer (brand, dealer, or an insurer behind it), term, km cap, excess, component list. A dealer cover page that names a "Gebrauchtwagengarantie" with no provider or term is not a guarantee yet. | Certified-used orders often name the product with no terms. V |
 | **Is the HV system covered** (OBC, DC-DC, motor, inverter, heat pump)? Many lists stop at mechanical parts. | I |
 | **Valid in the buyer's country?** Ask the issuer in writing whether a workshop there can claim it. DE brand products (VW "Garantieverlängerung", "Gebrauchtwagengarantie", 24–96-month cars, ≤150k km, excess €0–500, transferable to private buyers) are DE products; PT validity was unconfirmed. | A |
 | **Transferable** to the next owner? Some are first-buyer only. | V (varies) |
 | Warranty-insurance top-ups bundled with a brand warranty (e.g. a 3-yr insurance extension on DE-sold Hyundai Kona after the 5-yr warranty, reduced scope) count only if transferable and valid in the buyer country in writing. | V (DE press) / A (PT) |
-| Accepting a 1-year statutory term from a foreign dealer is reasonable **only** together with a written brand used-car guarantee (≥12 months, claimable at brand partners in the buyer's country). From abroad that guarantee is worth more than a second year of claims against the dealer. | I (EV run 2026-11-06) |
+| Accepting a 1-year statutory term from a foreign dealer is reasonable **only** together with a written brand used-car guarantee (≥12 months, claimable at brand partners in the buyer's country). From abroad that guarantee is worth more than a second year of claims against the dealer. | I |
 
 ---
 
@@ -154,13 +152,13 @@ These are **contracts or insurance products**, not the statutory liability (§5)
 1. **Brand web contact form** (creates a ticket, can route to a chosen dealer).
 2. **Phone** — the owner calls with the VIN; ~1 minute.
 3. **Photo from the seller** of the brand app's warranty/service screen (e.g. "MyToyota → Garantia") and the service book. Often the fastest evidence; costs no brand contact.
-4. **Brand customer-service email** — answered a non-owner in ~48 h with exact end dates (date + km cap) for warranty and battery (EV run 2026-11-04). If the address isn't on the contact page, look in the site's structured data (JSON-LD `contactPoint`).
-5. **Dealer generic inboxes ("geral@", "info@")** last: no reply, no auto-ack in 48 h (EV run 2026-11-02 → 11-04). Prefer a direct after-sales address if the dealer site lists one.
+4. **Brand customer-service email** — can answer a non-owner within ~48 h with exact end dates (date + km cap) for warranty and battery. If the address isn't on the contact page, look in the site's structured data (JSON-LD `contactPoint`).
+5. **Dealer generic inboxes ("geral@", "info@")** last: often no reply, not even an auto-ack, within 48 h. Prefer a direct after-sales address if the dealer site lists one.
 
 **Rules:**
 - **Owner approval first** for any outbound brand/dealer message (draft → owner OKs the exact text → send). Vet agents never message sellers; seller asks go through `carhunt evidence` (outreach agent sends).
-- **Cap: 2 emails** (brand + one dealer) **+ 1 follow-up** after 24 h, threaded into the original. Anything more needs the owner's OK. WHY: inbox noise, and phone/form are faster anyway (EV run 2026-11-03).
+- **Cap: 2 emails** (brand + one dealer) **+ 1 follow-up** after 24 h, threaded into the original. Anything more needs the owner's OK. WHY: inbox noise, and phone/form are faster anyway.
 - Short, polite, in the brand country's language; VIN only; no seller name, no price, no personal data beyond name and email.
 - Ask concrete questions: (a) vehicle warranty / extension active, end date and km cap; (b) battery warranty end date and whether the extension is active; (c) does it continue after an owner change and an import (state the first-sale country); (d) which campaign is open and is it done.
-- For recalls, **quote the checker's exact message** or attach a screenshot. WHY: "which recall is open?" alone was not understood by the brand's support (EV run 2026-11-04).
+- For recalls, **quote the checker's exact message** or attach a screenshot. WHY: "which recall is open?" alone is often misunderstood by brand support.
 - Treat a written answer naming the VIN as **V** for that car; anything verbal or "the dealer said" as **A** until written.

@@ -53,12 +53,12 @@ Keys and defaults: [`config.example.yaml`](../config.example.yaml) `owner`, `sec
 The schema is strict: an unknown key at any level fails validation (a typo like `notfy:` or `quiet_hour:` is an error, not a silent default). A module that adds a config key adds it to `carhunt/core/config.schema.json` and `config.example.yaml` in the same change.
 
 ## Rules (why)
-- Run data only in `$CARHUNT_HOME`, never in the repo: the repo is shared; ledgers, chats and DB rows are private (docs/privacy.md).
+- Run data only in `$CARHUNT_HOME`, never in the repo: the repo is shared; ledgers, chats and DB rows are private.
 - Config never holds a secret value, only `secret:NAME`; `Config` keeps refs unresolved so printing or logging it can't leak one.
-- No hardcoded time zone: the EV run baked Lisbon into quiet hours, logs and wakes; a buyer elsewhere would get night pings.
+- No hardcoded time zone: quiet hours, logs and wakes follow `owner.tz`, so a buyer anywhere gets no night pings.
 - Windows are `[start, end)` and may cross midnight (`21:30-09:30`); `start == end` is an error, not "all day".
 - Locks are `flock`: released when the holder dies, so a crashed agent can't wedge the others.
 
 ## Gaps
-- `op` backend is unit-shaped only (no 1Password on the build machine).
+- `op` (1Password) backend: unit-tested only.
 - Linux: secrets `file` backend works; bootstrap is macOS-only (design D1).

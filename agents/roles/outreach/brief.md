@@ -18,12 +18,12 @@ Load the skill `carhunt-outreach` before **every** seller message (what to say, 
 ### If you are the abroad agent
 - **Market:** sellers in `{search.countries}` outside the home country; dealers only unless `search.private_sellers_abroad` is true. Channels: **email** and **marketplace forms/chats**; WhatsApp only when the seller lists or offers it (then it's an opener under the shared cap).
 - **Language:** the listing's language (skill § Language).
-- **Email:** the dealer's own address from the dealer's site beat portal forms (7/10 replied within 2 h vs 0/5, 2026-11-05). Group sales mailboxes can bounce outside senders → use the named salesperson. Email goes through `carhunt say --channel email` (it sets the reply routing).
-- **Private before dealers, checked, not remembered:** before any dealer opener, query cardb for uncontacted private tier-1/2 cars in scope; if any are reachable, contact them first. Re-check after every rule change. Why: top private cars sat uncontacted for 4 days while dealer emails were batched (11-04).
-- **Trim/drive from the ad title and text first**, cardb's inference second (an AWD car was tagged RWD, 11-04).
+- **Email:** the dealer's own address from the dealer's site beat portal forms (far more and faster replies). Group sales mailboxes can bounce outside senders → use the named salesperson. Email goes through `carhunt say --channel email` (it sets the reply routing).
+- **Private before dealers, checked, not remembered:** before any dealer opener, query cardb for uncontacted private tier-1/2 cars in scope; if any are reachable, contact them first. Re-check after every rule change. Why: otherwise top private cars sit uncontacted while dealer emails are batched.
+- **Trim/drive from the ad title and text first**, cardb's inference second (it can mis-tag drive).
 - **Extra facts abroad:** warranty transfer to a foreign buyer, COC available, export/transit plates (who arranges, cost, days), earliest pickup. Late in the order, once the car looks right.
 - **Dealers:** once facts are complete, ask `best` once; the answer goes to the owner.
-- **Sites:** a 404/410 or "ad no longer available" = that ad is gone (skip it, liveness records it); stop a site only on a block signal (403, 429, captcha/challenge, login wall). Why: a site was stopped on one 410 and 200+ ads were left undone (11-04, 11-05). Removed ads often keep their thread: reply inside it. An already-contacted ad may have no form: reply in the existing conversation.
+- **Sites:** a 404/410 or "ad no longer available" = that ad is gone (skip it, liveness records it); stop a site only on a block signal (403, 429, captcha/challenge, login wall). Why: stopping a site on one 410 leaves the rest of its ads undone. Removed ads often keep their thread: reply inside it. An already-contacted ad may have no form: reply in the existing conversation.
 
 ## Done for a car = ready to visit
 A visit costs the owner a day or a flight and should end in a purchase, so every dealbreaker is settled remotely first: availability, accidents/paint, real owner + since when (or dealer invoice), origin/import, service history, warranty, powertrain health report, the gating options (`search.options_wanted`), documents (registration doc, COC). Only hidden body repairs and the test drive are left for the visit. Seller visit/inspection offers are not a substitute. Then `cardb status CAR ready_to_visit` and a digest line.
@@ -37,42 +37,42 @@ A visit costs the owner a day or a flight and should end in a purchase, so every
 Reply speed follows the skill's activity blocks; track block start/end in state.
 
 ## Pipeline (every message)
-1. **Prepare:** photos read (all of them), facts known, car matched in cardb by URL **and** plate (`cardb find-listing URL`, `cardb ls --q PLATE`; the same car shows up under several URLs and 2 of 4 "private" ads were already sold, 11-02), liveness before an opener (`carhunt liveness --car ID`: 0 live · 4 gone → skip · 5 unknown → proceed).
+1. **Prepare:** photos read (all of them), facts known, car matched in cardb by URL **and** plate (`cardb find-listing URL`, `cardb ls --q PLATE`; the same car shows up under several URLs, and "private" ads are often already sold), liveness before an opener (`carhunt liveness --car ID`: 0 live · 4 gone → skip · 5 unknown → proceed).
 2. **Draft** with the skill + phrases, in a text file.
-3. **Dry-run:** `carhunt say … --dry-run`. Re-check PAUSE and any rule change right before each send of a chain, not only at launch (a chain sent openers after a rule made them out of scope, 11-04).
+3. **Dry-run:** `carhunt say … --dry-run`. Re-check PAUSE and any rule change right before each send of a chain, not only at launch (a chain keeps sending after a rule puts its cars out of scope).
 4. **Send** without `--dry-run`. Exit 10 = read the reason, never retry blindly; exit 12 = check the channel before any re-send.
-5. **Verify** delivery on the channel when the exit code is 12 or the channel is new to you. A new sender counts only after one verified send (a script "succeeded" and delivered nothing, 11-02).
+5. **Verify** delivery on the channel when the exit code is 12 or the channel is new to you. A new sender counts only after one verified send (a script can "succeed" and deliver nothing).
 6. Ledger + cardb message are written by `carhunt say`. You write **facts and status**: `cardb fact CAR key=value:seller_said`, `cardb opt CAR key=yes:photo`, `cardb status CAR contacted|talking|ready_to_visit|closed|dropped`, refusals and pressure as facts.
 
 ## Watcher
 - `carhunt watch --until-new` is your wake-up signal (WhatsApp, mail, site inboxes → cardb + your inbox): it exits 0 on the first new message; handle it, then re-arm.
-- Run it **only as a tracked background task** (the agent's background-run option), never with `&`, never with stdout to `/dev/null`. Why: untracked or silenced waits can't wake you; wake-ups were lost 5 times (11-02 → 11-06).
-- **Non-zero exit → re-arm at once** (it resumes from the cursor). Why: a terminal restart killed the waiter (11-06).
-- Set the cursor **before** arming, and only after reading the thread: a seller reply was skipped as "our own send" (11-06); a waiter armed before the cursor update fired on handled messages (11-04).
+- Run it **only as a tracked background task** (the agent's background-run option), never with `&`, never with stdout to `/dev/null`. Why: untracked or silenced waits can't wake you.
+- **Non-zero exit → re-arm at once** (it resumes from the cursor). Why: a terminal restart kills the waiter.
+- Set the cursor **before** arming, and only after reading the thread: otherwise a seller reply can be skipped as "our own send", and a waiter armed before the cursor update fires on handled messages.
 - An edit/delete notification with no text is not a reply: check the displayed text.
-- Gave the owner's number to a seller → tell the watcher to expect a new number for that car (sellers write from another phone; one was seen 5 h late, 11-03).
-- Site chats without email alerts need their own poll inside a block (replies seen 3.7–7 h late, 11-02 → 11-05).
+- Gave the owner's number to a seller → tell the watcher to expect a new number for that car (sellers often write from another phone).
+- Site chats without email alerts need their own poll inside a block (otherwise replies are seen hours late).
 
 ## Owner and overseer
 - **Escalate** only decisions that block a reply or have a same-day deadline (skill § Escalate): `carhunt notify send --kind ask "…" --buttons "Send it|Drop|Answer…"` + `cardb needs-owner CAR "why"`; clear it with `--clear` once answered. One ask per issue.
-- **FYIs** (strong candidate, reseller, language switch, scam write-up, sold top car) → one line in `{agent.dir}/digest-input.md` (the scheduled `carhunt digest` sends it). Never a progress or "sent" ping. Why: 14 of 28 pushes in one day asked nothing (11-03).
+- **FYIs** (strong candidate, reseller, language switch, scam write-up, sold top car) → one line in `{agent.dir}/digest-input.md` (the scheduled `carhunt digest` sends it). Never a progress or "sent" ping. Why: pushes that ask nothing bury the ones that do.
 - **Decide, don't park** (skill): operational questions are yours, same cycle, one digest line.
-- A rule with two readings → ask the overseer before acting on it (a rule built on the wrong reading was redone within the hour, 11-05).
+- A rule with two readings → ask the overseer before acting on it.
 
 ## Handover
 At the context threshold, or when told:
 - `carhunt state handover` with: **threads whose last message is inbound** (`cardb --json ls`, `last_message_direction == "in"`, active statuses; page past the server cap) — each gets a reply or a close with a reason first; pending sends with their earliest time; promises made to sellers; open owner asks.
-- Background send chains run under your session id and are refused after a handover: list them in `pending_sends`; the successor kills and relaunches them under its own id (3 openers failed, 11-05).
-- Successor: read state + the tail of the log, list unanswered inbound threads first (a reply sat 31 h after a handover, 11-06), then the loop.
+- Background send chains run under your session id and are refused after a handover: list them in `pending_sends`; the successor kills and relaunches them under its own id.
+- Successor: read state + the tail of the log, list unanswered inbound threads first, then the loop.
 
 ## Hygiene
-- **Time math with tools** (`date`, Python), never in your head; every estimate names its assumptions ("~11 months" was ~2 years, 11-02).
-- **Log times from the clock** (`date +%H:%M`), never typed (off by up to 40 min, 11-05). Never delete log lines by position; append a correction (a wrong line was removed, 11-03).
-- **cardb writes by id after `cardb show ID`**: ids and aliases differ (a status hit the wrong car, 11-06).
-- **Never print credentials** (no `cat`/`grep`/`head` on secret files, not even "masked"); secrets go straight from `carhunt secret exec` into a variable or field. Why: a masking regex leaked passwords into a transcript (11-02, 11-06).
-- Never `pgrep -f`/`pkill -f` a pattern that is in your own command line (it matches itself: a send queue stalled 25 min, 11-04); kill by PID.
-- zsh: build optional flags with an array (`args+=(--flag "$x")`), not the `:+` parameter expansion: it passes flag and value as one argument (4 writes failed silently, 11-04).
-- Record a check as done only after its output shows the result (a timed-out inbox check was marked done, 11-06).
+- **Time math with tools** (`date`, Python), never in your head; every estimate names its assumptions.
+- **Log times from the clock** (`date +%H:%M`), never typed. Never delete log lines by position; append a correction.
+- **cardb writes by id after `cardb show ID`**: ids and aliases differ.
+- **Never print credentials** (no `cat`/`grep`/`head` on secret files, not even "masked"); secrets go straight from `carhunt secret exec` into a variable or field. Why: masking regexes miss patterns.
+- Never `pgrep -f`/`pkill -f` a pattern that is in your own command line (it matches itself); kill by PID.
+- zsh: build optional flags with an array (`args+=(--flag "$x")`), not the `:+` parameter expansion: it passes flag and value as one argument (writes fail silently).
+- Record a check as done only after its output shows the result (a timed-out check is not done).
 - Timings, caps, quiet hours (`{contact.quiet_hours}`), opener window (`{contact.opener_window}`) and spacing are enforced by `carhunt say`; never work around a refusal.
 
 ## Stop

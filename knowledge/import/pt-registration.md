@@ -1,6 +1,6 @@
 # Portugal: registering a used car bought in another EU country (destination side)
 
-> Snapshot: researched Oct–Nov 2026 (EV run). Prices, laws and tool behaviour drift — re-check anything you act on.
+> Snapshot: researched Oct–Nov 2026. Prices, laws and tool behaviour drift — re-check anything you act on.
 
 Tags: **V** verified (official/primary) · **A** anecdotal/forum/commercial · **I** inferred. PT-specific throughout. Seller-country halves: [de-to-pt.md](de-to-pt.md), [fr-to-pt.md](fr-to-pt.md), [es-to-pt.md](es-to-pt.md), [be-to-pt.md](be-to-pt.md), [other-to-pt.md](other-to-pt.md). Module overview: [README.md](README.md).
 
@@ -8,7 +8,7 @@ Tags: **V** verified (official/primary) · **A** anecdotal/forum/commercial · *
 
 **Homologation (online, free) → Category B inspection (car present) → DAV customs declaration (online, ≤20 working days from entry; PT plate number assigned on it) → plates + PT insurance → IMT counter/post (original foreign registration within 10 days of the DAV) → IRN ownership registration.** **V** (AT "Etapas" flow chart; gov.pt ISV page upd. 17.06.2026; gov.pt matrícula page upd. 04.09.2026; IMT "matrícula para veículos usados")
 
-- **Commercial blogs put the DAV first, which is wrong.** The DAV needs the homologation declaration and the Modelo 112 inspection report as uploads. (EV run 2026-11-04: an import-agency blog had the order reversed.)
+- **Commercial blogs put the DAV first, which is wrong.** The DAV needs the homologation declaration and the Modelo 112 inspection report as uploads.
 - **Consequence:** the car must still be legally drivable in PT until the inspection, so the **transit plate + insurance from the seller country must cover the drive plus the inspection visit — plan ≈30 days**. Book the Category B inspection slot **before** collecting the car. Per seller country: DE 30-day export plate, FR own temporary insurance ≥3 weeks on the French plate, ES seller deregisters after the inspection, BE X plate (30 days, no extension), NL/IT effectively truck/trailer.
 - An expired transit plate gives **no legal basis to drive**: truck or trailer the car to the inspection centre (or have the transporter deliver there). **V** (Código da Estrada art. 117(1)) / **A** (forum report, Aug 2025: a trucked car taken plateless to the inspection).
 
@@ -88,7 +88,7 @@ Bring/keep: foreign registration **all parts, originals** (registry keeps it at 
 
 - Any tyre size listed in the **CoC** is legal even if the foreign registration lists only one (DE ZB I fields 15.1/15.2 show one size; the CoC lists all in field 32 or 50). **V** (ADAC)
 - The PT registration document (DUA) has front/rear tyre fields; extra sizes go under "Anotações especiais" (Portaria 241-A/2019 **V**). Imported cars get their CoC sizes copied **A**.
-- **At legalisation: hand over the original CoC and check the new DUA lists every size you will use** before leaving the counter. (EV run: an extra wheel set came in a size missing from the registration.)
+- **At legalisation: hand over the original CoC and check the new DUA lists every size you will use** before leaving the counter — a second wheel set in a size missing from the registration is a common miss.
 - Periodic inspection (IPO) fails only for a size **not on the registration AND >5% outer-diameter difference**. **V** (inspection manual ITV-5, 2006 version). Fix if needed: an *averbamento* (~€30 IMT + ~€100 declaration) **A**.
 - Mixing winter and summer tyres across axles is legal in PT (IPO fails only mixed types on one axle) **V**. But in DE winter conditions **all wheels need the snowflake mark** (§2(3a) StVO) **V** — drive home on a matched set.
 
@@ -96,13 +96,13 @@ Bring/keep: foreign registration **all parts, originals** (registry keeps it at 
 
 - EU Dir. 2009/103 art. 15 (amended 2021/2118) allows a PT insurer to cover the car **from acceptance of delivery for 30 days** by VIN/foreign plate. **V** (law). **No PT insurer product page confirms it** — forum reports of one insurer doing short policies on a German plate, commercial claims of 1–28-day policies on foreign plates, and other sources saying PT insurers cover only PT plates. **Treat 30-day cover by VIN as unverified** and use the seller-country transit insurance. **A**
 - After the matrícula, PT insurance is mandatory — even inside the 60-day DAV window. **A** (press 12/2025)
-- A PT insurer quoting the new policy asks for the **previous insurer's claims-history declaration** (no-claims) — get it before pickup. **A** (EV run 2026-11-07)
+- A PT insurer quoting the new policy asks for the **previous insurer's claims-history declaration** (no-claims) — get it before pickup. **A**
 
 ## 10. Buyer step list (PT side)
 
 1. Before the trip: credenciação (if needed), homologation declaration online, **book the Category B inspection** ~4–10 days after arrival, check your Portal/IMT/IRN logins.
 2. Make sure the transit plate + insurance run ≥ drive + inspection (≈30 days).
-   At pickup (details in [../buy/pickup-day.md](../buy/pickup-day.md)): ask the dealer to run pending OTA updates and campaigns before handover; become primary user in the brand app with the previous owner removed; collect the previous insurer's claims-history declaration. (EV run 2026-11-07)
+   At pickup (details in [../buy/pickup-day.md](../buy/pickup-day.md)): ask the dealer to run pending OTA updates and campaigns before handover; become primary user in the brand app with the previous owner removed; collect the previous insurer's claims-history declaration.
 3. Arrival: keep entry-date proof. 20-working-day clock starts.
 4. Inspection at the buyer's nearest Category B inspection centre → Modelo 112.
 5. DAV online → PT plate number.

@@ -1,6 +1,6 @@
 # knowledge
 
-Vet / buy / import playbooks distilled from a real used-EV hunt (EU, Oct–Nov 2026). Every file carries a dated banner and V/A/I tags (verified / anecdotal / inferred): prices, laws and tool behaviour drift, so re-check before acting. Owner: vetbuy.
+Vet / buy / import playbooks for a used car bought in the EU (researched Oct–Nov 2026). Every file carries a dated banner and V/A/I tags (verified / anecdotal / inferred): prices, laws and tool behaviour drift, so re-check before acting.
 
 | file | use it for |
 |---|---|

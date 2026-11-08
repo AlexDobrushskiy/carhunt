@@ -51,7 +51,7 @@ Health: `GET /healthz` (server root) and `GET /api/v1/health` — same handler, 
 - No command prints a value; pass one to a process with `carhunt secret exec NAME=ENVVAR -- cmd`.
 - The web acts per user with that user's own token, so its writes carry the user's name and rights. There is no
   generic `web` token and no trusted-header identity.
-- Legacy plain `name:token` lines in the tokens file still work (e.g. a migrated evdb), but re-run `cardb init` to hash them.
+- Legacy plain `name:token` lines in the tokens file still work, but re-run `cardb init` to hash them.
 
 ## Config (cardb + search sections)
 
@@ -142,7 +142,7 @@ search:
 ```
 Defaults the example doesn't spell out: `models[].model: ""` = every family of the make; `models[].base_fit` = `ranking.fit.base_default`; `default_tier: 0` = highest model tier + 1; `queue_default_tiers: []` = every tier below `default_tier`; `search.price.max_eur` also drives the ×100 check when a family has no median.
 
-Worked example: the EV run's profile is `cardb/internal/profile/testdata/ev.yaml` (VAG 286 hp RWD = tier 1 via
+Worked example: `cardb/internal/profile/testdata/ev.yaml`, an EV search (VAG 286 hp RWD = tier 1 via
 `power_hp` + `variant_any` markers, long-range alternatives = tier 2, islands excluded, PL/Baltic history and suspect ads
 filtered, e-seats + power tailgate as `must_have`, per-country default distances).
 
@@ -175,7 +175,7 @@ every flag: `cardb help COMMAND`.
   whole list and drop other agents' items.
 - **Price rejected (exit 1, `price_x100|price_lease|price_net|price_range`)?** Re-read the ad: cents, a monthly rate,
   a net price? Fix the number, or pass `--price-vat gross|net|margin` when the ad states it. `--force` only after
-  checking — the price is stored flagged and the car leaves the fair-price pool. WHY: 10 ×100 prices in the EV run.
+  checking — the price is stored flagged and the car leaves the fair-price pool. WHY: ×100 prices (cents read as euros) are common.
 - **Powertrain: nested is the contract** (`powertrain{fuel, battery_net_kwh, …}`; CLI `--fuel --battery-net
   --engine-cc --gearbox --wltp-range …`). Flat `battery_net_kwh` in upsert JSON is still accepted (422 when it
   disagrees with the nested value). Fuel/gearbox accept ad words in seven languages (`elétrico`, `plug-in`, `gasóleo`,
@@ -192,8 +192,8 @@ every flag: `cardb help COMMAND`.
 - `author_kind`: `owner` (= `owner.name`) · `viewer` (a `cardb.users` entry) · `import` (author `import…`) · `agent`.
 - Users = owner + viewers. Verdicts are per user (`up|maybe|down` + note, history as `verdict` events). Cars show the
   owner's verdict unless `?user=` / `--user`; `verdicts` lists everyone's. The queue is per user (default owner).
-- A viewer token is read-only except for that viewer's own verdict (403 otherwise). WHY: a second household member had
-  no identity in the EV run, so their opinions lived in chat.
+- A viewer token is read-only except for that viewer's own verdict (403 otherwise). WHY: household members can rate
+  cars without being able to change anything else.
 
 ## Ranking, price sanity, versions
 
@@ -217,7 +217,7 @@ The compose ports bind to `127.0.0.1`. To reach cardb from a phone or another ma
 | TLS reverse proxy (Caddy) | public host, `/api/*` + `/healthz` → `127.0.0.1:8484`, the rest → `127.0.0.1:4321`, `request_body max_size 50MB` (photo uploads) | the API's bearer token is the gate for `/api`; put the web behind its own login (Caddy `basic_auth` on the web routes only) |
 
 - **Never put an interactive login (forward-auth/SSO) in front of `/api/*`.** Bearer clients (CLI, agents, scripts) can't
-  complete it. WHY: in the EV run off-LAN agents were locked out by exactly that.
+  complete it, so off-LAN agents get locked out.
 - Don't expose the API without TLS: the token travels in a header.
 - Web identity = the per-user tokens in `cardb_web_tokens`; a proxy login in front of the web only gates access.
 
@@ -254,25 +254,8 @@ off the machine (they hold seller data — never into the repo).
 5. **Replay = 0 changes**: run it again; any write means it isn't idempotent — stop and fix.
 6. **`PRAGMA quick_check`**: take a fresh `cardb backup`, then `sqlite3 <snapshot> 'PRAGMA quick_check'` → `ok`.
 
-WHY: the EV run used this for the drive backfill, the good-deal backfill and the photo-dedupe repair (47 listings
-re-split after stock photos merged different cars). The drive rule once said RWD where the ad title said AWD: read the
-raw text before trusting a `rule:*` value, and never overwrite a stronger source.
-
-## Migrating an evdb data dir
-
-1. Stop evdb and take a snapshot (`evdb backup`); work on a copy.
-2. Copy the data dir to `$CARHUNT_HOME/cardb/` (keep `photos/`) and rename `ev.sqlite3` → `cardb.sqlite3`.
-3. Set `owner.name` in config to the name the old setup used for the buyer (the old web's forced author), then
-   `cardb init` for fresh hashed tokens (old `name:token` lines still work meanwhile).
-4. Start cardb. Migrations run once (`PRAGMA user_version`):
-   - `needs_<person>`(`_reason`) → `needs_owner`(`_reason`), `km_to_<city>` → `distance_km`;
-   - powertrain columns added; a car with a battery value and no fuel gets `fuel = bev` (the old schema was EV-only);
-   - `version` starts counting; listings get `price_vat` + empty `price_flags` (old prices are not re-checked);
-   - users table; every old single verdict becomes the owner's;
-   - legacy owner identity rewrite (every start, idempotent): option/fact `source`, message `sender_kind` and note
-     `author_kind` equal to lower(`owner.name`) become `owner` — so step 3's name must match exactly (case-insensitive).
-5. Check: `cardb stats` matches the old counts; `PRAGMA quick_check` on a fresh snapshot = `ok`; `cardb queue` and a few
-   cars in the web UI look right (tiers now come from `search.models` — port the old tier rules into config first).
+Read the raw text before trusting a `rule:*` value (an inferred value can contradict the ad), and never overwrite a
+stronger source.
 
 ## Known gaps
 

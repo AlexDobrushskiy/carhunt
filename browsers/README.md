@@ -1,6 +1,6 @@
 # browsers
 
-Shell side of the browser stack (owner: browsers module). Docs: [docs/browsers.md](../docs/browsers.md); agent rules: [skills/carhunt-browsers](../skills/carhunt-browsers/SKILL.md).
+Shell side of the browser stack. Docs: [docs/browsers.md](../docs/browsers.md); agent rules: [skills/carhunt-browsers](../skills/carhunt-browsers/SKILL.md).
 
 | path | what |
 |---|---|

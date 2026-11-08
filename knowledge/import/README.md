@@ -1,6 +1,6 @@
 # Import module: bring a car bought abroad home and register it
 
-> Snapshot: researched Oct–Nov 2026 (EV run). Prices, laws and tool behaviour drift — re-check anything you act on.
+> Snapshot: researched Oct–Nov 2026. Prices, laws and tool behaviour drift — re-check anything you act on.
 
 Tags: **V** = verified from a primary/official source · **A** = anecdotal/forum/secondary · **I** = inferred.
 
@@ -32,11 +32,11 @@ No other destination exists yet.
 
 ## Universal EU rules (any seller country → any EU destination)
 
-- **VAT, new means of transport:** a car supplied **≤6 months after first entry into service OR with ≤6,000 km** is "new" and VAT is due in the **destination** country, even from a private seller. To count as used it must exceed **both** thresholds. Check field B (first registration) on any car under a year old. **V** (Your Europe; PT RITI art. 6; BE Code TVA art. 8bis) (EV run 2026-11-05: a 2025 car was checked against the cut-off date).
+- **VAT, new means of transport:** a car supplied **≤6 months after first entry into service OR with ≤6,000 km** is "new" and VAT is due in the **destination** country, even from a private seller. To count as used it must exceed **both** thresholds. Check field B (first registration) on any car under a year old. **V** (Your Europe; PT RITI art. 6; BE Code TVA art. 8bis).
 - **VAT, used car:** private seller → no VAT anywhere. Dealer/company seller → the seller-country VAT (regular or margin scheme) is **final** for a private buyer: no refund, no second VAT at home. VAT-exempt intra-EU supply needs a buyer VAT ID; "net export" prices are for businesses only. **V** (Your Europe; EC Taxation).
 - **I:** if a company seller arranges the transport to the destination, the sale may become an EU distance sale taxed at the destination rate. Collect it yourself or truck it on your own contract.
 - **Originals or nothing:** the destination registry needs the **original** foreign registration document(s) plus the CoC. Never accept a copy or "I'll post it later". **V** for PT (CISV art. 20(5)); **A** for the general claim.
-- **The contract/invoice must name the buyer** (full name exactly as on the ID, address incl. postcode and country). It is the customs/registration upload at home and the transit-plate application abroad. (EV run 2026-11-06: a dealer order had the wrong buyer name and postcode.)
+- **The contract/invoice must name the buyer** (full name exactly as on the ID, address incl. postcode and country). It is the customs/registration upload at home and the transit-plate application abroad.
 - **The new state withdraws the old registration** (Dir. 1999/37 art. 5). **V**
 - **Transit insurance by destination insurer:** Motor Insurance Directive 2009/103 art. 15 (as amended by 2021/2118) lets the risk sit in the destination state for **30 days from acceptance of delivery**, before registration. **V** for the law; whether an insurer actually sells it is country-specific and often unverified.
 - **Warranty** follows the VIN EU-wide but on the **origin country's terms** (EU Commission motor-vehicle FAQ Q5) → [../coverage-rules.md](../coverage-rules.md). **V**

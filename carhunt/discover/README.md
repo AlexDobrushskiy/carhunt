@@ -1,6 +1,6 @@
 # carhunt/discover
 
-`carhunt sweep`: enabled sites → search → cursor → scope → detail read → normalize → cardb. Owner: discover. Doc: [docs/discover.md](../../docs/discover.md).
+`carhunt sweep`: enabled sites → search → cursor → scope → detail read → normalize → cardb. Doc: [docs/discover.md](../../docs/discover.md).
 
 | file | what |
 |---|---|

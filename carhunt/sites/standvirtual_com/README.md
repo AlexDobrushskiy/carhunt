@@ -20,9 +20,9 @@
 - `site_ref` = numeric advert id (the cursor: ids grow with new ads); `createdAt` is bumped by refreshes, never a cursor. The URL token (`…-ID….html`) is `ad_id(url)` / `extra.url_id`.
 - Promoted rows (`vas.isPromoted`, `isPremiumTopAd`) are flagged `sponsored`: bumped out of date order, never a cursor.
 - Never touch "Mostrar VIN" (reCAPTCHA v3, login-gated UI): the decoded VIN is the same value.
-- Seller `type` PRIVATE with many active ads (`extra.seller_active_ads` ≥3) acted as resellers in the EV sweep: discover flags them.
-- 410 = ad gone; 200 + ad id = live (11-04).
+- Seller `type` PRIVATE with many active ads (`extra.seller_active_ads` ≥3) are often resellers: discover flags them.
+- 410 = ad gone; 200 + ad id = live.
 
 ## Gaps
-- Fuel codes beyond `electric`, and sort by price, not measured (sort=price → `Unsupported`).
+- Fuel codes beyond `electric`, and sort by price, unverified (sort=price → `Unsupported`).
 - If the decrypting module ever moves to a lazily loaded chunk (not in the page's script tags), discovery finds no salt: phones come back empty with `extra.decode`; pass `salt=` until fixed.

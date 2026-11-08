@@ -45,23 +45,23 @@ Per-site walls, pace numbers with their why, quirks: `carhunt/sites/<pkg>/README
 - `carhunt.sites.base`: `get(id)`, `ids()`, `metas()`, `for_url(url)`; `Gone`, `Unsupported`; `Blocked`/`PaceExceeded` re-exported from `carhunt.access.errors`.
 - `Site`: `search(SearchQuery) -> Iterator[Card]`, `ad(url) -> RawAd`, `phone(ad, reveal=False) -> list[str]`, `is_live(url) -> Liveness`, `owns(url)`, `ad_id(url)`, `close()`.
 - `carhunt.sites.model`: `SearchQuery` (one make/model per query), `Card`, `RawAd` (+`Seller`), `Liveness`. Plugins parse; discover normalises (VAT, scope, options).
-- Tests: `carhunt.sites.testing.FakeNet` (canned answers, no network); `CARHUNT_FAKE_SITES=1` registers the synthetic `fake` site (`CARHUNT_FAKE_SITES_FIXTURES=<ads.json>`, `CARHUNT_FAKE_SITES_BLOCK=search,ad,live`, `CARHUNT_FAKE_PHOTO_BASE=<local image server>`; unset = no photos, since cardb downloads every photo URL).
+- Tests: `carhunt.sites.testing.FakeNet` (canned answers, no network); `CARHUNT_FAKE_SITES=1` registers the test-only `fake` site (`CARHUNT_FAKE_SITES_FIXTURES=<ads.json>`, `CARHUNT_FAKE_SITES_BLOCK=search,ad,live`, `CARHUNT_FAKE_PHOTO_BASE=<local image server>`; unset = no photos, since cardb downloads every photo URL).
 
 ## Cursors and price changes
 - `site.yaml cursor.strategy` (read by discover, `carhunt/discover/cursor.py`): `newest_id` = newest first, numeric `site_ref` grows → stop at the stored max; `first_seen` = newest first with opaque ids (AS24 UUIDs) → stop at last run's first organic id / its created time; `full` = page the whole filtered set every run (coches.net relevance order, olx.pt ignores sort, unmeasured sites).
-- Newest-first sweeps never revisit known ads, so **price changes on known listings are caught by liveness**: a live page also yields the current price (parsed from the same page, no extra load); a change is written as a minimal upsert `{url, price}` → cardb price history + `price_change` event. Net (ex-VAT) page prices are skipped (cardb stores gross). Decision from discover, 2026-11-08; the EV run did this as a weekly price re-check of liked cars.
+- Newest-first sweeps never revisit known ads, so **price changes on known listings are caught by liveness**: a live page also yields the current price (parsed from the same page, no extra load); a change is written as a minimal upsert `{url, price}` → cardb price history + `price_change` event. Net (ex-VAT) page prices are skipped (cardb stores gross).
 - Price from the liveness page: autoscout24, standvirtual.com, kleinanzeigen.de, subito.it, marktplaats.nl, custojusto.pt, milanuncios.com, mobile.de, coches.net (page route), leboncoin.fr. Not available (ad data comes from a separate API): olx.pt, wallapop.com — their liveness reports state only.
 
 ## Rules (why)
 - Page's own data first (`__NEXT_DATA__`, RSC flight, `__INITIAL_PROPS__`, site JSON API): 1 request instead of ~50 browser requests → fewer loads, fewer bans.
-- Every request takes a slot in the shared ledger first (`access.pace.acquire(site, kind, via=<exit CC>)`; kinds `load` page, `api` JSON read, `phone` reveal; limits from site.yaml `pace`/`caps`, see docs/browsers.md) — parallel agents on one IP got sites banned (coches.net 11-03, leboncoin 10-30). A proxied request is paced on its exit (own rate budget, same day caps). The transport waits ≤180 s for a gap slot, else `PaceExceeded` (stop the site).
-- Stop a site at the first block (401/403/429/5xx/bot page → `Blocked`); 404/410/site marker = that ad is gone → `Gone`, keep going — two runs stopped leboncoin on a 410 and left ~200 ads undone (11-04/05).
+- Every request takes a slot in the shared ledger first (`access.pace.acquire(site, kind, via=<exit CC>)`; kinds `load` page, `api` JSON read, `phone` reveal; limits from site.yaml `pace`/`caps`, see docs/browsers.md) — unpaced parallel agents on one IP get sites banned. A proxied request is paced on its exit (own rate budget, same day caps). The transport waits ≤180 s for a gap slot, else `PaceExceeded` (stop the site).
+- Stop a site at the first block (401/403/429/5xx/bot page → `Blocked`); 404/410/site marker = that ad is gone → `Gone`, keep going — stopping on a gone ad leaves the rest of the run undone.
 - Missing page data = `Blocked`, never `Gone`: a changed page or a wall says nothing about the ad.
 - Phone reveal slots are taken before the call (a 403 still counts); day caps in site.yaml `caps`.
-- Country-IP steps go through `access.proxy`, fail-closed: no verified exit → no request (ES-only APIs 403 every non-ES client, 11-02/03).
-- Liveness removes on 404/410/marker at once, on a soft signal (redirect to a list page) only at the 2nd signal ≥1 h later, never on block/timeout; relists only what it removed — an ad-hoc string check once marked 2 live cars removed (11-04).
-- `pace.read_after` (messaging sites) is enforced by discover's scheduler, not the transport: liveness at 04:30 and sends at midday don't collide, but sweep reads did (lbc 11-05, mobile.de 11-06).
-- `pace.fresh_profile_every`: the transport closes the tab and opens a throwaway profile every N browser loads (mobile.de: Akamai burst limit per profile ~25 fast/~60 paced loads, 11-04).
+- Country-IP steps go through `access.proxy`, fail-closed: no verified exit → no request (ES-only APIs 403 every non-ES client).
+- Liveness removes on 404/410/marker at once, on a soft signal (redirect to a list page) only at the 2nd signal ≥1 h later, never on block/timeout; relists only what it removed — a one-off string check can mark live cars removed.
+- `pace.read_after` (messaging sites) is enforced by discover's scheduler, not the transport: liveness at 04:30 and sends at midday don't collide, but sweep reads would.
+- `pace.fresh_profile_every`: the transport closes the tab and opens a throwaway profile every N browser loads (mobile.de: Akamai burst limit per profile ~25 fast/~60 paced loads).
 - Liveness writes only via cardb (`PATCH /listings/{id}` + `ad_check` event); it never touches car status.
 
 ## Config
@@ -73,10 +73,10 @@ State + logs (never in the repo): `$CARHUNT_HOME/sites/liveness.db`, `$CARHUNT_H
 2. `codes.yaml` — make/model slugs/ids + filter codes (the query builder reads only this).
 3. `plugin.py` — `class Plugin(BaseSite)`, `pkg = "<pkg>"`; copy `autoscout24/plugin.py`. Transport only via `self.net.get/json` (HTTP) or `self.net.browser_get(url, mode=fetch|goto)` (browser routes); parse functions pure (text in, model out).
 4. `README.md` — wall, route, pace, phone, messaging, rules with why, gaps. No account names, phones, ad ids.
-5. `carhunt/sites/tests/test_<pkg>.py` + `tests/fixtures/<pkg>/` — **hand-made synthetic** pages in the site's real shape (VIN `SYN…`, phones `+cc 555…`, `example.invalid` hosts): query builder, search + ad parsers, Blocked/Gone, liveness rules.
+5. `carhunt/sites/tests/test_<pkg>.py` + `tests/fixtures/<pkg>/` — hand-made pages in the site's real shape: query builder, search + ad parsers, Blocked/Gone, liveness rules.
 6. Measure with ≤3 read-only public loads (`carhunt site <id> search --max 5`), then `python -m carhunt.sites.matrix --write docs/sites.md` and `carhunt browser site-table --write skills/carhunt-browsers/references/site-table.md` (both have drift tests).
 
 ## Gaps
 - olx.pt / wallapop.com liveness gives no price (API-only ad data); liked cars there need a periodic `carhunt site <id> ad` re-read for prices.
-- lacentrale.fr, leparking.fr, carsbat.com: URL builders only (no captured page shape yet) — search/ad/live raise `Unsupported`.
+- lacentrale.fr, leparking.fr, carsbat.com: URL builders only — search/ad/live raise `Unsupported`.
 - Browser-route sites (mobile.de, olx.pt, custojusto.pt, milanuncios.com, lacentrale.fr, leparking.fr, carsbat.com) open one `access.session.tab(route, site=, country=, fresh=)` per run; the tab blocks on walls but the transport paces (`goto(..., paced=False)`). Needs Chrome + playwright (doctor checks).

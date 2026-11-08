@@ -16,11 +16,11 @@
   and ~30 photos.
 
 ## Rules (why)
-- Cloudflare stops the lane and plain HTTP ("Just a moment", 11-01) → a non-automated browser.
+- Cloudflare stops the lane and plain HTTP ("Just a moment") → a non-automated browser.
 - Photos load only through the browser session's own request (`page.request`); plain HTTP gets 403.
 - Login (form `#id_login` / `#id_password` at `/accounts/login/`) belongs to the browsers/accounts modules
   (credentials from the secrets backend), never typed from a plugin.
 
 ## Gaps
-- No lot-page parser: the page was never captured. Capture one logged-in lot page and write `lookup` + a synthetic
-  fixture from it. A model browse page (`/en/<make>/<model>/`) exists; its shape is unknown.
+- No lot-page parser (`lookup`); the lot page's shape is not mapped. A model browse page (`/en/<make>/<model>/`)
+  exists; its shape is unknown.

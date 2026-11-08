@@ -33,7 +33,7 @@ There is no `secret get`. Python code calls `secrets.get(name)` and hands the va
 | `site_<domain>_user`, `site_<domain>_pass` | access.creds |
 
 ## Rules (why)
-- **Never print a secret or a credential file, not even masked.** EV run 2026-11-06: a `grep`/`head` over a creds folder with a masking regex missed `email // password` and ~12 passwords landed in an agent transcript that is still on disk.
-- Never put a secret in a ping or a chat message: a notifier hub stored a site password sent as a Telegram message in plain text (EV run). `notify.send` refuses token/key/`password:`-shaped text.
+- **Never print a secret or a credential file, not even masked.** A masking regex misses formats it didn't expect, and an agent transcript stays on disk.
+- Never put a secret in a ping or a chat message: chat services store it in plain text. `notify.send` refuses token/key/`password:`-shaped text.
 - Secrets reach other programs through env (`secret exec`) or stdin, never argv: argv is visible to every process (`ps`).
 - Tests use the `file` backend or a throwaway Keychain service (`carhunt-test-<random>`, deleted after).

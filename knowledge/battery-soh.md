@@ -1,12 +1,12 @@
 # Battery health (SoH) — evidence, asks, DIY OBD
 
-> Snapshot: researched Oct–Nov 2026 (EV run). Prices, laws and tool behaviour drift — re-check anything you act on.
+> Snapshot: researched Oct–Nov 2026. Prices, laws and tool behaviour drift — re-check anything you act on.
 
 Tags: **V** verified live on the official/provider source · **A** anecdotal/secondary (forum, press, user report) · **I** inferred, not from the sources — verify.
 
 Related: [vin-sources.md](vin-sources.md) (brand registry, recall tools) · [coverage-rules.md](coverage-rules.md) (what the HV-battery warranty does/doesn't cover) · [buy/pickup-day.md](buy/pickup-day.md). Record results: `cardb fact CAR battery_soh="<value> (<method>, <date>, <km>)":<source>`; missing evidence → `ask` event via `carhunt evidence CAR` (vet agents never message sellers).
 
-**Why it matters:** the traction battery is ~40% of a used EV's value (EV run 2026-10-31). No paid VIN history report measures it.
+**Why it matters:** the traction battery is ~40% of a used EV's value. No paid VIN history report measures it.
 
 ---
 
@@ -21,7 +21,7 @@ Related: [vin-sources.md](vin-sources.md) (brand registry, recall tools) · [cov
 | 5 | **Charging-session sample** (§2) | rough usable capacity (±5% or worse) | anything precise; loss assumptions dominate | A/I |
 | — | Seller's word ("100%", "like new") | nothing | — | — |
 
-WHY the ladder bottoms out at the app screenshot: non-native sellers didn't understand the charging-session ask, while an app screenshot was enough to move on (EV run 2026-11-05).
+WHY the ladder bottoms out at the app screenshot: non-native sellers often don't understand the charging-session ask, while an app screenshot is usually enough to move on.
 
 Benchmarks (dated examples, not norms): VW MEB ~93% at 30–50k km (owner sheet, ~169 cars, A); Kia EV6 at 27k km Aviloo 97.9% while BMS showed 100% (V); Toyota bZ4X at 30k km 92% (third-party certificate, V); Toyota's own target is 90% after 10 years (A). Typical HV warranty: 8 yr / 160k km, defect only below 70% (VW doc V; others similar A).
 
@@ -33,16 +33,16 @@ C_usable = E_batt / (SoC_end − SoC_start)       # SoC as fractions, car-displa
 SoH      = C_usable / C_usable_new              # C_usable_new = net capacity from the spec
 ```
 
-- Loss: DC fast ≈ 3–8%, AC/wallbox ≈ 8–15% (**I** — not measured in the run). Always report a **range**, never a point.
+- Loss: DC fast ≈ 3–8%, AC/wallbox ≈ 8–15% (**I** — not measured). Always report a **range**, never a point.
 - Use a big window (start ≤30%, end at a displayed **100%**), a warm pack, and the charger's own kWh (receipt/app photo), not the seller's memory.
 - Use the **net/usable** capacity of the exact variant (not gross; check the battery code — see the China-pack case in [vin-sources.md](vin-sources.md#6-wmi--market-flags)).
 
-**Worked synthetic example:** car with 77.0 kWh usable when new; DC session 20% → 100%, charger shows 60.5 kWh.
+**Worked example:** car with 77.0 kWh usable when new; DC session 20% → 100%, charger shows 60.5 kWh.
 - E_batt = 60.5 × (0.92 … 0.97) = 55.7 … 58.7 kWh
 - C_usable = E_batt ÷ 0.80 = 69.6 … 73.3 kWh
 - SoH ≈ 69.6/77 … 73.3/77 = **90% … 95%** → "roughly 90–95%, not proof; ask for #1–#3".
 
-Without the loss correction it would read 98% — the classic way to flatter a battery. In the run, a seller's claimed 95% came out at ~86–90% this way (2026-11-03). Re-check the arithmetic before relaying (agent-computed numbers have spread wrong before, 2026-11-03).
+Without the loss correction it would read 98% — the classic way to flatter a battery. Re-check the arithmetic before relaying; agent-computed numbers spread wrong easily.
 
 ## 3. How to ask (simple asks for non-native sellers)
 
@@ -86,7 +86,7 @@ A remote buyer's realistic route: ask the **selling dealer** to run FLASH or pri
 - **Never clear codes** (erases the fault history), never code, adapt, run service resets, "battery registration" or bi-directional tests. OBDeleven, Carly, BimmerCode and Car Scanner's coding menu can all write to the car. Reading doesn't affect warranty; coding can.
 - **Unplug the dongle when done** — left in, it keeps modules awake and drains the 12 V battery.
 
-**Kit (iPhone needs BLE):** vLinker MC+ (~€71–72, most versatile) or OBDLink CX (~€100, best for BMW/MINI) or Veepeak OBDCheck BLE+ (~€46, cheapest that works) + **Car Scanner ELM OBD2** Pro (€8.99 lifetime). Skip classic-BT/MFi-only dongles (OBDLink MX+, vLinker FS) for BLE-only apps, €10 ELM327 clones (lack the CAN commands EV reads need), OBDeleven (own app only, no EV SoH). CAN-FD not needed for the platforms below. Android has more apps (EVNotify, Torque) (V, 2026-11-01).
+**Kit (iPhone needs BLE):** vLinker MC+ (~€71–72, most versatile) or OBDLink CX (~€100, best for BMW/MINI) or Veepeak OBDCheck BLE+ (~€46, cheapest that works) + **Car Scanner ELM OBD2** Pro (€8.99 lifetime). Skip classic-BT/MFi-only dongles (OBDLink MX+, vLinker FS) for BLE-only apps, €10 ELM327 clones (lack the CAN commands EV reads need), OBDeleven (own app only, no EV SoH). CAN-FD not needed for the platforms below. Android has more apps (EVNotify, Torque) (V).
 
 | Platform | App → value | Trust | Verdict | Tag |
 |---|---|---|---|---|
@@ -102,14 +102,14 @@ A better DIY figure needs the car for a day (MEB counter method: kWh charged−d
 
 ## 7. 12 V battery (every EV)
 
-12 V / DC-DC trouble is the most common EV breakdown cause (A, 2026-10-31). On every car:
+12 V / DC-DC trouble is the most common EV breakdown cause (A). On every car:
 - Ask the 12 V battery's age and whether the car was ever towed in / wouldn't wake.
 - At the viewing, measure at the 12 V battery terminals with the car in **ready**: expect **~14–15 V** (DC-DC charging). Car off and rested: ~12.4–12.7 V is healthy (I).
 - Warnings on wake-up, slow wake, or a dealer 12 V replacement in the service history → ask why.
 
 ## 8. PHEV / HEV / ICE equivalents
 
-Short pointers; mostly **I** (not researched in the EV run) — verify per model.
+Short pointers; mostly **I** (not researched) — verify per model.
 
 | Powertrain | Evidence ladder | Tag |
 |---|---|---|

@@ -5,7 +5,7 @@ description: Use before any carhunt browser or site-access work — reading list
 
 # carhunt browsers
 
-Agents never touch the owner's own Chrome (no extension, no CDP attach, no profile copy). Every browser here is **Agent Chrome** (`agent-chrome`: a re-signed clone of the installed Chrome under its own bundle id) or Camoufox. Never launch from `/Applications/Google Chrome.app` (macOS takes the agent process for the owner's Chrome: Dock click activates a windowless agent, Quit fails, 10-16) and never Chrome for Testing (sites treat it differently, 10-25).
+Agents never touch the owner's own Chrome (no extension, no CDP attach, no profile copy). Every browser here is **Agent Chrome** (`agent-chrome`: a re-signed clone of the installed Chrome under its own bundle id) or Camoufox. Never launch from `/Applications/Google Chrome.app` (macOS takes the agent process for the owner's Chrome: Dock click activates a windowless agent, Quit fails) and never Chrome for Testing (sites treat it differently).
 
 Names below are the defaults `carhunt browser mcp-config` prints (prefix `browsers.mcp_name_prefix`, default `ch-`): lanes `ch-lane` + `ch-lane-a…d`, identity master `ch-identity` + pool copies `ch-identity-a…d`. If your install uses others, map them 1:1.
 
@@ -13,16 +13,16 @@ Names below are the defaults `carhunt browser mcp-config` prints (prefix `browse
 
 | route | what | use for |
 |---|---|---|
-| `http` | plain HTTP (curl_cffi if installed); `carhunt site <name> …` helpers | **reads first**: most classifieds ship full data (often phones) in `__NEXT_DATA__` / RSC / JSON APIs: 1 request instead of ~50 (11-01 sweep) |
+| `http` | plain HTTP (curl_cffi if installed); `carhunt site <name> …` helpers | **reads first**: most classifieds ship full data (often phones) in `__NEXT_DATA__` / RSC / JSON APIs: 1 request instead of ~50 |
 | lane `ch-lane`, `ch-lane-a…d` | Playwright MCP, throwaway in-memory context, headless presenting headed UA | JS pages without a login |
 | identity `ch-identity`, `ch-identity-a…d` | Playwright MCP on persistent profiles holding the site logins; one holder per browser | logged-in steps only (messages, phone reveals, account pages) |
 | `plain-chrome` | Agent Chrome launched like a person (debug port only, headed off-screen); attach after the first load | Akamai / DataDome sites that block Playwright-*launched* Chrome; `--profile` = on an identity profile |
 | `camoufox` | anti-detect Firefox (optional install) | Imperva sites behind a country proxy (send/phone steps) |
 
-Scripts: `from carhunt.access.session import tab` → `with tab("plain-chrome", site="mobile.de") as t: status = t.goto(url); t.content()` (paced + wall-checked; on browser routes `t` is also the Playwright page); `country="ES"` adds a fail-closed proxy (http, lane, camoufox; plain/identity refuse a country unless a geo lease). Per-site route: [references/site-table.md](references/site-table.md) (generated from `carhunt/sites/*/site.yaml`; seed evidence: `docs/browsers/site-walls.md`). **The site row wins over the ladder** (e.g. Imperva: never Playwright).
+Scripts: `from carhunt.access.session import tab` → `with tab("plain-chrome", site="mobile.de") as t: status = t.goto(url); t.content()` (paced + wall-checked; on browser routes `t` is also the Playwright page); `country="ES"` adds a fail-closed proxy (http, lane, camoufox; plain/identity refuse a country unless a geo lease). Per-site route: [references/site-table.md](references/site-table.md) (generated from `carhunt/sites/*/site.yaml`). **The site row wins over the ladder** (e.g. Imperva: never Playwright).
 
 ## Blocked? Escalation ladder — never settle for "blocked"
-Move up after **ONE** blocked hit per rung. Why: every blocked hit raises the site's bot score; ~10 test hits in an hour got the home IP flagged on lacentrale.fr (10-25).
+Move up after **ONE** blocked hit per rung. Why: every blocked hit raises the site's bot score; ~10 blocked hits in an hour can flag the home IP.
 1. `http` (site helper / plain request)
 2. lane (`ch-lane`; subagents their own `ch-lane-x`)
 3. identity MCP (real history; some checks pass only here)
@@ -31,55 +31,54 @@ Move up after **ONE** blocked hit per rung. Why: every blocked hit raises the si
 6. A captcha is showing → **solve it yourself in that same browser** (`carhunt captcha solve --cdp http://127.0.0.1:PORT --target TARGET`; MCP tabs: `--lane|--identity[-x] --url <part>`). Why same browser: the solve cookie is tied to that profile; the jar then carries it to the others. Max 2 attempts per run, 6 per site per 6 h (solver enforces).
 7. Solver failed/declined → **owner's one-time solve** in that window (`plain-chrome show PORT TARGET`, or `pw-identity login <url>`), asked as one concrete line ("solve the slider on <site> in the window I opened"). After that, rungs 3–5 pass for that site (cookie ~1 year).
 
-Never answer from other data because a site blocked you; name every site you could not read. Stop rules: helpers stop at the first non-200 and print `{"blocked": …}`; **404/410 = ad gone, skip**, not a block (11-05).
+Never answer from other data because a site blocked you; name every site you could not read. Stop rules: helpers stop at the first non-200 and print `{"blocked": …}`; **404/410 = ad gone, skip**, not a block.
 
 ## Rules (each with why)
 **Walls**
-- What Akamai/DataDome catch is "Playwright launched this browser", not headed/headless or fresh/logged-in → plain-chrome; `--headless` loses it (mobile.de + lacentrale, 10-25).
-- Imperva catches Playwright **attached at all** (CDP `*.enable` domains) → never lane/identity/plain-chrome+Playwright on Imperva sites; http or Camoufox only. Why: once flagged, **every** agent browser on that IP gets the bot page for hours (coches.net, 11-01 → still flagged next morning).
-- Solve DataDome in plain-chrome, never in a lane: a correct slide in Playwright → "Access temporarily restricted" (10-26).
-- Never open a second browser on a site whose captcha is showing or was just solved; reuse it, close via `plain-chrome close` so the cookie reaches the jar (owner solved one twice, 10-26).
-- A bot cookie can itself be banned: a poisoned `datadome` in the jar blocked every browser (leboncoin, 11-01). Test with `--fresh`; fresh passes → `plain-chrome cookies --delete <domain> <name>`. A `datadome` cookie in a profile does not prove a solve (blocked visits set one too).
-- WAF home pages can be stricter than data URLs: don't warm up on `/` where the site row says so (marktplaats 403, 11-01); others need the home page first (lacentrale `--warm`).
+- What Akamai/DataDome catch is "Playwright launched this browser", not headed/headless or fresh/logged-in → plain-chrome; `--headless` loses it (e.g. mobile.de, lacentrale).
+- Imperva catches Playwright **attached at all** (CDP `*.enable` domains) → never lane/identity/plain-chrome+Playwright on Imperva sites; http or Camoufox only. Why: once flagged, **every** agent browser on that IP gets the bot page for hours, often into the next day.
+- Solve DataDome in plain-chrome, never in a lane: a correct slide in Playwright → "Access temporarily restricted".
+- Never open a second browser on a site whose captcha is showing or was just solved; reuse it, close via `plain-chrome close` so the cookie reaches the jar (two browsers = two captchas).
+- A bot cookie can itself be banned: a poisoned `datadome` in the jar blocks every browser. Test with `--fresh`; fresh passes → `plain-chrome cookies --delete <domain> <name>`. A `datadome` cookie in a profile does not prove a solve (blocked visits set one too).
+- WAF home pages can be stricter than data URLs: don't warm up on `/` where the site row says so (e.g. marktplaats 403s on `/`); others need the home page first (lacentrale `--warm`).
 
 **Pacing** (shared IP = shared budget)
-- Before every load/api/phone/send/login on a classified: `carhunt pace take <site> <kind> [--via <CC>]` (Python `pace.acquire`). Exit 3 / `PaceExceeded` → stop and come back at `retry_at` (or `--wait` for a short gap), don't retry. Why: another agent's two checks silently ate a sender's slot (coches ≤2 loads/rolling hour for everyone, 11-02).
-- Bursts kill: leboncoin hard ban for hours after fast search bursts (10-30); coches 5th load at 10 s = bot page (11-03, twice); mobile.de ~25 fast loads per profile, home IP 403 after ~41 sweep loads (11-06); custojusto 403 after ~50 ads at 6 s (11-03).
+- Before every load/api/phone/send/login on a classified: `carhunt pace take <site> <kind> [--via <CC>]` (Python `pace.acquire`). Exit 3 / `PaceExceeded` → stop and come back at `retry_at` (or `--wait` for a short gap), don't retry. Why: budgets are shared by all agents (e.g. coches ≤2 loads/rolling hour); an unpaced check silently eats a sender's slot.
+- Bursts kill: leboncoin hard ban for hours after fast search bursts; coches 5th load at 10 s = bot page; mobile.de ~25 fast loads per profile, home IP 403 after ~41 sweep loads; custojusto 403 after ~50 ads at 6 s.
 - Day caps (phone reveals, sends) are taken **before** the action and reset at local midnight; missing caps in site.yaml → conservative default.
 
 **Identity**
-- If it doesn't need a login, use a lane. Identity = **one step, then `browser_close`** (check the message, close; reveal the phone, close). Never probe it (`about:blank` "to check"), never hold it across a wait on the owner. Why: a parked plain-chrome on the master blocked two agents for >90 min (11-01). A hook releases it after `browsers.idle_release_s` (180 s) idle anyway.
+- If it doesn't need a login, use a lane. Identity = **one step, then `browser_close`** (check the message, close; reveal the phone, close). Never probe it (`about:blank` "to check"), never hold it across a wait on the owner. Why: a parked holder blocks every other agent. A hook releases it after `browsers.idle_release_s` (180 s) idle anyway.
 - Busy? The PreToolUse hook blocks with holder + free copies → switch to a free `ch-identity-x`; never wait, never force a holder off. `pw-identity pool` lists all.
-- Google is **master-only** (`ch-identity`): Google logs out a session it sees in several profiles (10-21); the hook blocks Google URLs on copies.
-- Only cookies sync between copies; a localStorage login must be made on the master. Copy lacks a session / API 401 with a stale token → `pw-identity seed --all`, not "blocked" (custojusto, olx 401, 11-04/05).
+- Google is **master-only** (`ch-identity`): Google logs out a session it sees in several profiles; the hook blocks Google URLs on copies.
+- Only cookies sync between copies; a localStorage login must be made on the master. Copy lacks a session / API 401 with a stale token → `pw-identity seed --all`, not "blocked".
 - Never sign Chrome itself in (Chrome Sync) on any agent profile.
 
 **Accounts & secrets** — details: [references/logins-and-accounts.md](references/logins-and-accounts.md)
-- Agents log in and sign up **themselves**; only a code that goes to the owner's phone goes to the owner, **batched** into one ask. Why: "agents should not be blocked by anything they can do themselves" (owner, 10-21).
-- **Never print a credential** — not `cat`/`grep`/`head` on a secrets dir, not "masked". Read secrets only inside the script that types them; never snapshot/screenshot a sign-in page with a password typed. Why: one `grep` leaked ~12 passwords into a transcript (11-06).
-- Codes and confirm links: email first (`t0=$(date +%s)` before the site sends, then `carhunt email-code <site> --since $t0` [`--link REGEX`]; Python `accounts.wait_code` / `wait_link`), even for "texted" codes (one arrived by email, 10-31).
+- Agents log in and sign up **themselves**; only a code that goes to the owner's phone goes to the owner, **batched** into one ask. Why: agents should not be blocked by anything they can do themselves.
+- **Never print a credential** — not `cat`/`grep`/`head` on a secrets dir, not "masked". Read secrets only inside the script that types them; never snapshot/screenshot a sign-in page with a password typed. Why: anything printed lands in the transcript.
+- Codes and confirm links: email first (`t0=$(date +%s)` before the site sends, then `carhunt email-code <site> --since $t0` [`--link REGEX`]; Python `accounts.wait_code` / `wait_link`), even for "texted" codes.
 - Never type the owner's Google password for "Continue with Google" on a third-party site; use guest forms.
-- Never fake domestic data a form demands (local mobile, postcode): stop and report (coches.net, 11-05).
+- Never fake domestic data a form demands (local mobile, postcode): stop and report.
 
 **Proxies & SMS** — details: [references/proxies-and-sms.md](references/proxies-and-sms.md)
 - Country IP only for steps the site row marks geo-gated (phone/send/login), never for general browsing. Why: paid per GB.
-- Proxies **fail closed**: exit country verified before the first load; mismatch → `ProxyUnavailable`, no request leaves. Why: a dead tunnel once served the home IP (11-02).
-- One sticky session per run (a new IP per load → DataDome slider on the 3rd load, 11-06). An account made on a country IP lives on that one IP forever; its profile never joins the identity pool.
-- SMS rental only for **verify-once** sites (`carhunt sms policy <site>` must allow it: site.yaml `account.verification: sms-once`), never SMS-2FA-every-login sites, and only on the owner's OK (it's a purchase). Why: a rented number dies after one SMS → any later SMS challenge = lockout (leboncoin, 11-02).
+- Proxies **fail closed**: exit country verified before the first load; mismatch → `ProxyUnavailable`, no request leaves. Why: a dead tunnel can silently serve the home IP.
+- One sticky session per run (a new IP per load → DataDome slider within a few loads). An account made on a country IP lives on that one IP forever; its profile never joins the identity pool.
+- SMS rental only for **verify-once** sites (`carhunt sms policy <site>` must allow it: site.yaml `account.verification: sms-once`), never SMS-2FA-every-login sites, and only on the owner's OK (it's a purchase). Why: a rented number dies after one SMS → any later SMS challenge = lockout.
 
 **Messaging (transport side)**
-- **Never submit a test message to a real seller.** Test up to the filled form, then close that tab at once. Why: a filled form on a real ad was left open in a visible window (11-01). Real sends go through `carhunt say` (guards, caps, ledger), never a raw click.
+- **Never submit a test message to a real seller.** Test up to the filled form, then close that tab at once. Why: a filled form left open on a real ad can get sent. Real sends go through `carhunt say` (guards, caps, ledger), never a raw click.
 - **Never press "Make an offer"** (or any price/offer button): a price commits the owner.
-- Click send **once**; verify by the site's API answer (e.g. contact-mail 2xx), not UI text (differs per domain, 11-04). "Not sent" can still arrive (aborted XHR delivered, 11-03) → check sent box / relay mail before any re-send.
+- Click send **once**; verify by the site's API answer (e.g. contact-mail 2xx), not UI text (differs per domain). "Not sent" can still arrive (an aborted XHR can deliver) → check sent box / relay mail before any re-send.
 - Site quirks live in the site row (Enter resets coches.net's form; Wallapop truncates at 300 chars; off-screen windows need `el.evaluate(e => e.click())`).
 - Confirm with the owner before anything else that commits: paying, ordering, accepting terms, changing account settings.
 
 ## Close what you open (every browser, every run)
-Why: 8 orphaned test Chromes + 3 duplicate tabs from one agent in 1 h (10-27).
 - MCP (lane, identity): `browser_close` as the last browser step.
 - `plain-chrome`: `plain-chrome close PORT TARGET` (clean close flushes cookies to the jar; a killed Chrome loses its last ~30 s of cookies).
 - Scripts: `with tab(…)` / `try…finally`; one run = one tab. Tests: real browsers only behind `@pytest.mark.chrome`, closed in fixture teardown.
-- **Never `pkill`/`killall` by pattern**: kill only your own pid / close your own PORT TARGET. Why: one subagent's pkill killed another agent's search (11-03). `browser-reaper` (kills only browsers carhunt started, by pid record) is a safety net, not a licence.
+- **Never `pkill`/`killall` by pattern**: kill only your own pid / close your own PORT TARGET. Why: a pattern kill hits other agents' browsers. `browser-reaper` (kills only browsers carhunt started, by pid record) is a safety net, not a licence.
 - Hand-off windows (captcha for the owner, OAuth): close once done. Screenshots go to `$CARHUNT_HOME/browsers/mcp-out/` or a scratch dir, never notes or the repo.
 
 ## Subagents

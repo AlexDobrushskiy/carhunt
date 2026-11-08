@@ -1,4 +1,4 @@
-# --- private / generated: never commit (see docs/privacy.md) ---
+# --- private / generated: never commit ---
 config.yaml
 config.local.yaml
 .env

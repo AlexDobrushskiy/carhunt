@@ -1,6 +1,6 @@
 # Germany → Portugal: seller-country side
 
-> Snapshot: researched Oct–Nov 2026 (EV run). Prices, laws and tool behaviour drift — re-check anything you act on.
+> Snapshot: researched Oct–Nov 2026. Prices, laws and tool behaviour drift — re-check anything you act on.
 
 Tags: **V** verified (official/primary) · **A** anecdotal/forum/commercial · **I** inferred. The DE part (documents, export plate, office rules) applies to any destination; only the "covers the PT steps" parts are PT-specific. Destination side: [pt-registration.md](pt-registration.md). Contract (dealer order red flags, §312g withdrawal right) and payment: [../buy/contract-checklist.md](../buy/contract-checklist.md), [../buy/deposit-payment.md](../buy/deposit-payment.md).
 
@@ -36,9 +36,9 @@ Tags: **V** verified (official/primary) · **A** anecdotal/forum/commercial · *
 **Export plate details**
 
 - **Validity = insurance period**, max 1 year, not backdatable (§45 FZV). Local caps: Hamburg normally 1 month, Münster max 30 days, Berlin 15 days–1 year. **V**
-- **Take 30 days:** the clock starts at issue and must cover the drive (~2–3 days) **plus** the PT Category B inspection — see [pt-registration.md](pt-registration.md) §1. If it expires, PT presumes entry at expiry and the car can't be driven. (EV run 2026-11-04: 5- and 15-day options were quoted by forums; too short for PT's order.)
+- **Take 30 days:** the clock starts at issue and must cover the drive (~2–3 days) **plus** the PT Category B inspection — see [pt-registration.md](pt-registration.md) §1. If it expires, PT presumes entry at expiry and the car can't be driven. The 5- and 15-day options forums quote are too short for PT's order.
 - **Insurance: paper card only** (Anlage 16 FZV, "gelbe Karte"), **sent by post**; no eVB for export plates (§49 FZV). **Order ~1 week ahead**; deliver to the seller or a hotel (posting abroad unconfirmed). The office won't fill in the card; incomplete card = no plate. **V**
-- Example broker prices (zollplatz.de, AXA, liability + breakdown + legal, read **2026-11-04**): **9 days €75.42 · 15 days €76.93 · 30 days €87.64**; optional 30-day Vollkasko **€495**. FR, ES, PT need no green card. **V** (broker table)
+- Example broker prices (zollplatz.de, AXA, liability + breakdown + legal, as of **Nov 2026**): **9 days €75.42 · 15 days €76.93 · 30 days €87.64**; optional 30-day Vollkasko **€495**. FR, ES, PT need no green card. **V** (broker table)
 - **Fees:** office €30–70 (Nürnberg €31.40 + €0.60–2.60, Munich from €31.80, Münster €47.40, Hamburg €30–70) **V**; plates €20–40 from a plate maker (usually next door) **A**. Kfz-Steuer **€0** for BEVs first registered up to 2030 (exempt to end-2035; Bundestag 4 Dec 2025, Bundesrat 19 Dec 2025) **V**, but offices still ask for a **SEPA direct-debit mandate** — a foreign IBAN works in Hamburg; without an EU account pay at the Hauptzollamt. **V**
 - **In person, by appointment only** ("Nur nach Terminvereinbarung"); no i-Kfz route for export plates found. Bring the car (inspection only for never-DE-registered or doubtful cars). **V**
 - **Opening hours: no Saturdays; Friday closing 12:00–13:30** (e.g. Stuttgart 12:00, Landkreis München 12:00, Köln 13:00, Berlin-Lichtenberg — Berlin's only export-plate office — 13:30). **Deal Thursday or very early Friday.** **V**
@@ -70,7 +70,7 @@ Days: 4–5 door to door (a BEV does ~800–1,000 km/day with charging → 2 nig
 - No police stolen-car lookup for private buyers; commercial VIN reports query police data but an empty result is no guarantee. **A**
 - **HU timing:** a car near 3 years old may have its first HU due inside the plate period — ask the seller to do it before the sale.
 - Cash ≥€10k must be declared only at the EU external border; avoid cash anyway. **V**
-- **Dealer purchase:** VAT on the invoice is final (no PT VAT). Distance-sale withdrawal right, handover-protocol-only and order red flags → [../buy/contract-checklist.md](../buy/contract-checklist.md). The final invoice must carry the buyer's country. (EV run 2026-11-07)
+- **Dealer purchase:** VAT on the invoice is final (no PT VAT). Distance-sale withdrawal right, handover-protocol-only and order red flags → [../buy/contract-checklist.md](../buy/contract-checklist.md). The final invoice must carry the buyer's country.
 - Winter: in DE winter conditions all wheels need snowflake-marked tyres (§2(3a) StVO) — drive home on a matched set ([pt-registration.md](pt-registration.md) §8).
 
 ## 6. Buyer step list

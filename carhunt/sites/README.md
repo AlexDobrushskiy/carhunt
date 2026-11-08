@@ -1,6 +1,6 @@
 # carhunt/sites
 
-One plugin per marketplace (`<pkg>/plugin.py` + `site.yaml` + `codes.yaml` + `README.md`) and the liveness checker. Owner: sites. Doc: [docs/sites.md](../../docs/sites.md).
+One plugin per marketplace (`<pkg>/plugin.py` + `site.yaml` + `codes.yaml` + `README.md`) and the liveness checker. Doc: [docs/sites.md](../../docs/sites.md).
 
 | file | what |
 |---|---|
@@ -11,7 +11,7 @@ One plugin per marketplace (`<pkg>/plugin.py` + `site.yaml` + `codes.yaml` + `RE
 | `live.py` | liveness classifier + default `is_live` |
 | `liveness.py` | `carhunt liveness` runner (cardb writes, state) · `liveness.plist.tmpl` launchd job |
 | `cli.py`, `doctor.py`, `matrix.py` | CLI groups `site`/`liveness`, doctor checks, docs matrix |
-| `testing.py` | `FakeNet` for offline tests · `fake/` synthetic site (`CARHUNT_FAKE_SITES=1`) |
+| `testing.py` | `FakeNet` for offline tests · `fake/` test site (`CARHUNT_FAKE_SITES=1`) |
 | `site.schema.json` | site.yaml schema |
 
 Tests: `pytest carhunt/sites` (offline).

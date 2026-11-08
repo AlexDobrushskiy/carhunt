@@ -1,6 +1,6 @@
 # Spain → Portugal: seller-country side
 
-> Snapshot: researched Oct–Nov 2026 (EV run). Prices, laws and tool behaviour drift — re-check anything you act on.
+> Snapshot: researched Oct–Nov 2026. Prices, laws and tool behaviour drift — re-check anything you act on.
 
 Tags: **V** verified (official/primary) · **A** anecdotal/forum/commercial · **I** inferred. The ES part applies to any destination; Route B's timing is tied to PT's order of steps ([pt-registration.md](pt-registration.md)). Payment: [../buy/deposit-payment.md](../buy/deposit-payment.md).
 
@@ -20,7 +20,7 @@ Tags: **V** verified (official/primary) · **A** anecdotal/forum/commercial · *
 | Fee | **Tasa 4.1 = €8.67** (free if 15+ years) **V** | Transfer fee **+ ITP transfer tax paid by the buyer, ~6%** of the higher of price and Hacienda's table value (6% in the region checked; rate varies by autonomous community **I**). ≈ €2,100 on a €35k car **V** |
 | Foreign buyer as applicant? | In person needs DNI, Spanish licence, residence card or passport + NIE; online needs Cl@ve → **in practice no** | Needs proof of an address in Spain (RGV Anexo XIII A 3º) → **not possible** for a non-resident **V** |
 
-(EV run 2026-11-04: the EU portal page still describes transfer-then-export; it was last updated 2022.)
+The EU portal (Your Europe) page still describes transfer-then-export; it is outdated (last updated 2022).
 
 **How the baja works**
 - **Online** (seller with Cl@ve/certificate or the miDGT app): upload the signed contract (**every page signed by all owners and the buyer**) + €8.67 → filing receipt (justificante), then an email when processed. **No published processing time.** **V** ([DGT sede](https://sede.dgt.gob.es/es/vehiculos/altas-bajas-y-rehabilitacion/baja-por-exportacion/))
@@ -58,7 +58,7 @@ The CERO/ECO environmental sticker is tied to the Spanish plate — irrelevant a
 **Route B — size the risks honestly**
 - DGT says "realiza la baja **antes** de llevarte el vehículo" — Route B goes against DGT guidance. **V**
 - Exposure: seller stays registered owner (speed-camera fines go to him; he names the buyer as driver); seller must trust the buyer and actually file afterwards; seller's insurer may cancel (1 month's notice); PT may want the baja document → seller files next day online (€8.67, 10 min).
-- **Don't rely on the seller's policy transferring — buy your own insurance for the drive + inspection.** (EV run 2026-11-04)
+- **Don't rely on the seller's policy transferring — buy your own insurance for the drive + inspection.**
 - Mitigation: a signed declaration of responsibility from the time of sale, recorded in the contract.
 
 **Insurance for green plates:** policy needs the green plate number first; example (small car, Madrid-resident driver) €24/1 day, €54–69/7 days — a BEV costs more; ID: DNI, NIE **or passport**; driver 21+, licence 1+ year; check Portugal is covered. **A**

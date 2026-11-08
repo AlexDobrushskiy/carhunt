@@ -1,6 +1,6 @@
 # hooks
 
-Claude Code hooks. Owner: orchestrate. Install: `carhunt hooks install` → `$CARHUNT_HOME/claude/settings.json`, passed to agents with `claude --settings` (diff + ask, never touches foreign entries).
+Claude Code hooks. Install: `carhunt hooks install` → `$CARHUNT_HOME/claude/settings.json`, passed to agents with `claude --settings` (diff + ask, never touches foreign entries).
 
 | file | what |
 |---|---|

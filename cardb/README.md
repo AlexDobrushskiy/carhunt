@@ -7,7 +7,7 @@ Every carhunt stage reads and writes car data only through cardb.
 
 - Contract: [`api/openapi.yaml`](api/openapi.yaml) (wire types `internal/api/types.go`)
 - Design (storage, dedupe, merge/split, ranking, write rules with their why): [`DESIGN.md`](DESIGN.md)
-- Operating it (compose, remote access, backups, backfills, migrating an evdb DB): [`../docs/db.md`](../docs/db.md)
+- Operating it (compose, remote access, backups, backfills): [`../docs/db.md`](../docs/db.md)
 
 ## Install and run
 
@@ -48,11 +48,11 @@ Client config file: `~/.config/cardb/config.json` (`$CARDB_CONFIG`), url + autho
 ## Conventions (for agents)
 
 - `CAR` = numeric id or any alias/slug. A merged car's old id still resolves. Before a write by number, `show` the car:
-  aliases look like ids (`status 12 closed` once hit car 12 instead of the car aliased `abroad-12`).
+  aliases look like ids (`12` is car 12, not the car aliased `abroad-12`).
 - Scripts use `--json` + jq; table output is for humans. On failure stdout is empty and stderr carries
   `{"error", "exit_code", "status"}`. Exit codes: `0` ok · `1` API/network · `2` usage · `3` not found.
 - Build argument arrays (Python, `"$@"`), not string-built shell: zsh `${x:+--flag $x}` doesn't word-split and silently
-  dropped writes in the EV run.
+  drops writes.
 - Flags go before or after positional args; text starting with `-` goes after `--`.
 - Writes are idempotent (upsert by URL/site ad id, `msg` by external id/key/near duplicate, `event --key`, photos by hash):
   retrying is safe.
@@ -166,5 +166,4 @@ CARDB_SMOKE=1 go test ./internal/cli -run TestLiveSmoke -count=1 -v   # read-onl
 
 The e2e tests start the real server in-process over a temp dir and drive `cli.Run` exactly as an agent would. The live
 smoke test defaults to `http://127.0.0.1:8484` (`CARDB_SMOKE_URL` / `CARDB_URL` override) and refuses a non-localhost
-server unless `CARDB_E2E_ALLOW_REMOTE=1`. WHY: the EV run's e2e defaulted to the production URL. Fixtures are synthetic
-(VIN `SYN…`, phones `+<cc> 555…`, `example.invalid` URLs).
+server unless `CARDB_E2E_ALLOW_REMOTE=1`, so a test run never writes to a live server.

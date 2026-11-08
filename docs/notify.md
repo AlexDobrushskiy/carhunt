@@ -9,7 +9,7 @@ Pushes to the owner's phone (Telegram, optional) and the way the owner's answers
 | `ask` | a decision that blocks progress today; `--buttons "A\|B"` or a free answer | held |
 | `urgent` | a breach or a dead session the agent could not fix itself (PAUSE first) | sent silent |
 
-Anything else (`fyi`, "sent", "scheduled", heartbeats, research with no ask) is **refused** (exit 10): it goes into the next digest. Why: on 2026-11-03 the EV run put 28 messages on the owner's phone and 14 asked nothing. Per-kind quiet behaviour can be changed: `notify.quiet: {ask: silent}`.
+Anything else (`fyi`, "sent", "scheduled", heartbeats, research with no ask) is **refused** (exit 10): it goes into the next digest. Why: pushes that ask nothing train the owner to ignore the phone. Per-kind quiet behaviour can be changed: `notify.quiet: {ask: silent}`.
 Also refused: buttons on a non-`ask`, empty text, text that looks like a token/key/password.
 
 ## Commands
@@ -45,6 +45,6 @@ Privacy: a bot sees only chats where someone wrote to it. Keep it private: BotFa
 Keys and defaults: [`config.example.yaml`](../config.example.yaml) `notify:` (backend, Telegram secret names, `quiet_hours` in `owner.tz`, per-kind `quiet`, `default_agent`). Optional `notify.telegram.api_base` (default `https://api.telegram.org`).
 
 ## Rules for agents (why)
-- Answering an owner line: one reply, nothing after it (duplicate answers, EV 11-04).
+- Answering an owner line: one reply, nothing after it.
 - A decision that can wait for the next digest waits.
 - Never a secret in a ping ([secrets.md](secrets.md#rules-why)); `send` refuses token-shaped text.

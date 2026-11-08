@@ -1,6 +1,6 @@
 # Pickup day
 
-> Snapshot: researched Oct–Nov 2026 (EV run). Prices, laws and tool behaviour drift — re-check anything you act on.
+> Snapshot: researched Oct–Nov 2026. Prices, laws and tool behaviour drift — re-check anything you act on.
 
 Tags: **V** verified from a primary/official source · **A** anecdotal/forum/secondary · **I** inferred.
 Siblings: [contract-checklist.md](contract-checklist.md) · [deposit-payment.md](deposit-payment.md) · [doc-verify.md](doc-verify.md) · [shutdown.md](shutdown.md) · [../import/README.md](../import/README.md) · [../battery-soh.md](../battery-soh.md)
@@ -10,10 +10,10 @@ Assumes a signed remote order (DE dealer: withdrawal right runs from pickup — 
 ## 1. Before travel (remote, ~1 week ahead)
 
 - [ ] Written order confirmation received; final invoice draft names the buyer **with country**.
-- [ ] Ask the dealer (one email): run **pending OTA updates and open campaigns/recalls** before handover; confirm original CoC, both registration parts, keys, cables, wheel set ready. WHY: an open OTA was "one press" for the dealer; campaigns are easier before export (EV run 2026-11-06).
+- [ ] Ask the dealer (one email): run **pending OTA updates and open campaigns/recalls** before handover; confirm original CoC, both registration parts, keys, cables, wheel set ready. WHY: a pending OTA is "one press" for the dealer; campaigns are easier before export.
 - [ ] CoC copy in advance (all pages): every tyre size you'll use must be in it (§5).
 - [ ] Transit plates + insurance booked to cover **drive + destination inspection visit (~30 days)**. DE: 30-day export plate (Ausfuhrkennzeichen), **not** the 5-day yellow short-term plate (FR/BE/NL/LU refuse it, **A**). Insurance card comes by post → order ~1 week ahead; registration offices need an appointment, closed Saturdays and Friday afternoons; HU (MOT) must cover the plate period; dealers often run it via their registration service (~€100–300 incl. insurance, ~2 h after 08:00) (**A**). Details: [../import/de-to-pt.md](../import/de-to-pt.md).
-- [ ] Destination insurer: request your **claims-history declaration** from your current/previous insurer — a PT insurer asks for it to price the new policy (**A**, 2026-11-07).
+- [ ] Destination insurer: request your **claims-history declaration** from your current/previous insurer — a PT insurer asks for it to price the new policy (**A**).
 - [ ] **Instant-transfer limit** checked/raised; VoP name noted ([deposit-payment.md](deposit-payment.md) §4).
 - [ ] Book a **lift check** near the dealer if the dealer won't put it on theirs (independent garage or the manufacturer's service bay).
 - [ ] Arrival: fly in the day before, or plan a late-morning start (plates take the morning).
@@ -22,7 +22,7 @@ Assumes a signed remote order (DE dealer: withdrawal right runs from pickup — 
 
 ## 2. At the car
 
-- [ ] **Lift check: underbody and HV battery housing** (dents, scrapes, corrosion, leaks). WHY: lease-return inspections are often done without a lift ("eingeschränkt") so the underbody went unchecked (EV run 2026-11-06).
+- [ ] **Lift check: underbody and HV battery housing** (dents, scrapes, corrosion, leaks). WHY: lease-return inspections are often done without a lift ("eingeschränkt") so the underbody goes unchecked.
 - [ ] VIN on the car (windscreen plate + type plate) = order = papers.
 - [ ] Every defect the inspection report listed: fixed as the contract says? **Polishing can't remove chips** — chipped panels need touch-up/paint ([doc-verify.md](doc-verify.md)).
 - [ ] Tyres: sizes vs CoC, tread depth, DOT age, snowflake mark; second wheel set (if included) present and as described.
@@ -31,7 +31,7 @@ Assumes a signed remote order (DE dealer: withdrawal right runs from pickup — 
 - [ ] 12 V battery ~14–15 V in "ready".
 - [ ] OTA/software: confirm the pending update ran; open campaigns done (dealer printout of campaigns for the VIN).
 - [ ] Short test drive: charging port opens, AC charge starts, no warnings.
-- [ ] **Brand app:** buyer becomes **primary user**; dealer/previous owner **removed** from the car's account (otherwise they keep remote access/location) (**A**, 2026-11-07).
+- [ ] **Brand app:** buyer becomes **primary user**; dealer/previous owner **removed** from the car's account (otherwise they keep remote access/location) (**A**).
 - [ ] Anything wrong → it's still a distance sale: withdraw on the spot (DE), or have it written into the handover protocol.
 
 ## 3. Paperwork (same sitting as payment)
@@ -56,7 +56,7 @@ Payment: SEPA Instant with **VoP match** → papers + keys handed over in the sa
 
 ## 4. After
 
-- [ ] Photos of every original to the owner's private storage (not the repo/vault).
+- [ ] Photos of every original to the owner's private storage (not the repo).
 - [ ] cardb: `cardb status CAR bought`, `cardb event CAR --type pickup --summary "picked up; lift OK; papers complete"`.
 - [ ] Start [shutdown.md](shutdown.md) close-out for the backups.
 - [ ] DE distance sale: don't register in the destination before day 14 if any doubt remains — the withdrawal right runs 14 days from pickup and value loss grows with use (**I**).

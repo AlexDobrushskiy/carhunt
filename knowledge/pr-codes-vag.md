@@ -1,6 +1,6 @@
 # PR codes (VW / Audi / Škoda / Cupra / Seat) and options from photos
 
-> Snapshot: researched Oct–Nov 2026 (EV run). Prices, laws and tool behaviour drift — re-check anything you act on.
+> Snapshot: researched Oct–Nov 2026. Prices, laws and tool behaviour drift — re-check anything you act on.
 
 Confidence tags: **V** verified from a primary source (price list, OEM doc, dealer data), **A** anecdotal/forum/secondary, **I** inferred. Code tables were checked on 2023+ MEB EVs (ID.4/ID.5, Q4, Enyaq); the PR-code *system* is VAG-wide, but a given code's meaning can differ per model — confirm on the printout's plain text when it matters.
 
@@ -19,9 +19,9 @@ Every VAG car has a factory option list of 3-character **PR numbers**. Each **fa
 | Infotainment | Shows the VIN under Service, **no** equipment list | — |
 | Registration docs / CoC | **No** option list (DE ZB, PT DUA, FR carte grise, CoC). CoC only carries homologation data (tyre sizes) | — |
 
-### Decoders (tested 2026-11-04, prices dated)
+### Decoders (prices as of Nov 2026)
 
-- **No free VIN decoder returns factory options for 2023+ MEB** — 10+ tested. WHY: the run burned a day on decoders before falling back to the sticker (EV run 2026-11-04).
+- **No free VIN decoder returns factory options for 2023+ MEB** — 10+ tried. Go straight to the sticker or dealer printout.
 - **Free route:** sticker photo or dealer printout → type the codes into **oemwolf** (`https://oemwolf.com/wiki/pr/?search=3FU+9M3+4E6`, codes space-separated, works with curl) or `carhunt vin prcodes CODE…` (this repo's table, [`carhunt/vet/data/prcodes_vag.csv`](../carhunt/vet/data/prcodes_vag.csv)). oemwolf meanings are generic VAG; compare with the model tables below.
 
 | Decoder | Free? | Options for 2023+ VAG? | Result |
@@ -37,13 +37,13 @@ Every VAG car has a factory option list of 3-character **PR numbers**. Each **fa
 | vindecoderz, fastcarcheck.uk, pr-codes.de, lenkradcode, vin.dekoder.pl, vin-decode.de, vinanalytics.eu, vag-vin.com, 7zap, partsouq, exist.ru, catcar, mdecoder, EpicVIN | — | no | 403 / DNS fail / no VIN feature / no options |
 
 Rules:
-- **No paid option decode (~€6/VIN) without the owner's OK for that specific car.** Most options show in photos. WHY: owner ruling (EV run 2026-11-05).
-- **Never create a decoder/site account with the user's email and keep the password in a file.** Credentials go through the creds helper only. WHY: a research subagent created a paid-decoder account and stored the credential in a scratchpad (EV run 2026-11-04).
-- Other brands have their own datacards: **Mercedes** — a free datacard by VIN exposed basic-spec ex-company cars sold as "Progressive" (EV run 2026-11-04). See [vin-sources.md](vin-sources.md).
+- **No paid option decode (~€6/VIN) without the owner's OK for that specific car.** Most options show in photos.
+- **Never create a decoder/site account with the user's email and keep the password in a file.** Credentials go through the creds helper only.
+- Other brands have their own datacards: **Mercedes** — a free datacard by VIN exposes basic-spec ex-company cars sold as "Progressive". See [vin-sources.md](vin-sources.md).
 
 ## 2. Price-list codes ≠ sticker codes
 
-- Price lists and dealer ads use **sales package codes**: VW `P??`/`W??` (PA2, PAK, PJ3, WD5…), Škoda `PHC`, `PLx`, `WH?`, Audi `PY?`/`PW?`/`PQ?`. The sticker lists the **underlying PR numbers**, sometimes with the package codes too. WHY: matching a price-list code against a sticker gave false "missing option" reads (EV run 2026-11-04).
+- Price lists and dealer ads use **sales package codes**: VW `P??`/`W??` (PA2, PAK, PJ3, WD5…), Škoda `PHC`, `PLx`, `WH?`, Audi `PY?`/`PW?`/`PQ?`. The sticker lists the **underlying PR numbers**, sometimes with the package codes too. WHY: matching a price-list code against a sticker gives false "missing option" reads.
 - Example (V): Audi `PYY` Komfortpaket plus appears on the sticker as `3L5` + `7P1` + `6XL`.
 - Decode **by family**, not by exact string. A code outside the family's basic value = fitted.
 
@@ -98,22 +98,22 @@ Works for any option with a visible cue (seats, tailgate, roof, audio, towbar, H
 - **yes** = the cue is *clearly* visible (e.g. switch panel or ergoActive strip on the driver seat's outer side; numbered 1/2/3 + SET memory buttons).
 - **no** = the *absence* cue is clearly visible (height-pump lever, fore-aft bar, recline wheel on the driver seat).
 - **unknown** = anything else. Write nothing for the option; record why: `cardb fact CAR <key>_photo_check="unknown: no driver-seat-side photo among 14":photo`.
-- WHY: a wrong "no" hides a good car; "unknown" just triggers an ask (EV run 2026-11-04).
+- WHY: a wrong "no" hides a good car; "unknown" just triggers an ask.
 
 **Rules:**
-- **Source precedence.** Never overwrite an option whose source is `seller_said`, `vin_pr_code`, `inspection` or `owner`. On a conflict, write a fact instead: `cardb fact CAR <key>_conflict="photo <id>: <what is visible>":photo`. WHY: protected sources come from the car itself or the seller in writing (EV run 2026-11-04).
-- **Photo vs ad text:** a clearly visible direct cue beats a dealer's "full" equipment list — in all 5 photo-vs-text conflicts the photo was right (seat memory strip, memory row and pano missing from "full" lists; a tailgate close button not listed). Set the photo value over `ad_text`/`ad_spec` and still log `<key>_conflict` so the trail stays. (The first 2026-11-04 batch kept the text value and only logged the conflict; validation afterwards showed photo 5/5.)
-- **Driver seat only.** A manual **passenger** seat says nothing about the driver seat (driver-only electric/memory packs exist, e.g. VW, Škoda Plus). Confirm which seat you are looking at (LHD: left front; check door/B-pillar orientation). Several "manual" close-ups in the run turned out to be the passenger seat.
-- **Backfill galleries before judging.** Many ads sit in the DB with only the cover photo while the live ad has a full gallery: fetch the gallery from the live listing into cardb first (site pacing rules apply; stop a site at its first block). WHY: 47 of ~101 cars in one batch were "unknown" only because the DB held 1 photo (EV run 2026-11-04).
-- **Ask for the driver-seat-side photo.** Even with full galleries the seat base is usually cropped (dealer banners, interior shots framed above the cushion): of 89 galleries checked, 70 stayed unknown (3 yes, 16 no); a backfill of 20 cars / 315 photos gave 0 yes, 4 no, 16 unknown. Queue an ask for "a photo of the outer side of the driver's seat" (and the driver door card for memory buttons) via `carhunt evidence CAR`.
+- **Source precedence.** Never overwrite an option whose source is `seller_said`, `vin_pr_code`, `inspection` or `owner`. On a conflict, write a fact instead: `cardb fact CAR <key>_conflict="photo <id>: <what is visible>":photo`. WHY: protected sources come from the car itself or the seller in writing.
+- **Photo vs ad text:** a clearly visible direct cue beats a dealer's "full" equipment list — in validation the photo was right in every photo-vs-text conflict (seat memory strip, memory row and pano missing from "full" lists; a tailgate close button not listed). Set the photo value over `ad_text`/`ad_spec` and still log `<key>_conflict` so the trail stays.
+- **Driver seat only.** A manual **passenger** seat says nothing about the driver seat (driver-only electric/memory packs exist, e.g. VW, Škoda Plus). Confirm which seat you are looking at (LHD: left front; check door/B-pillar orientation). "Manual" close-ups are often the passenger seat.
+- **Backfill galleries before judging.** Many ads sit in the DB with only the cover photo while the live ad has a full gallery: fetch the gallery from the live listing into cardb first (site pacing rules apply; stop a site at its first block). WHY: many "unknown" verdicts come only from the DB holding just the cover photo.
+- **Ask for the driver-seat-side photo.** Even with full galleries the seat base is usually cropped (dealer banners, interior shots framed above the cushion), so most stay unknown. Queue an ask for "a photo of the outer side of the driver's seat" (and the driver door card for memory buttons) via `carhunt evidence CAR`.
 - **Exterior proxies are weak or useless** (painted arches, S line badge, light bar, black wheels); see §6. **Test any heuristic blind before using it** (§7).
 - Evidence: every verdict records the photo id + what is visible (e.g. "photo 123: SET/1/2 buttons on driver seat side") in a fact or event next to the `cardb opt … :photo` write. Log one line per car: `car | yes/no/unknown | photo id | what's visible`.
 
-Coverage to expect (67 MEB ads with full galleries): seat side visible in **57 %**, headliner **30 %**, speaker logo **24 %**, tailgate close button **18 %**.
+Coverage to expect (MEB ads with full galleries): seat side visible in **57 %**, headliner **30 %**, speaker logo **24 %**, tailgate close button **18 %**.
 
 ## 6. Visual cue table
 
-### Generic direct cues (any brand) — blind-validated on 67 VAG MEB ads, 2026-11-04
+### Generic direct cues (any brand) — blind-validated on 67 VAG MEB ads
 
 | Cue in photo | → option (`option_key`) | Hit rate vs ad text | Notes |
 |---|---|---|---|
@@ -124,7 +124,7 @@ Coverage to expect (67 MEB ads with full galleries): seat side visible in **57 %
 | harman/kardon · SONOS · CANTON grille logo; plain grille → no | `premium_audio` | 13/13 | Needs a close-up |
 | A/C label R744 / R1234yf | `heat_pump` | (V, label) | Heat pump is never otherwise visible |
 
-### Example: VAG MEB rules, MY24–26 (dated 2026-11-04 — model-specific, not current fact)
+### Example: VAG MEB rules, MY24–26 (model-specific, not current fact)
 
 | Rule | Hit rate | Verdict |
 |---|---|---|
@@ -133,7 +133,7 @@ Coverage to expect (67 MEB ads with full galleries): seat side visible in **57 %
 | Audi black textured arches → no e-seats | 9/9 | use, weak (base exterior can still have PYY) |
 | Audi painted/grey arches → e-seats | **0/14** | useless |
 | Audi S line → e-seats | **1/14** | useless |
-| VW Top-Sport seat with gloss-black cut-out headrest → e-seats (Top-Sport Plus) | refined after 4/9 first coding | use the refined cue only; standard seats also look one-piece |
+| VW Top-Sport seat with gloss-black cut-out headrest → e-seats (Top-Sport Plus) | refined cue | use the refined cue only; standard seats also look one-piece |
 | VW separate-headrest seat → no e-seats | 22/26 | weak (Interior Style Plus keeps separate headrests) |
 | VW plain cloth → no e-seats | 3/3 | small n |
 | VW light bar → e-tailgate | 17/21 (base rate 22/31) | weak lift |
@@ -157,7 +157,7 @@ Lessons: on VW and Audi the wanted options were **standalone packages on every t
 ## 8. Per-ad scoring recipe (< 1 min/ad)
 
 1. **Text pass:** explicit mention = yes; absence from a list = weak no only.
-2. **Photo pass (direct cues):** e-seats ±4, memory +1, e-tailgate +3, pano ±1.5, audio logo +1 / plain −1 (weights reflected the buyer's wish list — reweight for yours).
+2. **Photo pass (direct cues):** e-seats ±4, memory +1, e-tailgate +3, pano ±1.5, audio logo +1 / plain −1 (example weights for one wish list — reweight for yours).
 3. **Model rules** only when photos are silent (e.g. tables in §6).
 4. Heat pump +1 only on text, R744 label or PR code.
 5. Wheels 20"/21": −0.5 (comfort preference).

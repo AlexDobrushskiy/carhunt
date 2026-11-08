@@ -1,6 +1,6 @@
 # France → Portugal: seller-country side
 
-> Snapshot: researched Oct–Nov 2026 (EV run). Prices, laws and tool behaviour drift — re-check anything you act on.
+> Snapshot: researched Oct–Nov 2026. Prices, laws and tool behaviour drift — re-check anything you act on.
 
 Tags: **V** verified (official/primary) · **A** anecdotal/forum/commercial · **I** inferred. The FR part applies to any destination; insurance length is driven by the destination's order of steps — for PT see [pt-registration.md](pt-registration.md). Payment: [../buy/deposit-payment.md](../buy/deposit-payment.md).
 
@@ -36,7 +36,7 @@ Tags: **V** verified (official/primary) · **A** anecdotal/forum/commercial · *
 
 **Insurance — the one real to-do**
 - **The seller's policy does not cover you.** Cover in your name from the handover, valid in FR, ES, PT. **V** (Your Europe)
-- **Length: ≥3 weeks** — it must cover the drive **plus the PT Category B inspection** before the DAV, not the 3–7 days the insurers' examples quote. (EV run 2026-11-04)
+- **Length: ≥3 weeks** — it must cover the drive **plus the PT Category B inspection** before the DAV, not the 3–7 days the insurers' examples quote.
 - **Option A — French "assurance temporaire":** 1–90 days, whole EU. Example price (French plate, **Jul 2026**): **€71.77 / 3 days, €88.99 / 7 days** (liability + assistance); longer costs more. A cession certificate "suffit généralement" as proof. **V** (insurer pages). ⚠️ **Unverified whether they accept a PT-resident driver with a PT licence** — test it in the online quote. **I**
 - **Option B — PT insurer from the purchase date on the French plate** (EU Dir. 2009/103 art. 15 allows 30 days). Commercial PT pages say most PT insurers accept the foreign registration and sell 1–28-day policies; no product page confirmed. **A** — see [pt-registration.md](pt-registration.md) §9.
 

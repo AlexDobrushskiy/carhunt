@@ -5,8 +5,7 @@ Every doc in the repo, one line each. Start with the [README](../README.md), the
 ## Overview
 - [README](../README.md) — what carhunt is, requirements, quick start, module map
 - [design.md](design.md) — principles, CLI groups, who calls whom, site.yaml keys, decisions
-- [privacy.md](privacy.md) — what lives where, fixture rules, the privacy check
-- [testing.md](testing.md) — test layout, isolation, how to run each suite and the e2e run
+- [testing.md](testing.md) — how to run each suite and the e2e run
 
 ## Module docs
 - [core.md](core.md) — config, clock, locks, paths, cardb client, CLI plugin contract, doctor, bootstrap
@@ -15,7 +14,6 @@ Every doc in the repo, one line each. Start with the [README](../README.md), the
 - [db.md](db.md) — cardb: data model, ranking, `cardb init`, compose, remote access, backups
 - [web.md](web.md) — phone UI over cardb: routes, users and tokens, tests
 - [browsers.md](browsers.md) — agent Chrome, lanes, identity pool, plain-chrome, captcha, proxies, pace ledger, accounts
-- [browsers/site-walls.md](browsers/site-walls.md) — measured bot walls per site, Oct–Nov 2026 (history; live data in site.yaml)
 - [sites.md](sites.md) — site plugins, `carhunt site`, liveness, adding a site
 - [discover.md](discover.md) — `carhunt sweep`: windows, cursors, scope, normalize, ingest
 - [contact.md](contact.md) — `carhunt say` guards, channels, ledger, watcher, mail routing, asks

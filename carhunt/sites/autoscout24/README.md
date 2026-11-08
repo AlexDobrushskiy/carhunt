@@ -13,8 +13,8 @@
 
 ## Rules (why)
 - Belgium needs `/nl/` or `/fr/` before `/lst`: bare `/lst` is 404 on .be.
-- Never set a sweep cursor from a sponsored row (`searchResultType != Organic`): they ignore filters (11-03).
-- `isNetPrice` = dealer price without VAT: discover stores gross + `price_basis=net` (net asks passed the price filter, 11-03).
+- Never set a sweep cursor from a sponsored row (`searchResultType != Organic`): they ignore filters.
+- `isNetPrice` = dealer price without VAT: discover stores gross + `price_basis=net` (else net asks slip through the price filter).
 - 308 = the ad's slug changed, same uuid: liveness follows once; 410 = gone.
-- .de/.nl guest form sent nothing on 11-05 (0/5 replies) → contact uses the dealer's own email there.
+- The .de/.nl guest form doesn't reach the seller → contact uses the dealer's own email there.
 - Account login is Google-only: agents never type the owner's Google password; the guest form needs no login.

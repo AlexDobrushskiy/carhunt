@@ -1,11 +1,11 @@
 # Residual risk: judging a car's known flaws after coverage
 
-> Snapshot: researched Oct–Nov 2026 (EV run). Prices, laws and tool behaviour drift — re-check anything you act on.
+> Snapshot: researched Oct–Nov 2026. Prices, laws and tool behaviour drift — re-check anything you act on.
 
 **Tags:** **V** verified (primary/official source or ≥2 outlets) · **A** anecdotal (forum, single secondary source) · **I** inferred. Coverage facts come from [coverage-rules.md](coverage-rules.md); VIN lookups from [vin-sources.md](vin-sources.md); battery from [battery-soh.md](battery-soh.md).
 
 **Core rule: most flaws are a per-VIN question, not a model verdict.** A known fault that is covered free for the likely ownership period is a nuisance, not a dealbreaker. Judge every flaw after coverage, then rate **money** and **breakdown/inconvenience** separately.
-WHY: v1 of the EV reliability report treated covered faults as dealbreakers (e.g. a platform-wide charging-unit fault covered by recall + a 15-yr extension); the owner corrected it (2026-10-31) and several verdicts moved up by 0.5.
+WHY: treating covered faults as dealbreakers (e.g. a platform-wide charging-unit fault covered by recall + a 15-yr extension) under-rates good cars.
 
 ---
 
@@ -13,7 +13,7 @@ WHY: v1 of the EV reliability report treated covered faults as dealbreakers (e.g
 
 1. **Pin the car's coverage inputs** (from VIN decode, documents, ad): platform, build date, first-registration date, **first-sale country** (its warranty terms apply), km, service history (network or independent, unbroken?), seller type (dealer in buyer country / foreign dealer / private).
 2. **List the known flaws** for the model *and* its platform (shared modules and suppliers). Sources: table below. Include the generic EV ones: 12 V battery / DC-DC, onboard charger, heat pump, HV battery batch recalls.
-   - **Platform consistency:** a shared-platform issue gets the same score on every sibling model. Any difference must be explained by supplier/cell batch, plant, build date, or motor/software generation. WHY: owner rule for v2 (2026-10-31): sibling MEB models (VW/Škoda/Audi/Cupra) share modules and suppliers, so separate per-model agents must score them alike via one shared-issues file.
+   - **Platform consistency:** a shared-platform issue gets the same score on every sibling model. Any difference must be explained by supplier/cell batch, plant, build date, or motor/software generation. WHY: sibling models (e.g. MEB: VW/Škoda/Audi/Cupra) share modules and suppliers, so separate per-model agents must score them alike via one shared-issues file.
 3. **For each flaw, settle coverage for THIS VIN** (not the model):
    - Recall: in the affected build/VIN range? **done / open / not affected** — from a dealer printout or brand VIN checker run with controls.
    - Vehicle warranty left (first-sale country terms): end date and km cap. Does it cover this part?
@@ -36,7 +36,7 @@ WHY: v1 of the EV reliability report treated covered faults as dealbreakers (e.g
 | **medium** | not covered, moderate cost or moderate likelihood (e.g. OBC/DC-DC ~€1.5–3.5k on a car whose 2-yr warranty ended) | covered but with real restrictions or downtime: weeks waiting for parts, repeat failures, an open recall with a one-visit fix not yet done |
 | **high** | likely + expensive + not covered | likely tow + weeks off the road; interim restriction (80 % charge cap, park outdoors) **with no fix date**; open recall that fails the buyer-country inspection |
 
-- Coverage moves the **money** axis. Breakdown statistics and owner surveys move the **breakdown** axis; they don't change money. WHY: a fault can cost nothing and still strand the car for weeks (2026-10-31).
+- Coverage moves the **money** axis. Breakdown statistics and owner surveys move the **breakdown** axis; they don't change money. WHY: a fault can cost nothing and still strand the car for weeks.
 - An unknown coverage term in the buyer's country is written "**<country> unconfirmed**" plus who to ask and which document settles it. It is a question, not a score.
 - An **open recall** alone is not a walk-away; see [coverage-rules.md §1](coverage-rules.md#1-recalls) for the exceptions.
 
@@ -77,6 +77,6 @@ One row per flaw. Put "not affected (build date / batch)" rows in too, with the 
 | Repeat ICCU failure after replacement | Same as first failure | — | ~30 per model year in NHTSA complaints describe a repeat **A** | low | medium | How many ICCU replacements? Walk away from a car with two |
 | 12 V battery flattened / worn | 2 yr only **V** | ~€150–300 **A** | 12 V ≈ 20 % of faults in a UK owner survey **V** · jump start | low | low | 12 V battery age; any tow-ins; ~14–15 V at the 12 V battery in "ready" |
 
-**Roll-up:** Money **low** (covered to ~2028 even if PT refuses the extension; exposure is ~€2k only after that). Breakdown **high** (tow + weeks off the road remain likely). The 2026-10-31 report moved this model from 3/5 to 3.5/5 on that basis: still a candidate, conditional on recall done + extension confirmed in writing.
+**Roll-up:** Money **low** (covered to ~2028 even if PT refuses the extension; exposure is ~€2k only after that). Breakdown **high** (tow + weeks off the road remain likely). On that basis the model stays a candidate, conditional on recall done + extension confirmed in writing.
 
-**What generalises:** the same split applies to any combined charger/DC-DC unit (VW group "OCDC": US recalls 93CJ/93FR on 2024 builds, no EU recall in Oct 2026, out of warranty on 2-yr-brand cars → money **medium**, breakdown low per ADAC). Check the 12 V system on every EV: 12 V / DC-DC trouble was the most common EV breakdown cause across the models researched (2026-10-31).
+**What generalises:** the same split applies to any combined charger/DC-DC unit (VW group "OCDC": US recalls 93CJ/93FR on 2024 builds, no EU recall in Oct 2026, out of warranty on 2-yr-brand cars → money **medium**, breakdown low per ADAC). Check the 12 V system on every EV: 12 V / DC-DC trouble was the most common EV breakdown cause across the models researched.
