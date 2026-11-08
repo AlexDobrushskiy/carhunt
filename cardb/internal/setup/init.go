@@ -18,15 +18,20 @@ import (
 
 // TokenSpec is one API token cardb init manages: the server-side token name and the secret holding the token.
 type TokenSpec struct {
-	Name   string // token name = default author (agents, web, the owner's name, a viewer's name)
+	Name   string // token name = default author (agents, the owner's name, a viewer's name)
 	Secret string
 }
 
 var reSlug = regexp.MustCompile(`[^a-z0-9_.-]+`)
 
-// Specs lists the tokens for a profile: agents (the default client token), web, the owner, each viewer.
+// WebTokensSecret holds `name:token` lines for the owner and every viewer: the web UI acts per user with that
+// user's own token (the web container reads it as CARDB_WEB_TOKENS_FILE).
+const WebTokensSecret = "cardb_web_tokens"
+
+// Specs lists the tokens for a profile: agents (the default client token), the owner, each viewer. A user's token
+// is named after the user, so it writes as that user (author_kind owner / viewer).
 func Specs(p *profile.Profile, agentsSecret string) ([]TokenSpec, error) {
-	specs := []TokenSpec{{"agents", agentsSecret}, {"web", "cardb_web_token"}, {p.Owner.Name, "cardb_owner_token"}}
+	specs := []TokenSpec{{"agents", agentsSecret}, {p.Owner.Name, "cardb_owner_token"}}
 	for _, u := range p.Users() {
 		if u.Role == "viewer" {
 			slug := strings.Trim(reSlug.ReplaceAllString(strings.ToLower(u.Name), "_"), "_.-")
@@ -39,12 +44,12 @@ func Specs(p *profile.Profile, agentsSecret string) ([]TokenSpec, error) {
 			return nil, fmt.Errorf("user name %q cannot be a token name (no : , # or surrounding spaces)", s.Name)
 		}
 		if names[strings.ToLower(s.Name)] {
-			return nil, fmt.Errorf("user name %q collides with another token name (agents and web are built in)", s.Name)
+			return nil, fmt.Errorf("user name %q collides with another token name (agents is built in)", s.Name)
 		}
 		if err := secrets.CheckName(s.Secret); err != nil {
 			return nil, err
 		}
-		if secs[s.Secret] {
+		if secs[s.Secret] || s.Secret == WebTokensSecret {
 			return nil, fmt.Errorf("two users map to secret %s; rename one", s.Secret)
 		}
 		names[strings.ToLower(s.Name)], secs[s.Secret] = true, true
@@ -160,9 +165,9 @@ func Init(args []string, stdout io.Writer) error {
 		known[hashOf(l.value)] = true
 	}
 
-	var lines []string
+	var lines, web []string
 	ours := map[string]bool{}
-	for _, s := range specs {
+	for i, s := range specs {
 		ours[strings.ToLower(s.Name)] = true
 		cur, err := backend.Get(s.Secret)
 		if err != nil && !errors.Is(err, secrets.ErrNotFound) {
@@ -184,7 +189,22 @@ func Init(args []string, stdout io.Writer) error {
 			}
 		}
 		lines = append(lines, s.Name+":"+HashToken(cur))
+		if i > 0 { // users, not agents
+			web = append(web, s.Name+":"+cur)
+		}
 		fmt.Fprintf(stdout, "%-7s token %-10s → secret %s (%s)\n", action, s.Name, s.Secret, backend.Name())
+	}
+	webVal := strings.Join(web, "\n") // no trailing newline: backends strip one on read
+	switch prev, err := backend.Get(WebTokensSecret); {
+	case err != nil && !errors.Is(err, secrets.ErrNotFound):
+		return err
+	case err == nil && prev == webVal:
+		fmt.Fprintf(stdout, "kept    web tokens (owner + viewers) → secret %s (%s)\n", WebTokensSecret, backend.Name())
+	default:
+		if err := backend.Set(WebTokensSecret, webVal); err != nil {
+			return err
+		}
+		fmt.Fprintf(stdout, "wrote   web tokens (owner + viewers) → secret %s (%s)\n", WebTokensSecret, backend.Name())
 	}
 	for _, l := range old { // hand-added tokens stay
 		if !ours[strings.ToLower(l.name)] {

@@ -56,7 +56,7 @@ func runInit(t *testing.T, args ...string) string {
 func secretsOf(t *testing.T, home string) map[string]string {
 	t.Helper()
 	out := map[string]string{}
-	for _, n := range []string{"cardb_token", "cardb_web_token", "cardb_owner_token", "cardb_token_bea"} {
+	for _, n := range []string{"cardb_token", "cardb_owner_token", "cardb_token_bea", "cardb_web_tokens"} {
 		b, err := os.ReadFile(filepath.Join(home, "secrets", n))
 		if err != nil {
 			t.Fatalf("secret %s: %v", n, err)
@@ -80,13 +80,17 @@ func TestInitFileBackend(t *testing.T) {
 		t.Fatalf("modes: data %v secrets %v tokens %v", perm(t, data), perm(t, filepath.Join(home, "secrets")), perm(t, filepath.Join(data, "tokens")))
 	}
 	sec := secretsOf(t, home)
-	for _, v := range sec {
-		if len(v) != 43 || strings.Contains(out1, v) {
+	for k, v := range sec {
+		if k != "cardb_web_tokens" && (len(v) != 43 || strings.Contains(out1, v)) {
 			t.Fatal("token has the wrong shape or was printed")
 		}
 	}
+	// The web gets each user's own token, named after the user; never the agents token.
+	if sec["cardb_web_tokens"] != "Sam:"+sec["cardb_owner_token"]+"\nBea:"+sec["cardb_token_bea"] {
+		t.Fatal("cardb_web_tokens is not the owner + viewer name:token lines")
+	}
 	tokens, _ := os.ReadFile(filepath.Join(data, "tokens"))
-	for name, secret := range map[string]string{"agents": "cardb_token", "web": "cardb_web_token", "Sam": "cardb_owner_token", "Bea": "cardb_token_bea"} {
+	for name, secret := range map[string]string{"agents": "cardb_token", "Sam": "cardb_owner_token", "Bea": "cardb_token_bea"} {
 		if !strings.Contains(string(tokens), "\n"+name+":"+setup.HashToken(sec[secret])+"\n") {
 			t.Errorf("tokens file lacks the hash of %s for %s", secret, name)
 		}
@@ -94,7 +98,8 @@ func TestInitFileBackend(t *testing.T) {
 			t.Fatal("tokens file holds a plain token")
 		}
 	}
-	if strings.Count(out1, "created") != 4 || !strings.Contains(out1, "next: ") {
+	if strings.Count(out1, "created") != 3 || !strings.Contains(out1, "wrote   web tokens") || !strings.Contains(out1, "next: ") ||
+		strings.Contains(string(tokens), "\nweb:") {
 		t.Errorf("first run output:\n%s", out1)
 	}
 
@@ -116,7 +121,8 @@ func TestInitFileBackend(t *testing.T) {
 	out3 := runInit(t, "--home", home, "--rotate")
 	rot := secretsOf(t, home)
 	tokens3, _ := os.ReadFile(filepath.Join(data, "tokens"))
-	if strings.Count(out3, "rotated") != 4 || rot["cardb_token"] == sec["cardb_token"] || !strings.Contains(string(tokens3), "extra:") ||
+	if strings.Count(out3, "rotated") != 3 || rot["cardb_token"] == sec["cardb_token"] || !strings.Contains(string(tokens3), "extra:") ||
+		rot["cardb_web_tokens"] != "Sam:"+rot["cardb_owner_token"]+"\nBea:"+rot["cardb_token_bea"] ||
 		strings.Contains(string(tokens3), setup.HashToken(sec["cardb_token"])) {
 		t.Fatalf("rotate:\n%s", out3)
 	}
@@ -158,6 +164,25 @@ func TestInitFileBackend(t *testing.T) {
 	var cout, cerr bytes.Buffer
 	if code := cli.Run(context.Background(), []string{"--server", base, "stats", "--json"}, &cout, &cerr); code != 0 {
 		t.Fatalf("cli stats with the backend token: %d %s", code, cerr.String())
+	}
+	// The owner's own token (what the web uses for the owner) writes as the owner with full access.
+	call := func(method, path, tok, body string) (int, string) {
+		req, _ := http.NewRequest(method, base+path, strings.NewReader(body))
+		req.Header.Set("Authorization", "Bearer "+tok)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		b, _ := io.ReadAll(resp.Body)
+		return resp.StatusCode, string(b)
+	}
+	if code, _ := call("POST", "/api/v1/listings/upsert", rot["cardb_owner_token"], `{"url": "https://example.invalid/init/1", "make": "SYNTH"}`); code != 200 {
+		t.Fatalf("owner token upsert: %d", code)
+	}
+	if code, body := call("POST", "/api/v1/cars/1/notes", rot["cardb_owner_token"], `{"text": "mine"}`); code != 201 ||
+		!strings.Contains(body, `"author":"Sam"`) || !strings.Contains(body, `"author_kind":"owner"`) {
+		t.Fatalf("owner token note: %d %s", code, body)
 	}
 	req, _ := http.NewRequest("PATCH", base+"/api/v1/cars/1", strings.NewReader(`{"km": 1}`))
 	req.Header.Set("Authorization", "Bearer "+rot["cardb_token_bea"])

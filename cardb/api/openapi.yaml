@@ -10,11 +10,12 @@ info:
 
     Conventions
     - Auth: `Authorization: Bearer <token>` on every route except `/health`. Tokens are named
-      (e.g. `web`, `agents`, the owner's name, a viewer's name); the token name is the default `author` of writes.
+      (`agents`, the owner's name, each viewer's name); the token name is the default `author` of writes. A token named
+      owner.name writes as the owner (`author_kind: owner`, full access); the web UI acts per user with that user's token.
       The server keeps only hashes: tokens file lines `name:sha256:<hex of sha256(token)>` (legacy `name:token` still read),
       default `<data dir>/tokens` written by `cardb init`, which stores the tokens themselves in the secrets backend.
     - `author` on writes: optional body field or `X-Author` header (agent role/session id, the owner's name, `import`).
-      Precedence: body `author` > `X-Author` header > token name. The web UI sends the owner's name (`owner.name`).
+      Precedence: body `author` > `X-Author` header > token name.
       `author_kind` = `owner` when author == owner name, `viewer` for a configured viewer, else `agent` (`import` for imports).
     - Users: the owner + optional viewers (`GET /profile` → `users`). A token whose name is a viewer is read-only except
       for that viewer's own verdict (403 otherwise) and always writes as itself (body/X-Author `author` ignored).
