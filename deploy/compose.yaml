@@ -22,7 +22,7 @@ services:
       context: ../cardb
       args:
         VERSION: ${CARDB_VERSION:-dev}
-    image: carhunt/cardb:local
+    image: ${CARHUNT_CARDB_IMAGE:-carhunt/cardb:local}   # overridable so a test stack never retags or removes yours
     mem_limit: 768m
     environment:
       CARDB_DATA_DIR: /data
@@ -50,7 +50,7 @@ services:
     <<: *hardened
     build:
       context: ../web                          # Dockerfile owned by the web module
-    image: carhunt/web:local
+    image: ${CARHUNT_WEB_IMAGE:-carhunt/web:local}
     mem_limit: 384m
     depends_on:
       cardb:

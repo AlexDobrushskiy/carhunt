@@ -124,7 +124,8 @@ cleanup() {
     fi
   done
   if [ -n "${COMPOSE_PROJECT:-}" ]; then
-    docker compose -p "$COMPOSE_PROJECT" -f "$CLONE/deploy/compose.yaml" down -v --rmi local >/dev/null 2>&1
+    CARHUNT_CARDB_IMAGE=$COMPOSE_PROJECT/cardb:e2e CARHUNT_WEB_IMAGE=$COMPOSE_PROJECT/web:e2e docker compose -p "$COMPOSE_PROJECT" -f "$CLONE/deploy/compose.yaml" \
+      down -v --rmi all >/dev/null 2>&1
     info "compose project $COMPOSE_PROJECT down"
   fi
   print_summary
@@ -250,7 +251,7 @@ step_compose() {  # optional (E2E_COMPOSE=1): the Docker path builds and serves 
   [ "${E2E_COMPOSE:-0}" = 1 ] || { info "skipped (set E2E_COMPOSE=1)"; return 0; }
   local port project; port=$(free_port); project=carhunt-e2e-$(basename "$W" | tr 'A-Z.' 'a-z-')
   setstate COMPOSE_PROJECT "$project"
-  CARHUNT_CARDB_PORT=$port docker compose -p "$project" -f "$CLONE/deploy/compose.yaml" up -d --build cardb \
+  CARHUNT_CARDB_PORT=$port CARHUNT_CARDB_IMAGE=$project/cardb:e2e CARHUNT_WEB_IMAGE=$project/web:e2e docker compose -p "$project" -f "$CLONE/deploy/compose.yaml" up -d --build cardb \
     >"$LOGS/compose.log" 2>&1 || { tail -30 "$LOGS/compose.log"; die "compose up failed"; }
   wait_http "http://127.0.0.1:$port/healthz" "" "compose cardb" 90
   info "compose cardb healthy on 127.0.0.1:$port"

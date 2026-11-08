@@ -31,6 +31,7 @@ Version stamp: `CARDB_VERSION=$(git describe --tags --always) docker compose …
 | hardening | `read_only`, tmpfs `/tmp`, `cap_drop: [ALL]`, `no-new-privileges`, non-root, `mem_limit` 768m/384m, `restart: unless-stopped`, healthchecks | a compromised container can't write outside `/data` or escalate |
 | user | `${CARHUNT_UID:-10001}:${CARHUNT_GID:-10001}` | macOS Docker Desktop maps bind-mount ownership, so 10001 just works (verified). **Linux:** `sudo chown -R 10001:10001 $CARHUNT_HOME/cardb`, or run with `CARHUNT_UID=$(id -u) CARHUNT_GID=$(id -g)` |
 | images | base images pinned by tag + sha256 (`cardb/Dockerfile`, `web/Dockerfile`) | compose builds from cached layers without pulling; a floating tag goes stale |
+| image names | `${CARHUNT_CARDB_IMAGE:-carhunt/cardb:local}`, `${CARHUNT_WEB_IMAGE:-carhunt/web:local}` | a second stack (the e2e) builds and removes its own images, never yours |
 | `up cardb` alone | works while web isn't built | web depends on cardb (healthy), not the reverse |
 
 
