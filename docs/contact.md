@@ -160,10 +160,17 @@ contact:
     signoff: ""                 # email only: a first name at most
     name: ""                    # site forms that require a name
     email: ""                   # site forms: use the plus-address
-    phone: ""                   # site forms that require a phone (give it only when needed)
+    aliases: []                 # names a site shows for your account (OLX: tells our messages apart)
+  sites:                        # per-site overrides without a code change
+    olx.pt: {selectors: {box: "textarea"}}   # any selector/marker the sender uses (msg_sel, mine_sel, box, conv_sel…)
 ```
+Site forms never get a phone number (phone fields are emptied before submit).
 
 ## Gaps
+- Site thread/inbox selectors on mobile.de, kleinanzeigen, subito, wallapop, leboncoin, standvirtual and the OLX send box / CustoJusto ad form are built from the EV scripts but unconfirmed live: the first real read per site must confirm them, then pin them under `contact.sites.<site>.selectors`.
+- access must provide: leboncoin = its own profile on a FR exit (never the identity pool); coches.net = Camoufox with main-world eval; mobile.de/subito/kleinanzeigen = plain-chrome on an identity profile; CustoJusto/OLX logins live on the identity master.
+- Wallapop sends need the item id or chat URL (an `/item/` URL costs one extra page load); mobile.de already-contacted ads have no form → reply via the seller's relay mail.
+- Site send results carry flags (`blocked`, `login`, `gone`, `no_form`, `already_contacted`); `say` appends them to the ledger error. Stop the site on `blocked`.
 - WhatsApp chats addressed by LID JIDs (no phone number) don't map to a phone; the watcher reports the digits it has.
 - Reply timing ("activity blocks", 2–3 h of 3–4-min replies, then a pause) is a skill rule, not enforced in code.
 - Price/no-sold detection is a multi-language regex; extend with `nudge.price_extra` / `nudge.no_extra`.
