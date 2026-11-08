@@ -41,6 +41,10 @@ def _config(sub) -> None:
     p = s.add_parser("show", help="print the config (secret refs as secret:NAME, never values)")
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=cmd_config_show)
+    p = s.add_parser("get", help="print one value by dotted key (secret refs as secret:NAME); exit 1 if unset")
+    p.add_argument("key", help="e.g. contact.quiet_hours")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=cmd_config_get)
     p = s.add_parser("validate", help="check a config file against the schema")
     p.add_argument("file", nargs="?")
     p.set_defaults(func=cmd_config_validate)
@@ -57,6 +61,25 @@ def cmd_config_show(a) -> int:
         return 1
     print(json.dumps(data, indent=2, ensure_ascii=False) if a.json
           else yaml.safe_dump(data, sort_keys=False, allow_unicode=True), end="" if not a.json else "\n")
+    return 0
+
+
+def cmd_config_get(a) -> int:
+    try:
+        data = config.load(check=False).as_dict()
+    except config.ConfigError as e:
+        _err(str(e))
+        return 1
+    node = data
+    for part in a.key.split("."):
+        if not isinstance(node, dict) or part not in node:
+            _err(f"{a.key} is not set")
+            return 1
+        node = node[part]
+    if a.json or isinstance(node, (dict, list)):
+        print(json.dumps(node, ensure_ascii=False))
+    else:
+        print("" if node is None else node)
     return 0
 
 

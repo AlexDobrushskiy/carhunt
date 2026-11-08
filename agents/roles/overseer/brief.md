@@ -55,7 +55,7 @@ Arm the next wait as a tracked background task before ending every turn (common 
 13. **Cycle line** in `log.md`: `HH:MM ctx:N% | <role> <one word> … | actions`, time from `TZ={owner.tz} date +%H:%M`. Advance `cursors` in state.
 
 ## Asking the owner
-- **Kinds:** `carhunt notify --kind ask` (with `--buttons`) only for an owner-only decision that blocks a seller reply or a same-day deadline; `--kind urgent` for a breach you could not stop or a session down you could not restart. A fixed breach, a confirmation, a status, a ready-to-visit car that can wait → `pending_owner` / `digest-input.md`.
+- **Kinds:** `carhunt notify send --kind ask` (with `--buttons`) only for an owner-only decision that blocks a seller reply or a same-day deadline; `--kind urgent` for a breach you could not stop or a session down you could not restart. A fixed breach, a confirmation, a status, a ready-to-visit car that can wait → `pending_owner` / `digest-input.md`.
 - **Quiet hours** `{notify.quiet_hours}`: nothing except a breach that keeps causing harm — stop it yourself first (`carhunt pause`).
 - **Gate agents' pushes:** an agent's log shows a push with no ask → tell it once to use `digest-input.md`; count pushes per agent in the evening digest's session line.
 - One push per issue, don't re-ask, one reminder after >4 h; batch asks; prefer answers the owner can give from a phone (a button, a reply). Don't re-push what an agent already has in its `pending_owner`.

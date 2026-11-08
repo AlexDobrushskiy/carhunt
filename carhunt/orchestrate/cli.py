@@ -246,13 +246,14 @@ def _confirm(prompt: str) -> bool:
 
 def cmd_hooks(a) -> int:
     from . import hooks
-    path = Path(a.settings).expanduser() if a.settings else hooks.settings_path()
+    if a.settings:
+        path = Path(a.settings).expanduser()
+    else:
+        path = hooks.user_settings_path() if a.user else hooks.settings_path()
     if a.action == "show":
         status, cmd = hooks.statusline_status(path)
-        cur = hooks.load(path).get("hooks", {})
-        ours = [f"{ev}: {h['command'].split()[2]}" for ev, h in hooks._all_commands(cur)
-                if hooks.MARKER in str(h.get("command", ""))]
-        print("\n".join(ours) or "no carhunt hooks installed")
+        print(f"{path}:")
+        print("\n".join(hooks.describe(hooks.load(path).get("hooks", {}))) or "no carhunt hooks installed")
         print(f"statusLine: {status}")
         return 0
     if a.action == "statusline":
@@ -370,7 +371,10 @@ def register(subparsers: argparse._SubParsersAction) -> None:
 
     p = subparsers.add_parser("hooks", help="Claude Code guard hooks + statusline")
     p.add_argument("action", choices=["install", "uninstall", "show", "statusline"])
-    p.add_argument("--settings", help="settings.json (default: $CLAUDE_CONFIG_DIR or ~/.claude)")
+    p.add_argument("--settings", help="settings file (default: $CARHUNT_HOME/claude/settings.json, "
+                                      "which launch passes to agents)")
+    p.add_argument("--user", action="store_true",
+                   help="target the user settings ($CLAUDE_CONFIG_DIR or ~/.claude): guards bind every session")
     p.add_argument("--dry-run", action="store_true", help="show the diff only")
     p.add_argument("--yes", action="store_true", help="apply without asking")
     p.set_defaults(func=wrap(cmd_hooks))

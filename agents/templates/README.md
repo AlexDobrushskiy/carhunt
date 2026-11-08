@@ -1,6 +1,6 @@
 # agents/templates
 
-Owner: orchestrate. Placeholders are `{dotted.key}` (config keys + `agent.*`, `home`, `date`, `learned.dir`); unknown keys fail the launch; `{{x}}` renders a literal `{x}`.
+Owner: orchestrate. Placeholders are `{dotted.key}` (config keys + `agent.*`, `home`, `date`, `learned.dir`, per-launch `--var` values, `{variant}` for `BASE-VARIANT` roles); unknown keys fail the launch; `{{x}}` renders a literal `{x}`. See docs/orchestrate.md § Launch values.
 
 | file | used by |
 |---|---|

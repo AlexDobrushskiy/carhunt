@@ -1,8 +1,13 @@
 """`carhunt hooks install|uninstall|show|statusline`: merge carhunt guards into Claude Code settings.
 
-Merge rules: only hook entries whose command names carhunt_hook.py are ours. Foreign entries
-are never changed or removed; where a foreign hook already does the job (another mailbox
-receiver, an existing `pw-identity hook pre`) ours is left out so the two don't race.
+Target: `$CARHUNT_HOME/claude/settings.json`, which `carhunt agent launch` passes to every claude
+agent with `--settings`. Why: the guards deny wacli sends and Keychain reads, which the owner's own
+sessions may need; scoped this way they bind only carhunt agents. `--user` targets the user settings.
+
+Merge rules: ours = entries naming carhunt_hook.py, plus the identity lease block from
+`carhunt browser mcp-config --hooks` (matcher on carhunt's own identity MCP names). Foreign entries
+are never changed or removed; where a foreign hook (in the target or the user settings, both load
+in an agent) already runs an asyncRewake mailbox receiver, ours is left out so the two don't race.
 Only the `hooks` section is diffed or printed — settings files can hold tokens in `env`.
 """
 from __future__ import annotations
@@ -23,7 +28,7 @@ from . import settings
 
 MARKER = "carhunt_hook.py"
 FILE_TOOLS = "Read|Edit|Write|MultiEdit|NotebookEdit|Grep|Glob"
-IDENTITY = "mcp__identity(-[a-z])?__.*"
+LEASE = "pw-identity hook"
 
 
 class HooksError(RuntimeError):
@@ -31,8 +36,29 @@ class HooksError(RuntimeError):
 
 
 def settings_path() -> Path:
+    """Agent-scoped settings (`claude --settings`); never the user's own config."""
+    return paths.home() / "claude" / "settings.json"
+
+
+def user_settings_path() -> Path:
     base = os.environ.get("CLAUDE_CONFIG_DIR") or "~/.claude"
     return Path(base).expanduser() / "settings.json"
+
+
+def identity_hooks() -> dict[str, list]:
+    """The browsers module's identity lease block (absolute pw-identity path, carhunt's MCP names)."""
+    from carhunt.access import mcp
+    return mcp.render_hooks(repo=paths.repo_root())["hooks"]
+
+
+def identity_matcher() -> str:
+    from carhunt.access import mcp
+    return mcp.identity_tool_matcher()
+
+
+def _ours(group: Mapping, hook: Mapping, matcher: str | None) -> bool:
+    cmd = str(hook.get("command", ""))
+    return MARKER in cmd or (matcher is not None and group.get("matcher") == matcher and LEASE in cmd)
 
 
 def hook_script() -> Path:
@@ -61,8 +87,12 @@ def _foreign_has(hooks: Mapping, event: str, needle: str, async_rewake: bool | N
     return False
 
 
-def desired(current: Mapping, *, python: str | None = None, home: Path | None = None) -> dict[str, list]:
-    """Our entries per event, minus the ones a foreign hook already covers."""
+def desired(current: Mapping, *, python: str | None = None, home: Path | None = None,
+            also: Mapping | None = None) -> dict[str, list]:
+    """Our entries per event, minus the ones a foreign hook already covers.
+
+    also: hooks of other settings that load in the same session (the user settings).
+    """
     py = python or sys.executable
     hm = home or paths.home()
     want: dict[str, list] = {"PreToolUse": [
@@ -71,24 +101,35 @@ def desired(current: Mapping, *, python: str | None = None, home: Path | None = 
         {"matcher": "Bash|Monitor",
          "hooks": [{"type": "command", "command": _cmd("send-guard", py, hm), "timeout": 10}]},
     ]}
-    if not _foreign_has(current, "PreToolUse", "pw-identity hook pre"):
-        want["PreToolUse"].append({"matcher": IDENTITY, "hooks": [
-            {"type": "command", "command": _cmd("identity-pre", py, hm), "timeout": 15}]})
-        want["PostToolUse"] = [{"matcher": IDENTITY, "hooks": [
-            {"type": "command", "command": _cmd("identity-post", py, hm), "timeout": 15}]}]
-    if not _foreign_has(current, "Stop", "", async_rewake=True):
+    for event, groups in identity_hooks().items():
+        want.setdefault(event, []).extend(groups)
+    if not any(_foreign_has(h, "Stop", "", async_rewake=True) for h in (current, also or {})):
         for ev in ("SessionStart", "UserPromptSubmit", "Stop"):
             want[ev] = [{"hooks": [{"type": "command", "command": _cmd("mailbox", py, hm),
                                     "asyncRewake": True, "timeout": 2_000_000}]}]
     return want
 
 
-def strip_ours(hooks: Mapping) -> dict:
+def describe(hooks: Mapping) -> list[str]:
+    """One line per carhunt entry: `event: guard`."""
+    m = identity_matcher()
+    out = []
+    for event, groups in hooks.items():
+        for g in groups or []:
+            for h in g.get("hooks") or []:
+                if _ours(g, h, m):
+                    cmd = str(h.get("command", ""))
+                    what = cmd.split()[2] if MARKER in cmd else f"identity lease ({cmd.split()[-1]})"
+                    out.append(f"{event}: {what}")
+    return out
+
+
+def strip_ours(hooks: Mapping, matcher: str | None = None) -> dict:
     out: dict = {}
     for event, groups in hooks.items():
         kept = []
         for g in groups or []:
-            hs = [h for h in g.get("hooks") or [] if MARKER not in str(h.get("command", ""))]
+            hs = [h for h in g.get("hooks") or [] if not _ours(g, h, matcher)]
             if hs:
                 kept.append({**g, "hooks": hs})
             elif not g.get("hooks"):
@@ -104,7 +145,7 @@ def merge(settings: Mapping, want: Mapping[str, list] | None) -> dict:
     hooks = settings.get("hooks", {})
     if not isinstance(hooks, Mapping) or any(not isinstance(v, list) for v in hooks.values()):
         raise HooksError("settings.json `hooks` has an unexpected shape; refusing to touch it")
-    new_hooks = strip_ours(hooks)
+    new_hooks = strip_ours(hooks, identity_matcher())
     for event, groups in (want or {}).items():
         new_hooks.setdefault(event, [])
         new_hooks[event] = new_hooks[event] + copy.deepcopy(groups)
@@ -163,7 +204,14 @@ def write_guards(config: Mapping) -> Path:
 
 def plan(path: Path, *, remove: bool = False, python: str | None = None) -> tuple[dict, dict, str]:
     cur = load(path)
-    new = merge(cur, None if remove else desired(cur.get("hooks", {}), python=python))
+    user = user_settings_path()
+    also = {}
+    if user.resolve() != path.resolve():
+        try:
+            also = load(user).get("hooks", {})
+        except HooksError:
+            also = {}
+    new = merge(cur, None if remove else desired(cur.get("hooks", {}), python=python, also=also))
     return cur, new, hooks_diff(cur, new, str(path))
 
 

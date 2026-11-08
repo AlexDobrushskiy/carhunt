@@ -30,7 +30,17 @@ def test_launch_inits_state_and_env(home, config, fake, dummy_role):
 def test_agent_args_opt_in(home, config, fake, dummy_role):
     config["orchestrate"]["agent_args"] = {"claude": ["--allowedTools", "Bash(carhunt state:*)"]}
     sid = launch.launch("dummy", backend=fake, config=config)
-    assert fake.sessions[sid]["cmd"][2:4] == ["--allowedTools", "Bash(carhunt state:*)"]
+    assert fake.sessions[sid]["cmd"][2:6] == ["--settings", str(home / "claude" / "settings.json"),
+                                              "--allowedTools", "Bash(carhunt state:*)"]
+
+
+def test_launch_refuses_without_guard_hooks(home, config, fake, dummy_role):
+    (home / "claude" / "settings.json").unlink()
+    with pytest.raises(launch.LaunchError, match="carhunt hooks install"):
+        launch.launch("dummy", backend=fake, config=config)
+    assert fake.sessions == {}
+    config["orchestrate"]["agent_cli"] = "codex"  # no hooks in codex: nothing to require
+    launch.launch("dummy", backend=fake, config=config)
 
 
 def test_set_get_add(home, config, fake, dummy_role):

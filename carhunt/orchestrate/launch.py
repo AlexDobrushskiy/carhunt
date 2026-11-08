@@ -134,12 +134,28 @@ def compose(role: str, config: Mapping, name: str, *, body_path: Path | None = N
     return "\n\n".join(p.rstrip() + "\n" for p in parts)
 
 
+def guard_settings() -> list[str]:
+    """`--settings <agent settings>` carrying the guard hooks; refuse to start an unguarded claude agent.
+
+    Why: the secret guard exists because prose rules failed (a masked dump leaked passwords, 11-06).
+    """
+    from . import hooks
+    agent = hooks.settings_path()
+    for f, flag in ((agent, ["--settings", str(agent)]), (hooks.user_settings_path(), [])):
+        try:
+            if hooks.MARKER in f.read_text():
+                return flag
+        except OSError:
+            continue
+    raise LaunchError("guard hooks not installed: run `carhunt hooks install` (see docs/orchestrate.md)")
+
+
 def agent_command(config: Mapping, prompt: str) -> list[str]:
     cli = settings.get(config, "orchestrate.agent_cli", "claude")
     args = list((settings.get(config, "orchestrate.agent_args", {}) or {}).get(cli) or [])
     if cli == "claude":
         # prompt first: variadic flags like --allowedTools would swallow a trailing prompt
-        return ["claude", prompt, *args]
+        return ["claude", prompt, *guard_settings(), *args]
     if cli == "codex":
         # codex filters the shell env by default; agents need AGTERM_*/CARHUNT_* for state + guards
         return ["codex", prompt, "-c", "shell_environment_policy.inherit=all", *args]
