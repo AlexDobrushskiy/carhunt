@@ -48,12 +48,21 @@ def test_aggregates_and_never_crashes(tmp_path):
     assert "fix: do x" in text and "1 ok, 3 warn, 2 fail" in text
 
 
-def test_cli_doctor_runs_with_modules_missing(example_config, tmp_path):
+def test_cli_doctor_runs_every_module(example_config, tmp_path):
+    """Real tree, nothing running: one line per check, down services warn, every module reports, no crash."""
     env = {**os.environ, "CARDB_URL": "http://127.0.0.1:9"}  # nothing listens: cardb = warn
-    r = subprocess.run([sys.executable, "-m", "carhunt", "doctor"], capture_output=True, text=True, env=env)
+    r = subprocess.run([sys.executable, "-m", "carhunt", "doctor", "--json"], capture_output=True, text=True, env=env)
     assert "Traceback" not in r.stderr
-    assert "ok    config" in r.stdout and "WARN  cardb" in r.stdout
-    assert "module not built/installed yet" in r.stdout or "no doctor checks yet" in r.stdout
+    import json
+    res = json.loads(r.stdout)
+    by = {c["name"]: c for c in res}
+    assert by["config"]["status"] == "ok" and by["cardb"]["status"] == "warn"
+    assert by["web"]["status"] in ("ok", "warn") and by["web"]["detail"].startswith(doctor.WEB_URL)
+    assert {c["module"] for c in res} >= set(doctor.EXPECTED)
+    crashed = [c for c in res if c["name"].endswith(": checks") and c["status"] == "fail"]
+    assert crashed == [], crashed
+    assert not any(c["name"].endswith(": installed") for c in res), "all design.md modules are on main"
+    r = subprocess.run([sys.executable, "-m", "carhunt", "doctor"], capture_output=True, text=True, env=env)
     assert r.returncode in (0, 1)
     assert all(line.split()[0] in ("ok", "WARN", "FAIL", "fix:") for line in r.stdout.splitlines()[:-2] if line.strip())
 
@@ -64,3 +73,28 @@ def test_cli_doctor_fails_without_config():
     res = json.loads(r.stdout)
     assert r.returncode == 1
     assert any(c["name"] == "config" and c["status"] == "fail" for c in res)
+
+
+def test_web_check_ok_and_down():
+    import http.server
+    import threading
+
+    class H(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200 if self.path == "/health" else 404)
+            self.end_headers()
+            self.wfile.write(b'{"ok":true}')
+
+        def log_message(self, *a):
+            pass
+
+    srv = http.server.HTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    cfg = types.SimpleNamespace(get=lambda k, d=None: f"http://127.0.0.1:{srv.server_port}" if k == "web.url" else d)
+    try:
+        assert doctor._web_check(cfg).status == "ok"
+    finally:
+        srv.shutdown()
+        srv.server_close()
+    down = doctor._web_check(types.SimpleNamespace(get=lambda k, d=None: "http://127.0.0.1:9" if k == "web.url" else d))
+    assert down.status == "warn" and down.detail.startswith("http://127.0.0.1:9/health") and "compose" in down.fix

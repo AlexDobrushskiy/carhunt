@@ -29,8 +29,18 @@ def config_file() -> Path:
     return Path(env).expanduser() if env else home() / "config.yaml"
 
 
+def repo_root() -> Path:
+    """The carhunt checkout (agents/, hooks/, skills/ are read from it): $CARHUNT_REPO or this install."""
+    env = os.environ.get("CARHUNT_REPO")
+    return Path(env).expanduser() if env else Path(__file__).resolve().parents[2]
+
+
+def agents_root() -> Path:
+    return home() / "agents"
+
+
 def agent_dir(role: str) -> Path:
-    d = home() / "agents" / safe_name(role, "agent")
+    d = agents_root() / safe_name(role, "agent")
     d.mkdir(parents=True, exist_ok=True)
     return d
 

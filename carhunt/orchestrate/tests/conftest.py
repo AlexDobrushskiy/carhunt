@@ -49,19 +49,24 @@ def example_config():
 def home(tmp_path, monkeypatch, example_config):
     h = tmp_path / "carhunt"
     h.mkdir()
-    for k in ("CARHUNT_CONFIG", "CARHUNT_SESSION_ID", "AGTERM_SESSION_ID", "CARHUNT_AGENT", "CLAUDE_CONFIG_DIR"):
+    for k in ("CARHUNT_CONFIG", "CARHUNT_SESSION_ID", "AGTERM_SESSION_ID", "CARHUNT_AGENT"):
         monkeypatch.delenv(k, raising=False)
     monkeypatch.setenv("CARHUNT_HOME", str(h))
     monkeypatch.setenv("CARHUNT_REPO", str(REPO))
     monkeypatch.setenv("CARHUNT_FAKE_NOW", "2026-11-08T12:00:00")
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / "claude-user"))  # never the real ~/.claude
     (h / "config.yaml").write_text(yaml.safe_dump(example_config))
+    guards = h / "claude" / "settings.json"  # what `carhunt hooks install` writes; launch requires it
+    guards.parent.mkdir()
+    guards.write_text(json.dumps({"hooks": {"PreToolUse": [{"matcher": "Bash", "hooks": [
+        {"type": "command", "command": "python3 /repo/hooks/carhunt_hook.py secret-guard"}]}]}}))
     return h
 
 
 @pytest.fixture
 def config(home):
-    from carhunt.orchestrate import _core
-    return _core.load_config()
+    from carhunt.orchestrate import settings
+    return settings.load()
 
 
 @pytest.fixture

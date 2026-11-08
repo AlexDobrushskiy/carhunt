@@ -8,7 +8,9 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from typing import Any
 
-from . import _core, launch, state
+from carhunt.core import clock, notify, paths
+
+from . import launch, settings, state
 from .session import Backend
 
 NONE = "–"
@@ -72,7 +74,7 @@ def needs_you(states: list[Mapping]) -> tuple[str, list[str]]:
 def collect_fyi(roles: list[str], consume: bool, stamp: str) -> list[str]:
     out: list[str] = []
     for role in roles:
-        f = _core.agent_dir(role) / "digest-input.md"
+        f = paths.agent_dir(role) / "digest-input.md"
         if not f.is_file():
             continue
         lines = [ln.strip().lstrip("-•* ").strip() for ln in f.read_text().splitlines()]
@@ -84,16 +86,27 @@ def collect_fyi(roles: list[str], consume: bool, stamp: str) -> list[str]:
     return out
 
 
+def cardb_queue(limit: int) -> list[dict]:
+    """Top of the cardb queue (tier 1 first). Empty when cardb is unreachable: the digest still goes out."""
+    from carhunt.core import db
+    try:
+        res = db.Client.from_config().queue(tier=1, limit=limit)
+    except Exception:  # noqa: BLE001
+        return []
+    items = res.get("items", []) if isinstance(res, Mapping) else list(res or [])
+    return list(items)[:limit]
+
+
 def build(slot: str, *, backend: Backend | None, config: Mapping | None = None,
-          queue: Callable[[int], list[dict]] = _core.cardb_queue, consume: bool = False) -> tuple[str, list[str]]:
-    config = config if config is not None else _core.load_config()
+          queue: Callable[[int], list[dict]] = cardb_queue, consume: bool = False) -> tuple[str, list[str]]:
+    config = config if config is not None else settings.load()
     roles = state.roles()
     states = [state.read(r) for r in roles]
-    limit = int(_core.cfg(config, "orchestrate.digest_strong_cars", 8))
+    limit = int(settings.get(config, "orchestrate.digest_strong_cars", 8))
     cars = [car_line(i) for i in queue(limit)]
     ask, buttons = needs_you(states)
     advice = [f"• {a}" for s in states if s.get("role") == "learning" for a in (s.get("advice") or [])][:5]
-    today = _core.now(config).date().isoformat()
+    today = clock.now().date().isoformat()
     fyi = collect_fyi(roles, consume, f"{today}-{slot}")
     tmpl = (launch.templates_dir() / "digest.txt").read_text()
     text = launch.render(tmpl, {
@@ -108,8 +121,8 @@ def build(slot: str, *, backend: Backend | None, config: Mapping | None = None,
 
 
 def send(slot: str, *, backend: Backend | None, config: Mapping | None = None, dry_run: bool = False,
-         queue: Callable[[int], list[dict]] = _core.cardb_queue) -> str:
+         queue: Callable[[int], list[dict]] = cardb_queue) -> str:
     text, buttons = build(slot, backend=backend, config=config, queue=queue, consume=not dry_run)
     if not dry_run:
-        _core.notify(text, agent="overseer", kind="digest", buttons=buttons or None)
+        notify.send(text, agent="overseer", kind="digest", buttons=buttons or None)
     return text

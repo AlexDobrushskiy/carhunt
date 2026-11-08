@@ -14,7 +14,9 @@ import sys
 from collections.abc import Mapping
 from pathlib import Path
 
-from . import _core
+from carhunt.core import paths
+
+from . import settings
 
 PREFIX = "carhunt."
 HHMM = re.compile(r"^([01]?\d|2[0-3]):([0-5]\d)$")
@@ -45,8 +47,8 @@ def _times(v: object) -> list[str]:
 
 def jobs(config: Mapping) -> list[dict]:
     """[{label, argv, times[] | interval}] from config; empty/null entries are skipped."""
-    sched = _core.cfg(config, "orchestrate.schedule", {}) or {}
-    overrides = _core.cfg(config, "orchestrate.schedule_commands", {}) or {}
+    sched = settings.get(config, "orchestrate.schedule", {}) or {}
+    overrides = settings.get(config, "orchestrate.schedule_commands", {}) or {}
     out = []
     for job, when in sched.items():
         if not when:
@@ -95,7 +97,7 @@ def agents_dir() -> Path:
 
 
 def render_all(config: Mapping, *, exe: str | None = None) -> dict[str, bytes]:
-    home = _core.home()
+    home = paths.home()
     path_env = os.pathsep.join(dict.fromkeys(
         [str(Path(exe or carhunt_exe()).parent), "/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin",
          "/usr/sbin", "/sbin"]))
@@ -117,7 +119,7 @@ def install(config: Mapping, *, load: bool = True, exe: str | None = None) -> li
     uninstall(unload=load)
     d = agents_dir()
     d.mkdir(parents=True, exist_ok=True)
-    (_core.home() / "logs" / "schedule").mkdir(parents=True, exist_ok=True)
+    (paths.home() / "logs" / "schedule").mkdir(parents=True, exist_ok=True)
     written = []
     for label, data in render_all(config, exe=exe).items():
         p = d / f"{label}.plist"
