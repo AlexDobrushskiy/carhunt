@@ -74,6 +74,26 @@ class BaseSite:
                 return m.group(1)
         return None
 
+    # --- query codes (codes.yaml) -----------------------------------------
+    def code(self, table: str, *keys: str | None, slug: bool = True) -> str | None:
+        """Look up codes.yaml `table` by key path, case-insensitive (e.g. code("models", "Skoda", "Enyaq")).
+        Missing → slugified last key when `slug`, else None (numeric-code sites must list every make/model)."""
+        node: Any = self.codes.get(table) or {}
+        for k in keys:
+            if k is None or not isinstance(node, dict):
+                return None
+            node = {str(a).lower(): b for a, b in node.items()}.get(str(k).lower())
+            if node is None:
+                return slugify(keys[-1]) if slug and keys[-1] else None
+        return None if isinstance(node, dict) else str(node)
+
+    def need_code(self, table: str, *keys: str | None) -> str:
+        c = self.code(table, *keys, slug=False)
+        if c is None:
+            raise Unsupported(f"{self.id}: no {table} code for {'/'.join(k or '?' for k in keys)} — add it to "
+                              f"carhunt/sites/{self.pkg}/codes.yaml")
+        return c
+
     # --- actions ---------------------------------------------------------
     def search(self, q: SearchQuery) -> Iterator[Card]:
         raise Unsupported(f"{self.id}: search has no reader yet (route {self.meta.get('route')})")
@@ -98,6 +118,11 @@ class BaseSite:
 
 
 # --- metadata ----------------------------------------------------------------
+
+def slugify(s: str) -> str:
+    """"Q4 e-tron" → "q4-e-tron", "ID.4" → "id.4" (dots kept: AS24/standvirtual slugs keep them)."""
+    return re.sub(r"[^a-z0-9.]+", "-", s.lower()).strip("-")
+
 
 def pkg_of(site_id: str) -> str:
     return site_id.replace(".", "_").replace("-", "_")

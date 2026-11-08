@@ -136,6 +136,7 @@ class RawAd:
         if not raw:
             d.pop("raw")
         d["seller"] = _clean(d["seller"])
+        d["extra"] = _clean(d["extra"])
         return _clean(d) | {"url": self.url, "site": self.site, "site_ref": self.site_ref}
 
 
