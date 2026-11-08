@@ -330,20 +330,6 @@ func loadNotes(tx *sql.Tx, carID int64, pinnedFirst bool) ([]api.Note, error) {
 	return out, rows.Err()
 }
 
-func loadVerdict(tx *sql.Tx, carID int64) (*api.Verdict, error) {
-	var v api.Verdict
-	var note sql.NullString
-	var at float64
-	err := tx.QueryRow("SELECT value, note, author, updated_at FROM verdicts WHERE car_id = ?", carID).Scan(&v.Value, &note, &v.Author, &at)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
-	} else if err != nil {
-		return nil, err
-	}
-	v.Note, v.UpdatedAt = strPtr(note), fromTS(at)
-	return &v, nil
-}
-
 func loadOptions(tx *sql.Tx, carID int64) ([]api.Option, error) {
 	rows, err := tx.Query("SELECT key, value, source, source_ref, note, author, updated_at FROM options WHERE car_id = ? ORDER BY key", carID)
 	if err != nil {
@@ -480,7 +466,7 @@ func carDetail(tx *sql.Tx, id int64) (*api.CarDetail, error) {
 	if d.Notes, err = loadNotes(tx, id, true); err != nil {
 		return nil, err
 	}
-	if d.Verdict, err = loadVerdict(tx, id); err != nil {
+	if err := setDetailVerdicts(tx, d, ""); err != nil {
 		return nil, err
 	}
 	if d.Duplicates, err = loadDuplicates(tx, "status = 'proposed' AND (car_a = ? OR car_b = ?)", id, id, id); err != nil {

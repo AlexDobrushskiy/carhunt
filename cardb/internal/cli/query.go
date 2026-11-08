@@ -16,6 +16,7 @@ func cmdLs(e *env, args []string) error {
 	var statuses, verdicts, countries, sellerTypes, opts, drives, families, tiers multi
 	f.Var(&statuses, "status", "status (repeatable or comma list)")
 	f.Var(&verdicts, "verdict", "up|maybe|down|none (repeatable/comma; 👍 🤔 👎 ok)")
+	user := f.String("user", "", "whose verdict to show and filter on (default the owner)")
 	f.Var(&countries, "country", "ISO-2 country (repeatable/comma)")
 	f.Var(&sellerTypes, "seller-type", "private|dealer|reseller|unknown (repeatable/comma)")
 	f.Var(&opts, "opt", "option filter key:value, value yes|no|unknown|yes_or_unknown (repeatable, ANDed)")
@@ -160,6 +161,7 @@ func cmdLs(e *env, args []string) error {
 	if err != nil {
 		return err
 	}
+	flt.User = *user
 	list, err := cl.ListCars(e.ctx, flt)
 	if err != nil {
 		return err
@@ -225,6 +227,7 @@ func printCarTable(w io.Writer, list api.CarList) {
 
 func cmdShow(e *env, args []string) error {
 	f := newFlags(e, "show")
+	user := f.String("user", "", "whose verdict to show first (default the owner)")
 	pos, err := f.parse(args)
 	if err != nil {
 		return err
@@ -236,7 +239,7 @@ func cmdShow(e *env, args []string) error {
 	if err != nil {
 		return err
 	}
-	car, err := cl.GetCar(e.ctx, pos[0])
+	car, err := cl.GetCarFor(e.ctx, pos[0], *user)
 	if err != nil {
 		return err
 	}
@@ -411,16 +414,7 @@ func printCard(w io.Writer, c api.CarDetail, ref string) {
 	}
 
 	fmt.Fprintln(w, "\nVERDICT")
-	if c.Verdict == nil {
-		fmt.Fprintln(w, "  — (none yet)")
-	} else {
-		v := c.Verdict
-		line := fmt.Sprintf("  %s %s", verdictEmoji(v), v.Value)
-		if v.Note != nil && *v.Note != "" {
-			line += " — " + *v.Note
-		}
-		fmt.Fprintf(w, "%s  (%s, %s)\n", line, v.Author, fmtTime(v.UpdatedAt))
-	}
+	printVerdicts(w, c.Verdict, c.Verdicts)
 
 	if len(c.Notes) > 0 {
 		fmt.Fprintf(w, "\nNOTES (%d)\n", len(c.Notes))
@@ -744,6 +738,7 @@ func cmdSplit(e *env, args []string) error {
 
 func cmdStats(e *env, args []string) error {
 	f := newFlags(e, "stats")
+	user := f.String("user", "", "whose verdicts to count (default the owner)")
 	if _, err := f.parse(args); err != nil {
 		return err
 	}
@@ -751,7 +746,7 @@ func cmdStats(e *env, args []string) error {
 	if err != nil {
 		return err
 	}
-	s, err := cl.Stats(e.ctx)
+	s, err := cl.StatsFor(e.ctx, *user)
 	if err != nil {
 		return err
 	}

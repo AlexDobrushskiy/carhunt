@@ -162,6 +162,9 @@ type CarSummary struct {
 	// RemovedListingCount = listings with status removed. Tier = "To rate" tier 1|2|3 (see GET /queue).
 	RemovedListingCount int `json:"removed_listing_count"`
 	Tier                int `json:"tier"`
+
+	// Verdicts = every user's verdict by user name; Verdict above = the selected user's (?user=, default owner).
+	Verdicts map[string]*Verdict `json:"verdicts"`
 }
 
 type CarList struct {
@@ -208,6 +211,8 @@ type CarDetail struct {
 	GoodDealBy   *string    `json:"good_deal_by"`
 	GoodDealAt   *time.Time `json:"good_deal_at"`
 	DealRank     *string    `json:"deal_rank"`
+	// Verdicts = every user's verdict by user name; Verdict = the selected user's (?user=, default owner).
+	Verdicts map[string]*Verdict `json:"verdicts"`
 }
 
 type Listing struct {
@@ -455,6 +460,7 @@ type NotePatch struct {
 }
 
 type Verdict struct {
+	User      string    `json:"user"`
 	Value     string    `json:"value"`
 	Note      *string   `json:"note"`
 	Author    string    `json:"author"`
@@ -464,6 +470,7 @@ type Verdict struct {
 type VerdictInput struct {
 	Value  string     `json:"value"`
 	Note   string     `json:"note,omitempty"`
+	User   string     `json:"user,omitempty"`
 	Author string     `json:"author,omitempty"`
 	At     *time.Time `json:"at,omitempty"`
 }

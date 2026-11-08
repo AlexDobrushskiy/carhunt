@@ -18,10 +18,10 @@ func startServer(t *testing.T) (string, string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	srv := httptest.NewServer(server.NewHandler(st, map[string]string{"agents": "tok"}))
+	srv := httptest.NewServer(server.NewHandler(st, map[string]string{"agents": "tok-cli-agents"}))
 	t.Cleanup(func() {
 		srv.Close()
 		st.Close()
 	})
-	return srv.URL, "tok"
+	return srv.URL, "tok-cli-agents"
 }

@@ -326,7 +326,7 @@ func (s *Store) AddMessage(ctx context.Context, in api.MessageInput, author stri
 			switch {
 			case in.Direction == "in":
 				senderKind = "seller"
-			case author == "owner":
+			case isOwner(tx, author):
 				senderKind = "owner"
 			default:
 				senderKind = "agent"
