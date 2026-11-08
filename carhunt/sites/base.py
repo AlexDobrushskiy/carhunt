@@ -120,6 +120,16 @@ class BaseSite:
 
 # --- metadata ----------------------------------------------------------------
 
+def overrides(site_id: str) -> dict:
+    """config `sites.overrides[<id>]` ({} without a config: plugins and tests run on defaults)."""
+    try:
+        from carhunt.access import _core
+        sec = _core.section("sites")
+    except Exception:   # no config file yet / core not installed
+        return {}
+    return dict((sec.get("overrides") or {}).get(site_id) or {})
+
+
 def slugify(s: str) -> str:
     """"Q4 e-tron" → "q4-e-tron", "ID.4" → "id.4" (dots kept: AS24/standvirtual slugs keep them)."""
     return re.sub(r"[^a-z0-9.]+", "-", s.lower()).strip("-")

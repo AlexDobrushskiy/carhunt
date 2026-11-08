@@ -28,6 +28,7 @@ class SearchQuery:
     make: str | None = None
     model: str | None = None
     country: str | None = None          # ISO-3166 alpha-2
+    lang: str | None = None             # language mirror on bilingual sites (2dehands nl / 2ememain fr)
     price_min: int | None = None
     price_max: int | None = None
     year_min: int | None = None

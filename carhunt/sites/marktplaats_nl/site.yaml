@@ -1,0 +1,28 @@
+site: marktplaats.nl
+name: Marktplaats / 2dehands / 2ememain
+kind: marketplace
+countries: [NL, BE]
+hosts: ['(^|\.)marktplaats\.nl$', '(^|\.)2dehands\.be$', '(^|\.)2ememain\.be$']
+ad_id: ['/(m\d{6,})(?=[-/?#]|$)']
+wall: CloudFront WAF (home page / is 403 to scripts; data URLs pass)
+route: http
+country_ip: null
+accept_language: "nl-NL,nl;q=0.9"
+pace:
+  min_gap_s: 6
+  max_loads_per_run: 60
+  read_after: "12:00"
+  why: "~25 loads @6 s, no block (11-01); sweeps ran 45 API pages/day @7 s (11-05..07). ≤60/run + reads after 12:00 (or via a proxy): messaging sites' read bursts got the home IP 403'd on mobile.de/leboncoin, rule for every messaging site incl. 2dehands (11-06)"
+caps: {}
+account:
+  needed_for: [message, phone]
+  verification: "email confirm + mandatory SMS 2FA at every new-device login; never completed (a rented number locks the account later). 2dehands/2ememain account is separate from marktplaats"
+phone: none
+messaging: "site chat ('asq' in seller.contactOptions) needs a logged-in account → unusable (SMS 2FA); dealers' own phone/website are on the ad page"
+liveness: {evidence: "410 = gone; 200 + ad id (m…) = live (measured 11-04)"}
+measured: 2026-11-07
+notes:
+  - "Never warm up on / : CloudFront answers 403 to scripts there while /lrp/api/search and ad pages pass (11-01)"
+  - "One platform: same API, attribute ids and ad ids on all three hosts; 2dehands/2ememain are NL/FR mirrors of the same ads"
+  - "Logged-out pages hide private phones (seller.phoneNumberHidden); 'Toon nummer' needs a login. Dealers' phoneNumber is public"
+  - "constructionYear is a year only: first_registration = 'YYYY', never a guessed month"

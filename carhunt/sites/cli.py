@@ -39,6 +39,7 @@ def _site(sub) -> None:
     q.add_argument("--make")
     q.add_argument("--model")
     q.add_argument("--country", help="ISO-2: domain/market on multi-country sites")
+    q.add_argument("--lang", help="language mirror (marktplaats BE: fr = 2ememain)")
     q.add_argument("--price-min", type=int)
     q.add_argument("--price-max", type=int)
     q.add_argument("--year-min", type=int)
@@ -78,7 +79,7 @@ def cmd_site(a) -> int:
             if a.urls:
                 print("carhunt: search takes filters, not URLs", file=sys.stderr)
                 return 1
-            q = SearchQuery(make=a.make, model=a.model, country=a.country, price_min=a.price_min,
+            q = SearchQuery(make=a.make, model=a.model, country=a.country, lang=a.lang, price_min=a.price_min,
                             price_max=a.price_max, year_min=a.year_min, year_max=a.year_max, km_max=a.km_max,
                             fuel=a.fuel, seller=a.seller, sort=a.sort, max_pages=a.pages,
                             extra=dict(kv.split("=", 1) for kv in a.extra))
