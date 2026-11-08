@@ -101,8 +101,9 @@ else
   nb=$(brew_node22 || true)
   if [ -z "$nb" ] && have brew; then run brew install node@22; [ "$DRY" = 1 ] || nb=$(brew_node22 || true); fi
   if [ -n "$nb" ] && node_ok "$nb/node"; then
+    old_node="$(command -v node 2>/dev/null || echo none) $(node -v 2>/dev/null)"
     export PATH="$nb:$PATH" NODE_HINT=$nb
-    say "node: $(command -v node 2>/dev/null || echo none) is older than 22.19; using $nb/node ($("$nb/node" -v)) for this run"
+    say "node: $old_node on PATH is older than 22.19; using $nb/node ($("$nb/node" -v)) for this run"
     say "add it to PATH in your shell profile: export PATH=\"$nb:\$PATH\""
   elif [ "$DRY" = 1 ]; then say "would use \$(brew --prefix node@22)/bin (node on PATH: $(node -v 2>/dev/null || echo none))"
   else warn "Node >= 22.19 not found (node on PATH: $(node -v 2>/dev/null || echo none)): brew install node@22 and put its bin on PATH"; fi
