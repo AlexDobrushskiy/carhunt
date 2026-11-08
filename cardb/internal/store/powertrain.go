@@ -118,3 +118,32 @@ func fuelMatch(c *api.CarSummary, fuels []string) bool {
 	}
 	return slices.Contains(fuels, f)
 }
+
+// withLegacyBattery folds the flat pre-v2 battery keys into the powertrain block; a flat value that disagrees
+// with a nested one is 422 (silently picking one would lose data).
+func withLegacyBattery(s api.CarSpecs) (*api.Powertrain, error) {
+	if s.LegacyBatteryNetKwh == nil && s.LegacyBatteryGrossKwh == nil {
+		return s.Powertrain, nil
+	}
+	pt := &api.Powertrain{}
+	if s.Powertrain != nil {
+		*pt = *s.Powertrain
+	}
+	fold := func(key string, flat *float64, nested **float64) error {
+		if flat == nil {
+			return nil
+		}
+		if *nested != nil && **nested != *flat {
+			return invalidf("%s %v conflicts with powertrain.%s %v; send it once, inside powertrain", key, *flat, key, **nested)
+		}
+		*nested = flat
+		return nil
+	}
+	if err := fold("battery_net_kwh", s.LegacyBatteryNetKwh, &pt.BatteryNetKwh); err != nil {
+		return nil, err
+	}
+	if err := fold("battery_gross_kwh", s.LegacyBatteryGrossKwh, &pt.BatteryGrossKwh); err != nil {
+		return nil, err
+	}
+	return pt, nil
+}

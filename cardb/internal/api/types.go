@@ -84,6 +84,9 @@ type CarSpecs struct {
 	City         *string     `json:"city,omitempty"`
 	DistanceKm   *int        `json:"distance_km,omitempty"`
 	Market       *string     `json:"market,omitempty"` // read-only
+	// Deprecated input (pre-v2 clients): flat battery keys, folded into Powertrain on write; never set on reads.
+	LegacyBatteryNetKwh   *float64 `json:"battery_net_kwh,omitempty"`
+	LegacyBatteryGrossKwh *float64 `json:"battery_gross_kwh,omitempty"`
 }
 
 type CarInput struct {
