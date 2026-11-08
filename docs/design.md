@@ -2,13 +2,13 @@
 
 Layout, module boundaries and the interfaces between them. Commands and config keys in full: each `docs/<module>.md` ([index](index.md)).
 
-## Principles
+## Ground rules
 - **Repo = code, templates, docs.** Everything a run produces (config, secrets, DB, ledgers, rendered briefs, state, logs, browser profiles) lives in `$CARHUNT_HOME` (default `~/.carhunt`), never in the repo.
 - **cardb is the hub.** Every stage reads/writes car facts through cardb (REST, or the `cardb` CLI). No module keeps its own car list.
 - **One config file** (`$CARHUNT_HOME/config.yaml`, schema `carhunt/core/config.schema.json`, worked example `config.example.yaml`). The buyer profile lives there, not in code.
 - **Secrets by name only.** Config holds `secret:NAME`; values come from the secrets backend. No command prints a value.
-- **Rules live in code where they can.** Pace, caps, quiet hours, send guards, notify kinds are enforced by the tool, not by brief prose; each rule keeps a one-line why.
-- **Platform:** macOS (Apple Silicon) + agterm + Claude Code. Session and secrets backends are interfaces, so tmux or Linux can be added.
+- **Rules are enforced by the tool:** pace, caps, quiet hours, send guards, notify kinds.
+- **Platform:** macOS (Apple Silicon) + agterm + Claude Code. Session and secrets backends are interfaces.
 
 ## Layout
 Module → paths → doc: [README](../README.md#modules). Role briefs per module: [agents/roles](../agents/roles/README.md); skills: [skills](../skills/README.md). Languages: Python 3.12 (`carhunt/`), Go (`cardb/`), Astro/TS on Node 22 (`web/`), sh + Node (`browsers/`).
@@ -51,7 +51,7 @@ Schema `carhunt/sites/site.schema.json`; per-site overrides in config `sites.ove
 | `caps` | `<kind>_per_day\|_per_hour\|_per_session`, `<kind>_min_gap_s`, `why` (kind = load\|api\|phone\|send\|login) |
 | `account` | `needed_for[]`, `verification` ∈ none \| email \| email-link \| email-code \| google \| sms-once \| sms-own \| sms-every-login, `note`, `mail_from` (Gmail query for `email-code`) |
 | `phone` | page \| decode \| reveal \| reveal-login \| text-only \| none |
-| `messaging`, `notes[]`, `measured` | how to reach a seller; dated evidence |
+| `messaging`, `notes[]`, `measured` | how to reach a seller; site notes; measured limits |
 | `liveness` | `supported`, `mode` fetch\|goto, `gone_redirect/_text/_title`, `sold_text`, `proxy_country`, `evidence` |
 | `cursor.strategy` | newest_id \| first_seen \| full (+ `why`) |
 | `proxy.sticky_minutes` | sticky exit length |
@@ -59,24 +59,7 @@ Schema `carhunt/sites/site.schema.json`; per-site overrides in config `sites.ove
 Semantics: pace ledger [browsers.md](browsers.md#pace-ledger-accesspace), cursors [sites.md](sites.md#cursors-and-price-changes).
 
 ## Config sections
-`owner`, `secrets`, `notify`, `cardb`, `web` (core) · `search` (db + discover) · `browsers`, `net`, `accounts` (browsers) · `sites` · `discover` · `contact` · `vet` · `orchestrate`. Values: [`config.example.yaml`](../config.example.yaml); what each key does: the module doc's "Config" section. Unknown keys anywhere are errors (D12).
+`owner`, `secrets`, `notify`, `cardb`, `web` (core) · `search` (db + discover) · `browsers`, `net`, `accounts` (browsers) · `sites` · `discover` · `contact` · `vet` · `orchestrate`. Values: [`config.example.yaml`](../config.example.yaml); what each key does: the module doc's "Config" section. Unknown keys anywhere are errors.
 
 ## Tests
-Every suite is offline and isolated by the root `conftest.py` (D9): [testing.md](testing.md). Commits pass `scripts/privacy-check` (git hook).
-
-## Decisions (open to change)
-| # | decision | why | alternative |
-|---|---|---|---|
-| D1 | macOS + agterm only | agterm required anyway | tmux backend + Linux secrets later |
-| D2 | Powertrain-specific fields (EV battery etc.) under `powertrain` | any used car, not one type | flat EV columns |
-| D3 | Ranking only in cardb | one answer for web, CLI, agents | discover-side scoring |
-| D4 | Secrets: env → Keychain (default) / 1Password / file | no plaintext in repo or config | keyring lib |
-| D5 | One Python package with auto-discovered CLI groups | modules never edit a shared dispatcher | one script per tool |
-| D6 | Telegram optional; digest/ask/urgent only, enforced in code | unbounded pushes turn into noise | prose-only rule |
-| D7 | Skills shipped as `carhunt-*` and symlinked | don't clash with the user's own skills | copy into `~/.claude/skills` |
-| D8 | Guard hooks in `$CARHUNT_HOME/claude/settings.json`, passed with `claude --settings` | guards bind carhunt agents only; the user's other sessions stay unchanged | global `~/.claude/settings.json` (`hooks install --user`) |
-| D9 | Root `conftest.py` forces file secrets + temp home for every test | a test must never reach the real Keychain or home | per-package fixtures |
-| D10 | `carhunt creds new\|status` and `carhunt email-code SITE` as CLI | agents drive the CLI; values never reach the transcript | agents call Python |
-| D11 | `captcha` extra (torch) not in `all` | heavy; most sites never need the local model | in `all` |
-| D12 | Strict config schema (unknown keys fail) per section | typo guard: a misspelled key would silently run on the default | open module sections |
-| D13 | `outreach-home` / `outreach-abroad` as variants of one brief | one rule set, separate state, inbox and caps | two briefs |
+Every suite is offline and isolated by the root `conftest.py`: [testing.md](testing.md). Commits pass `scripts/privacy-check` (git hook).

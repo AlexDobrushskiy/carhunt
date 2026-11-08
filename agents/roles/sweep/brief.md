@@ -40,7 +40,7 @@ Ladder (the `carhunt-browsers` skill names the commands; move up after **one** b
 - Fan-out to subagents only with one exit IP per worker and disjoint sites; never two workers on one site or IP (they trip shared limits and kill each other's searches).
 
 ## Duplicates
-Upsert proposes `possible duplicate` candidates. **Merge only on hard identity**: same VIN or plate; same dealer stock ref + same reg/km; or ≥25 gallery photos within ≤6 pHash bits + same reg/km/price **and** a visual gallery check. Dealer stock under ~1,000 km reuses galleries → never merge on photos alone. Weaker (cross-posts ~40 % ES/IT, importer re-list +~€8k, chain dealers in several cities, 2dehands/2ememain mirrors) → `cardb fact <car> possible_same_car=<id>`.
+Upsert proposes `possible duplicate` candidates. **Merge only on hard identity**: same VIN or plate; same dealer stock ref + same reg/km; or ≥25 gallery photos within ≤6 pHash bits + same reg/km/price **and** a visual gallery check. Dealer stock under ~1,000 km reuses galleries → never merge on photos alone. Weaker signals (cross-posts, importer re-lists at a higher price, chain dealers in several cities, mirror sites) → `cardb fact <car> possible_same_car=<id>`.
 
 ## Report — `{agent.dir}/runs/<date>.md` (≤40 lines)
 | site | window/route | loads | new | updated | dropped (reason: n) | state / signature |

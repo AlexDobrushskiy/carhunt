@@ -3,7 +3,7 @@
 makes:        # path slug; missing → slugify(make). `coches` = no make category on the site: the make joins the keyword
   Mercedes-Benz: mercedes-benz
   XPeng: coches
-models:       # keyword `s` (as the sweeps sent it, 11-04..07); missing → the model name lowercased
+models:       # keyword `s`; missing → the model name lowercased
   Volkswagen: {ID.3: id.3, ID.4: id.4, ID.5: id.5}
   Audi: {Q4 e-tron: q4}
   Skoda: {Enyaq: enyaq}
@@ -16,7 +16,7 @@ models:       # keyword `s` (as the sweeps sent it, 11-04..07); missing → the 
   Toyota: {bZ4X: bz4x}
   Mini: {Countryman: countryman}
   BYD: {Seal U: seal u, Sealion 7: sealion 7}
-params:       # SearchQuery field → URL key. desde/anoh follow the site's scheme but were not sent in the measured runs
+params:       # SearchQuery field → URL key. desde/anoh follow the site's scheme (untested)
   year_min: anod
   year_max: anoh
   km_max: kilometersTo

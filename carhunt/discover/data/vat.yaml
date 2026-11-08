@@ -1,5 +1,5 @@
-# Standard VAT rate per country (%), for net → gross. Dealer B2B asks shown net (AS24 isNetPrice, "netto",
-# "HT", "IVA esclusa", "excl. BTW") passed the price filter as if gross on day 1 of the EV run (2026-11-03).
+# Standard VAT rate per country (%), for net → gross: dealer B2B asks shown net (AS24 isNetPrice, "netto",
+# "HT", "IVA esclusa", "excl. BTW") would otherwise pass the price filter as if gross.
 # Check rates yearly; a wrong rate shifts every net ask from that country.
 AT: 20
 BE: 21

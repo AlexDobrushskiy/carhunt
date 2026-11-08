@@ -6,7 +6,7 @@ A Go REST API over SQLite and one binary, `cardb`, that is both the server and t
 Every carhunt stage reads and writes car data only through cardb.
 
 - Contract: [`api/openapi.yaml`](api/openapi.yaml) (wire types `internal/api/types.go`)
-- Design (storage, dedupe, merge/split, ranking, write rules with their why): [`DESIGN.md`](DESIGN.md)
+- Design (storage, dedupe, merge/split, ranking, write rules): [`DESIGN.md`](DESIGN.md)
 - Operating it (compose, remote access, backups, backfills): [`../docs/db.md`](../docs/db.md)
 
 ## Install and run

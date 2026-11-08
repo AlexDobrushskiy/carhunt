@@ -10,8 +10,8 @@ fuel:                   # cardb powertrain → `fuel` code (others: leave unfilt
   bev: "4"              # Électrique
 seller:                 # owner_type
   private: private
-  dealer: pro           # = the ads' owner.type value; filter itself not measured
-sort:                   # price: not measured → not listed (site default order)
+  dealer: pro           # = the ads' owner.type value
+sort:                   # price: not listed (site default order)
   newest: {sort: time, order: desc}
   relevance: {}
 brands:                 # u_car_brand, used for a make-only query
@@ -28,7 +28,7 @@ brands:                 # u_car_brand, used for a make-only query
   Kia: KIA
 models:                 # u_car_model (the site's own normalised model; comma = several). Missing → text=<make> <model>
   Volkswagen: {ID.4: VOLKSWAGEN_ID.4, ID.5: VOLKSWAGEN_ID.5}
-  Audi: {Q4 e-tron: AUDI_Q4}          # "AUDI_Q4 e-tron"/"AUDI_Q4 Sportback e-tron" matched nothing (11-03)
+  Audi: {Q4 e-tron: AUDI_Q4}          # "AUDI_Q4 e-tron"/"AUDI_Q4 Sportback e-tron" match nothing
   Skoda: {Enyaq: "SKODA_Enyaq,SKODA_Enyaq Coupé"}
   Mercedes-Benz: {EQA: MERCEDES-BENZ_EQA, EQB: MERCEDES-BENZ_EQB}
   BMW: {iX1: BMW_iX1}

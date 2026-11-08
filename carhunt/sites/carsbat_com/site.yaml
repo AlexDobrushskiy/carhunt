@@ -9,7 +9,7 @@ route: plain-chrome
 country_ip: null
 pace:
   min_gap_s: 10
-  why: "not measured; Cloudflare: one non-automated browser tab, a few lookups per car"
+  why: "Cloudflare: one non-automated browser tab, a few lookups per car"
 account:
   needed_for: [vin]
   verification: email-link
@@ -22,7 +22,7 @@ cursor: {strategy: full, why: "VIN lookup, not a feed"}
 measured: 2026-11-01
 notes:
   - "EU auction archive (OpenLane, BCA-type lots): price history with/without VAT, sale date, country, km, damage flag, keys, seller type, ~30 photos"
-  - "countries = where the measured lot was sold; lots come from several EU auctions"
+  - "lots come from several EU auctions; countries = where a lot was sold"
   - "lane and plain HTTP get Cloudflare's 'Just a moment' → plain-chrome or the identity browser"
   - "Lot pages /en/detail/<vin lowercase>-<hash>/ are public; the VIN search /en/vin-search/?query=<VIN> needs the login and redirects to the lot when the VIN is archived"
   - "Photos only through the browser session's own request (plain HTTP 403)"

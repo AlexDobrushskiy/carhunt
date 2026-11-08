@@ -61,4 +61,4 @@ The schema is strict: an unknown key at any level fails validation (a typo like 
 
 ## Gaps
 - `op` (1Password) backend: unit-tested only.
-- Linux: secrets `file` backend works; bootstrap is macOS-only (design D1).
+- Linux: secrets `file` backend works; bootstrap is macOS-only.

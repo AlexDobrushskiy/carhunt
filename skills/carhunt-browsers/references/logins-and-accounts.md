@@ -29,7 +29,7 @@ Reference for the `carhunt-browsers` skill. Hold/release rules stay in SKILL.md.
 ## Verification codes and links
 - **Email first**, even when the site says "texted": `from carhunt.access.accounts import wait_code, wait_link`; take `t0 = time.time()` **before** the site sends, then `wait_code(site, since=t0)` / `wait_link(site, since=t0, pattern=…)` — CLI: `carhunt email-code <site> --since <t0> [--link REGEX]` (prints only the code/link). Read-only Gmail API, token from secrets; query = site.yaml `account.mail_from`, else `from:<domain>`.
 - A code that goes **only** to the owner's phone → one `ask` notification, batched with any other pending codes (agents must not be blocked by anything they can do themselves).
-- Some activations fail on IP, not the number: kleinanzeigen refused the activation link on a residential range ("IP-Bereich vorübergehend gesperrt"); opening it on mobile data works.
+- Some activations fail on IP, not the number (kleinanzeigen: "IP-Bereich vorübergehend gesperrt") → open the link on mobile data.
 - Phone verification: try the owner's own number first (subito accepts a foreign EU mobile). Rented numbers: see proxies-and-sms.md.
 
 ## Gmail OAuth (for email codes)

@@ -10,16 +10,15 @@ Some sites gate by **country**, not reputation: coches.net and milanuncios (same
 ## Proxy rules
 | rule | why |
 |---|---|
-| Residential (or mobile) provider; free/public VPNs and datacenter ranges are useless on serious walls | public VPN IPs (e.g. VPN Gate) are on block lists → Imperva bot page on the first load; datacenter IPs get messaging soft blocks (leboncoin) |
+| Residential (or mobile) provider; free/public VPNs and datacenter ranges are useless on serious walls | public VPN IPs are on block lists (Imperva bot page on the first load); datacenter IPs get messaging soft blocks |
 | **Fail closed**: exit country verified before the first site load; mismatch/unknown → `ProxyUnavailable`, no request leaves | a dead tunnel can leave a forwarder serving the home IP |
 | One sticky session per run (≤30 min) | a new IP per load → DataDome slider within a few loads |
-| Media/images off where the site allows; Firefox Widevine/OpenH264 downloads off | Widevine alone can be a quarter of a campaign's traffic; milanuncios needs media on (click does nothing without it) |
+| Media/images off where the site allows; Firefox Widevine/OpenH264 downloads off | proxy traffic is paid per GB; milanuncios needs media on (click does nothing without it) |
 | Behind a slow proxy, extend app XHR timeouts; wait ≤180 s for the send answer | a 10 s app timeout aborts the real POST |
 | Credentials only inside the adapter (`carhunt proxy` never prints a URL with credentials); Chrome gets a local no-auth forwarder that dies with the tunnel | Chrome can't take proxy auth on the command line; a leaked URL = a leaked secret |
 
 - Test: `carhunt proxy test ES` → exit IP country + ASN type, nothing else. Do it once after setup and after any provider change.
 - Python: `access.proxy.get(country, sticky_minutes)`; `session.tab(route, country="ES")` does get + verify.
-- Cost reference: a whole coches/milanuncios send campaign ≈ 66 MB (a ~$5 / 1 GB plan).
 
 ## Geo browser (one account, one IP)
 - An account created on a country IP **lives on that one IP forever**; the home IP never logs into it; its profile (`profiles/geo-<cc>`) never joins the identity pool's cookie sync. Why: IP hopping gets accounts banned.
@@ -27,8 +26,8 @@ Some sites gate by **country**, not reputation: coches.net and milanuncios (same
 - Pace on residential: ≤8 loads per 55 min, ≥60 s gap (leboncoin FR route).
 
 ## Camoufox (optional, `camoufox` route)
-- `os="macos"` always (a random Windows identity turns on canvas noise) and an explicit locale (geoip produced `es-PT`).
-- Reach React state with `main_world_eval`; read API status from the driver's network events, not a page hook (Camoufox saw the real 403; Chrome only `net::ERR_FAILED`).
+- `os="macos"` always (a random Windows identity turns on canvas noise) and an explicit locale.
+- Reach React state with `main_world_eval`; read API status from the driver's network events, not a page hook.
 
 ## Rented SMS numbers
 | rule | why |
@@ -36,7 +35,7 @@ Some sites gate by **country**, not reputation: coches.net and milanuncios (same
 | Rent **only for verify-once sites** (SMS at signup, never again); never for sites with SMS 2FA at every new-device login (marktplaats / 2dehands) | the number dies after one SMS → the next challenge locks the account |
 | Prefer the owner's own long-lived mobile when the site accepts foreign numbers | subito accepts a foreign EU mobile; a rented number can't be swapped later (change needs a code to the dead number; support wants a bill + ID) |
 | Each rental is a purchase → owner's OK first (site, country, price) | spend rule |
-| Pick the provider/pool by **per-service success rate**, not price; pay only on received code; cancel = refund | 5sim FR leboncoin 0.4–3.7 % vs SMSPool ~30 %; cheap pools return recycled numbers ("already linked to an account") |
+| Pick the provider/pool by **per-service success rate**, not price; pay only on received code; cancel = refund | success rates differ widely per service; cheap pools return recycled numbers ("already linked to an account") |
 | The rental IP matters: sign up from the target country's IP, then that IP is the account's IP forever | foreign-IP signup gets stuck at the phone step (leboncoin) |
 | Record that the account has **no SMS recovery** in the site row notes | any future SMS challenge = lockout |
 

@@ -57,16 +57,16 @@ Values and defaults: [`config.example.yaml`](../config.example.yaml) `sites:`, `
 
 Flags discover sets: `lease_transfer` (always dropped), `damaged`, `reseller`, `net_price`, `history_abroad`, `china_market_vin`, `net_price_unknown_vat`.
 
-## Rules (why)
+## Rules
 - **Serial, one sweep per machine.** Parallel workers on one IP get sites banned and break each other's searches.
 - **Sends before reads.** Sites with `pace.read_after` are read only after it: discovery reads can get the IP used for seller messages blocked.
 - **Budget ≤ 60 loads/site/run** (lower where site.yaml says so): strict sites block an IP after a few dozen loads.
 - **Stop a site at the first block; gone ≠ blocked** (classification and why: [sites.md](sites.md#rules-why)).
-- **Cursors only from organic, in-filter cards; checked before the cardb lookup; committed per query after a clean finish; merged, never replaced.** Promoted rows violate filters; a replaced cursor dict lost models with no eligible head.
+- **Cursors only from organic, in-filter cards; checked before the cardb lookup; committed per query after a clean finish; merged, never replaced.** Promoted rows violate filters.
 - **Cursor strategy:** config `discover.cursor.<site>` > site.yaml `cursor.strategy` (`newest_id` \| `first_seen` \| `full`) > `first_seen`.
 - **Newest-first cursors don't see price drops on older ads.** Price tracking of known listings = full-coverage sites + liveness/price checks (sites module).
 - **Upsert without photos, then photos by resolved URL; later writes resolve by URL.** Dealer stock galleries can merge different cars, and a later write then hits the wrong one.
-- **No scoring, no merging here.** Ranking and dedupe are cardb's (one answer for web, CLI, agents); discover sends identity keys (VIN, plate, phone, `dealer_stock_ref`).
+- **No scoring, no merging here.** Ranking and dedupe are cardb's; discover sends identity keys (VIN, plate, phone, `dealer_stock_ref`).
 - **Prices gross.** Net asks + country VAT (`data/vat.yaml`); ES "precio al contado" beats a finance headline; IT "IVA esclusa" asks → gross. Otherwise net asks slip through the price filter.
 - **Price sanity before storing** (×100 prices are common). cardb refuses too (422 `{reason}`): `price_lease` → dropped (a rate/deposit, not a sale); `price_x100`/`price_range`/`price_net` → car stored **without price**, the ask in `price_note`, counted `price_held` + a disposition line. Agent: check the ad, then `cardb listing set ID --price N [--price-vat gross|net|margin]` (`--force` only after checking). Why: newest-first cursors move past the ad, so a dropped car is never seen again.
 - **One bad ad never stops the run:** a 400/422 rejects that ad; cardb down / 5xx stops the sweep (exit 1).
@@ -81,7 +81,7 @@ Flags discover sets: `lease_transfer` (always dropped), `damaged`, `reseller`, `
 - **Model match on make/model/title only, never the description** — dealer prose lists other models.
 
 ## Heuristics plug-ins
-`carhunt/discover/heuristics/<name>.yaml`: `families`, `variants` (battery/power/drive per trim + year), `drive_rules`, `option_cues` (`kind: text` applied by discover; `kind: photo` for vet/agents, with validation counts), `pr_codes` (+ `decode_pr()`), `fallback_ask` (+ i18n) and `rules` with why. `vag_meb.yaml` (VW ID.4/ID.5, Škoda Enyaq, Audi Q4, Cupra Tavascan) is the worked example. New model group = new YAML, no code.
+`carhunt/discover/heuristics/<name>.yaml`: `families`, `variants` (battery/power/drive per trim + year), `drive_rules`, `option_cues` (`kind: text` applied by discover; `kind: photo` for vet/agents), `pr_codes` (+ `decode_pr()`), `fallback_ask` (+ i18n) and `rules`. `vag_meb.yaml` (VW ID.4/ID.5, Škoda Enyaq, Audi Q4, Cupra Tavascan) is the worked example. New model group = new YAML, no code.
 
 ## Data files (`carhunt/discover/data/`)
 `vat.yaml` · `regions.yaml` · `phone.yaml` · `keywords.yaml` (lease, damage, reseller, net wording, cash price, facts, fuel and drive vocab) · `options.yaml` (multi-language option cues, `present`/`absent`/`unless`). Languages: en de fr es it pt nl.

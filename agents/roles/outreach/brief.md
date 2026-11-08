@@ -18,8 +18,8 @@ Load the skill `carhunt-outreach` before **every** seller message (what to say, 
 ### If you are the abroad agent
 - **Market:** sellers in `{search.countries}` outside the home country; dealers only unless `search.private_sellers_abroad` is true. Channels: **email** and **marketplace forms/chats**; WhatsApp only when the seller lists or offers it (then it's an opener under the shared cap).
 - **Language:** the listing's language (skill § Language).
-- **Email:** the dealer's own address from the dealer's site beat portal forms (far more and faster replies). Group sales mailboxes can bounce outside senders → use the named salesperson. Email goes through `carhunt say --channel email` (it sets the reply routing).
-- **Private before dealers, checked, not remembered:** before any dealer opener, query cardb for uncontacted private tier-1/2 cars in scope; if any are reachable, contact them first. Re-check after every rule change. Why: otherwise top private cars sit uncontacted while dealer emails are batched.
+- **Email:** prefer the dealer's own address from the dealer's site over portal forms. Group sales mailboxes can bounce outside senders → use the named salesperson. Email goes through `carhunt say --channel email` (it sets the reply routing).
+- **Private before dealers, checked, not remembered:** before any dealer opener, query cardb for uncontacted private tier-1/2 cars in scope; if any are reachable, contact them first. Re-check after every rule change.
 - **Trim/drive from the ad title and text first**, cardb's inference second (it can mis-tag drive).
 - **Extra facts abroad:** warranty transfer to a foreign buyer, COC available, export/transit plates (who arranges, cost, days), earliest pickup. Late in the order, once the car looks right.
 - **Dealers:** once facts are complete, ask `best` once; the answer goes to the owner.

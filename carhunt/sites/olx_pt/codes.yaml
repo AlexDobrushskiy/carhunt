@@ -1,6 +1,6 @@
 # OLX.pt offers API (called inside the site's own tab): /api/v1/offers/?offset&limit=40&category_id=378&query=…&filters
-# No make/model filter is known: the model goes in as free text (`query`), as the EV sweep did 11-04…11-07.
-# Measured filters: filter_float_year:from, filter_float_quilometros:to, filter_float_price:to, owner_type=private.
+# No make/model filter is known: the model goes in as free text (`query`).
+# Filters: filter_float_year:from, filter_float_quilometros:to, filter_float_price:to, owner_type=private.
 # The other bound of each range follows the API's own `:from`/`:to` scheme.
 category: 378            # Carros
 limit: 40                # organic rows per page; promoted rows come on top (metadata.promoted)
@@ -10,7 +10,7 @@ filters:                 # SearchQuery field → API param
   price_min: "filter_float_price:from"
   price_max: "filter_float_price:to"
   km_max: "filter_float_quilometros:to"
-owner_type:              # server-side seller filter (only `private` measured; dealer = business flag, filtered here)
+owner_type:              # server-side seller filter (`private` only; dealer = business flag, filtered here)
   private: private
 fuel:                    # cardb powertrain → `combustivel` param key; filtered on the rows (no API filter known)
   bev: electrico

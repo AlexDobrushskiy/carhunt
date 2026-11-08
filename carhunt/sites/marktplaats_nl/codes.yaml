@@ -11,7 +11,7 @@ seller:         # attributesById: Adverteerder
   private: 10898   # Particulier
   dealer: 10899    # Bedrijf
 fuel:           # attributesById: Brandstof (others: leave unfiltered)
-  bev: 11756       # Elektrisch: every row on 11-05..07 was Elektrisch with it, mixed fuels without it (11-04)
+  bev: 11756       # Elektrisch
 sort:
   newest: {sortBy: SORT_INDEX, sortOrder: DECREASING}
   price: {sortBy: PRICE, sortOrder: INCREASING}

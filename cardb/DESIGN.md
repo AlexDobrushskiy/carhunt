@@ -27,8 +27,7 @@ schema, queries, dedupe, merge/split, price sanity, versions, ranking (`rank.go`
 `internal/client` typed HTTP client · `internal/cli` subcommands.
 
 ## Storage
-- `<data dir>/cardb.sqlite3`, WAL, `foreign_keys=ON`, `busy_timeout=5000`, one writer connection. WHY: one data dir =
-  one backup path (snapshot + `photos/`); Postgres would need its own backed-up instance for no gain at this scale.
+- `<data dir>/cardb.sqlite3`, WAL, `foreign_keys=ON`, `busy_timeout=5000`, one writer connection.
 - Migrations: `PRAGMA user_version` + ordered list in `internal/store/schema.go` (SQL or Go func per step).
   5 legacy column renames · 6 powertrain + version + price VAT/flags · 7 users + per-user verdicts · 8 car lat/lon.
 - Timestamps stored as Unix epoch REAL seconds; the API emits RFC 3339 UTC.
@@ -44,8 +43,7 @@ schema, queries, dedupe, merge/split, price sanity, versions, ranking (`rank.go`
 - `sellers` + `seller_contacts` (kind, value, note, shared). An own contact (shared = 0) is unique per kind+value; a
   shared one (portal call centre, group switchboard) sits on every seller whose ad prints it. Upsert resolves a seller by
   an own contact only when the names don't conflict; a contact seen with a differently named seller becomes shared on
-  both. Shared contacts never pick a seller, route a message (`--to`) or count as duplicate evidence. WHY: shared dealer
-  numbers would merge unrelated sellers. Phones: digits with country code; a
+  both. Shared contacts never pick a seller, route a message (`--to`) or count as duplicate evidence. Phones: digits with country code; a
   national-format number gets the calling code of `owner.home.country` (its dialing plan). Emails lowercased.
 - `listings`: id, car_id, url (normalized) UNIQUE, site, site_ref, title, status, price, price_note, price_vat
   (gross|net|margin|unknown), price_flags JSON, seller_id, first/last_seen_at, removed_at, raw JSON. `price_points`: listing_id, price, at, note.
@@ -60,10 +58,9 @@ schema, queries, dedupe, merge/split, price sanity, versions, ranking (`rank.go`
 - `verdicts`: (car_id, user) PK, value, note, author, updated_at; every change also writes a `verdict` event.
 - `duplicates`: id, car_a < car_b, score, reasons JSON, status proposed|rejected|merged; UNIQUE(car_a,car_b). Rejected pairs are never re-proposed.
 
-## Write rules (each with its why)
+## Write rules
 - **Every write is idempotent.** Upsert by normalized URL / site ad id; `msg` by `external_id` / `dedupe_key` / derived
-  sha1(channel|dir|counterpart|text|minute); `event --key` stored once; photos by sha256 per car. Agents re-run blindly;
-  a replay must make 0 writes.
+  sha1(channel|dir|counterpart|text|minute); `event --key` stored once; photos by sha256 per car. A replay must make 0 writes.
 - **Upsert fills only empty car fields unless `overwrite`; `status` applies only on car creation.** Several agents describe
   the same car; a later sloppy ad must not clobber a confirmed value. Powertrain fills field by field the same way.
 - **Re-upserting a removed/sold ad relists it only if `seen_at` is later than the removal.** Replaying old sightings without
@@ -71,18 +68,17 @@ schema, queries, dedupe, merge/split, price sanity, versions, ranking (`rank.go`
 - **Message near-duplicate guard:** same car+channel+direction+normalized text (+ attachment kinds, agreeing counterpart)
   within 5 min under another key returns the existing row (`matched_by: near_duplicate`). Not when both carry different
   external ids, failed ≠ failed, or two different caller keys of one family (prefix before the first non-letter).
-  `allow_duplicate` logs a deliberate repeat. WHY: an import and a catch-up logger can both log the same message.
-- **Message delete is soft** (keys kept, `message_deleted` event, `msg restore`). A logger re-posting can't resurrect it.
+  `allow_duplicate` logs a deliberate repeat.
+- **Message delete is soft** (keys kept, `message_deleted` event, `msg restore`).
 - **Log incoming messages verbatim, in the original language, when read.** Paraphrases can't be re-checked; translations go in a note.
 - **Never overwrite a strong evidence source with a weak one** (photo/agent_inference never replaces seller_said,
   vin_pr_code, inspection, owner). On conflict keep the value and add a `*_conflict` fact. When in doubt write `unknown`:
   a wrong `no` hides a good car.
 - **Unknown ≠ no everywhere** (filters `yes_or_unknown`, `?` icons, `? km` in the queue). Missing data must not drop a car.
 - **Powertrain input:** nested `powertrain{…}` is the contract; flat `battery_net_kwh`/`battery_gross_kwh` on upsert and
-  POST /cars are still folded in (422 when they disagree with the nested value). WHY: flat-field clients must not lose the value
-  silently. Fuel/gearbox take ad words in PT/ES/FR/DE/IT/NL/EN (`elétrico`→bev, `plug-in`→phev, `gasóleo`→diesel,
+  POST /cars are still folded in (422 when they disagree with the nested value). Fuel/gearbox take ad words in PT/ES/FR/DE/IT/NL/EN (`elétrico`→bev, `plug-in`→phev, `gasóleo`→diesel,
   `GPL`→lpg, `DSG`/`automático`→automatic, …); an unrecognised word is 400.
-- **API changes stay additive** while agents write all day; avoid long migration locks.
+- **API changes stay additive**; avoid long migration locks.
 
 ## Price sanity (upsert, PATCH /listings/{id})
 Checked only when the price changes (re-sending the stored price is not re-checked, so replays stay idempotent).
@@ -97,7 +93,6 @@ Failures, most severe first; the first one is the 422 `{error, reason, price, ex
 
 `force: true` stores the price anyway: `price_flags` on the listing (and `CarSummary.price_flags`), a
 `price_sanity_override` event; the ranking drops the car from the comparable pool and adds `risk.price_forced`.
-WHY: ×100 prices sort as bargains; lease and net prices skew fair prices.
 
 ## Versions (optimistic locking)
 - `cars.version` is an **opaque** counter: it rises (by ≥ 1) on any write that changes the car row or anything shown on
@@ -108,8 +103,7 @@ WHY: ×100 prices sort as bargains; lease and net prices skew fair prices.
 - `GET /cars/{car}` (and PATCH/status responses) send `ETag: "<version>"`; GET /cars rows and queue items carry `version`.
 - `PATCH /cars/{car}` / `POST …/status` with `If-Match: "<n>"` or body `version` → 412 `{error, version, car}` when
   stale; without it last writer wins. `red_flags_add/_remove`, `open_questions_add/_remove`: exact text, atomic,
-  idempotent (422 when combined with a full replace of the same list). WHY: list PATCH replaced the whole list and
-  concurrent agents dropped each other's items; a status lagged its chat.
+  idempotent (422 when combined with a full replace of the same list).
 
 ## URL normalization
 Lowercase scheme+host, strip `www.`/`m.` for matching, drop fragment and tracking params (`utm_*`, `fbclid`, `gclid`,
@@ -121,15 +115,14 @@ if the slug differs. A site without a rule falls back to the full URL and loses 
 ## Dedupe
 Runs when upsert creates a car and whenever VIN/plate/seller contacts/photos change.
 - **Certain → auto-link/merge** (`merge` event with reason): same VIN (uppercase, 17 chars); same plate (alnum uppercase);
-  same private-seller phone AND same make+model. WHY: dealers share phones across their stock.
+  same private-seller phone AND same make+model. (Dealers share phones across their stock.)
 - **Photos** (pHash, Hamming ≤ 6) count only when distinctive: a picture on ≥ 3 distinct cars is a banner/stock image and
   is ignored. ≥ 2 distinctive matches covering ≥ ½ of the smaller set attach a NEW listing (`linked_by: photos`) only if
   make and model family agree, no known spec contradicts (year, km apart > max(5000, 15 %), plate, phones with none shared),
   the car is not closed/dropped/bought and no second car matches. Two existing cars are never merged on photos (proposal,
-  score 0.9). WHY: dealer stock photos would auto-merge different cars into one.
+  score 0.9).
 - **Never the same car** unless VIN/plate say so: different VINs, different make, different model family (first word of
-  the model), two different known fuels (`mhev` stays compatible with petrol/diesel/hev). WHY: a BEV and the petrol
-  version of the same model share photos and model names.
+  the model), two different known fuels (`mhev` stays compatible with petrol/diesel/hev).
 - **Likely → proposal** (score 0..1 + reasons): 1 distinctive photo match; same phone any seller type + same model; same
   make+model+year + km within ±5 % or ±3000 + (same city or colour); same make+model+reg_date+colour. Contradictions listed as "but …".
 - Agents: upsert the car without photos, then `photo add --listing`, and resolve later writes by `find-listing URL`, never
@@ -157,7 +150,7 @@ Runs when upsert creates a car and whenever VIN/plate/seller contacts/photos cha
 
 ## Ranking (GET /queue, `cardb queue`, GET /cars?sort=score)
 One pure function of (cars, facts, profile, now) in `internal/store/rank.go`, shared by API, CLI and web; nothing is
-stored. WHY: one answer everywhere. Every number below
+stored. Every number below
 is a `search.ranking.*` default (docs/db.md has the full key list).
 
 1. **Eligible** (per user, default owner): no verdict from that user; status not closed/dropped/bought; ≥ 1 live listing;
@@ -211,7 +204,6 @@ hit, the gap vs peers, then unknown must-haves and missing core fields.
 - Verdict user = body `user` > `?user=` > the token's user > the owner (unknown user 422). GET /cars, /cars/{car},
   /stats, /queue take `?user=` (unknown 400) and always return `verdicts` for every user.
 - **Legacy owner rewrite** (each start, idempotent): option/fact `source`, message `sender_kind` and note `author_kind`
-  equal to lower(`owner.name`) become `owner`; skipped when the name is itself a vocabulary word. WHY: older data
-  stored the owner's first name as an identity.
+  equal to lower(`owner.name`) become `owner`; skipped when the name is itself a vocabulary word.
 - The web UI holds one token per user (`cardb_web_tokens`), so its writes carry that user's name and rights; the
   browser never sees a token. `/healthz`, `/api/v1/health`, `/api/v1/openapi.yaml` need no token.

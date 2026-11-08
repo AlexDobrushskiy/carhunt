@@ -10,7 +10,7 @@ country_ip: null
 pace:
   min_gap_s: 6
   max_loads_per_run: 120
-  why: "~19 loads @6 s across 8 domains, no block (11-01); sweeps ran at 7 s"
+  why: "≥6 s across all country domains; sweeps use 7 s"
 caps: {}
 account:
   needed_for: []
@@ -18,7 +18,7 @@ account:
   note: "Google-only login; not needed: guest contact form"
   mail_from: "from:(autoscout24)"
 phone: page
-messaging: "guest 'E-Mail senden' form (no login); .de/.nl form unreliable 11-05 → dealer's own email"
+messaging: "guest 'E-Mail senden' form (no login); .de/.nl form unreliable → dealer's own email"
 liveness: {evidence: "410 = gone; 308 = slug moved (same uuid) → follow once; 200 + uuid = live"}
 cursor: {strategy: first_seen, why: "sort=age desc; uuids are unordered → created timestamp + first organic id per model"}
 measured: 2026-11-06

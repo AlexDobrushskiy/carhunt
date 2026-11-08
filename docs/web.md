@@ -38,7 +38,7 @@ No config.yaml section: labels, tiers, option keys, home city and time zone come
 | `/identity` (POST) | "Viewing as" picker: sets the `carhunt_user` cookie (a name, not a token) |
 | `/health` | web liveness |
 
-## Rules (with why)
+## Rules
 
 - **The browser never sees a token.** Tokens live in env; the browser holds only a user name cookie; `/ui/*` adds the token server-side. A `?token=` in a URL ends up in history and logs.
 - **`/ui/*` is an allowlist** (verdict, notes, status, needs flag, good deal, merge, reject duplicate); everything else → 405. Viewers get verdict only (cardb enforces it too → 403). A UI bug must not become an arbitrary API write.
@@ -48,7 +48,7 @@ No config.yaml section: labels, tiers, option keys, home city and time zone come
 - **Per-user verdicts:** reads pass `?user=<viewer>` (only for names in `/profile` users; cardb 422s on others), so lists, the queue and "To review" are the viewer's own. Other users' verdicts show beside yours.
 - **Edits send the car `version`** (status, needs flag): a stale page gets "changed by someone else, reload" (412) instead of silently undoing an agent's write.
 - **Unknown ≠ no.** A missing option row is `?`, never ✗; filters offer `✓ or ?`. A wrong ✗ hides a good car.
-- **Gzip HTML in middleware**: a long list is ~20× smaller on a phone. No JS framework on the list; islands only on the car page.
+- **Gzip HTML in middleware.** No JS framework on the list; islands only on the car page.
 - **Times in `owner.tz`**, whatever zone the server runs in.
 - **Price gap sign:** cardb's `price_gap_pct` is positive when cheaper; the chip shows the price relative to fair (−12 % = 12 % under).
 - **e2e never touches a non-local URL**: global setup starts its own cardb on a temp dir, and `fixtures.ts` refuses a non-loopback base URL.

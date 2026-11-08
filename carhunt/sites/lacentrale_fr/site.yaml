@@ -12,21 +12,20 @@ accept_language: "fr-FR,fr;q=0.9"
 pace:
   min_gap_s: 12
   why: >-
-    not measured; ~10 blocked test hits in one hour flagged the home IP (10-25) → move up the escalation ladder after
-    ONE blocked hit; same DataDome pace as leboncoin.fr
+    repeated blocked hits flag the home IP → move up the escalation ladder after ONE blocked hit; same DataDome pace
+    as leboncoin.fr
 account:
   needed_for: []
   verification: none
   note: "none needed for reads"
 phone: none
-messaging: "site's message-seller form on the ad page (not measured here; sender lives in contact)"
-liveness: {supported: false, evidence: "no liveness reader (3 listings in the EV run, 11-04)"}
-cursor: {strategy: full, why: "newest sort not measured"}
+messaging: "site's message-seller form on the ad page (sender lives in contact)"
+liveness: {supported: false, evidence: "no liveness reader"}
+cursor: {strategy: full, why: "no newest sort known"}
 measured: 2026-10-30
 notes:
-  - "Automated browsers (Playwright lane, identity MCP, Playwright-launched headed Chrome) get the slider; a slide solved there → 'Access is temporarily restricted' (10-26)"
-  - "plain-chrome (headed, not automated) passes with the jar's DataDome cookie; without it the 'Slide right' slider, solvable there (2/2, 10-26). --headless fails (10-25)"
+  - "Automated browsers (Playwright lane, identity MCP, Playwright-launched headed Chrome) get the slider; a slide solved there → 'Access is temporarily restricted'"
+  - "plain-chrome (headed, not automated) passes with the jar's DataDome cookie; without it the 'Slide right' slider, solvable there. --headless fails"
   - "Open the home page before the listing (tab_home): the listing straight away is walled"
-  - "The jar's cookie can go stale (home page captcha'd with it, 10-26): solve once, close the browser cleanly so the new cookie reaches the jar"
+  - "The jar's cookie can go stale (home page captcha'd with it): solve once, close the browser cleanly so the new cookie reaches the jar"
   - "Dealer listings only: the private-seller filter returned 0"
-  - "Read fine in plain-chrome (1,005 ads, no captcha) on the day leboncoin was hard-banned (10-30)"

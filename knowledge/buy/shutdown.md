@@ -1,10 +1,8 @@
 # Shutdown (deal signed → hunt closed)
 
-> Snapshot: researched Oct–Nov 2026. Prices, laws and tool behaviour drift — re-check anything you act on.
-
 Siblings: [contract-checklist.md](contract-checklist.md) · [pickup-day.md](pickup-day.md) · [deposit-payment.md](deposit-payment.md)
 
-WHY this exists: once a contract is signed, dozens of chats are left ending on an inbound message, replies go stale across agent handovers, and paid services keep running. The plan: stop sweeps on signing, keep backups warm until the car is in hand, then one thanks/close line to every open chat.
+Stop sweeps on signing, keep backups warm until the car is in hand, then one thanks/close line to every open chat.
 
 ## 1. On signing (contract sent back)
 
@@ -18,7 +16,7 @@ WHY this exists: once a contract is signed, dozens of chats are left ending on a
 
 ## 2. Keeping backups warm
 
-- Honest holding line: *"I'm closing another option; I'll tell you in a few days."* A seller's "otherwise I sell to a dealer" is a pressure line — this answer usually gets "OK, I'll wait".
+- Honest holding line: *"I'm closing another option; I'll tell you in a few days."*
 - No promises, no price talk, no viewing dates. If a backup sells meanwhile, fine.
 - Release backups (thanks/close line) once the car is picked up and the lift check passed ([pickup-day.md](pickup-day.md)) — or keep one until the DE withdrawal window is clearly not needed.
 
@@ -48,7 +46,7 @@ WHY this exists: once a contract is signed, dozens of chats are left ending on a
 |---|---|
 | Residential proxy plan | Cancel / switch off auto-renew; delete the stored secret |
 | SMS rental numbers | Release numbers; cancel any subscription |
-| VIN/history report subscriptions & trials | Cancel. EpicVIN's $1 trial auto-renews at $99.99/month (**A**); pack credits (carVertical ~6 months, CARFAX ~4 years) don't renew — note the expiry |
+| VIN/history report subscriptions & trials | Cancel; note the expiry of prepaid report credits |
 | Paid decoders / captcha solver balance | Cancel auto top-up |
 | Portal premium/alerts | Turn off saved-search emails and paid boosts |
 | Site accounts created for the hunt | Keep (logins) or delete — owner decides; never leave plaintext credentials anywhere |

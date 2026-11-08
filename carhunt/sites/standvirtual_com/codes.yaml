@@ -1,6 +1,6 @@
 # Standvirtual list URL: https://www.standvirtual.com/carros/<make>/<model>?search[...]=…&page=N (32 rows/page).
 # Slugs are the site's own (make "vw", not "volkswagen"); missing entries fall back to slugify(name).
-# Measured filters (EV sweep 11-03…11-07): fuel_type, first_registration_year:from, price:to, mileage:to, order,
+# Filters: fuel_type, first_registration_year:from, price:to, mileage:to, order,
 # private_business. The other bound of each range follows the site's own `:from`/`:to` scheme.
 filters:          # SearchQuery field → site param
   year_min: "search[filter_float_first_registration_year:from]"
@@ -40,7 +40,7 @@ models:
   XPeng: {G6: g6}
   BYD: {Seal U: seal-u, Sealion 7: sealion-7}
 
-# The site's own client salt (a public constant in its JS: webpack module that does PBKDF2), last read 2026-11-04.
+# The site's own client salt (a public constant in its JS: webpack module that does PBKDF2).
 # Used only after it authenticates an advert's token (AES-GCM rejects a wrong salt); when it stops working the plugin
 # re-discovers it from the page's script bundles and caches it in $CARHUNT_HOME/sites/standvirtual.com/.
 # The module is lazy-loaded (not in the page's script tags), so discovery can miss it: update this value then.

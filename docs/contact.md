@@ -15,7 +15,7 @@ Talk to sellers without getting banned, double-messaging or leaking: every messa
 - `--to` defaults to the car's contact for that channel (WhatsApp/phone, email, or the car's live listing URL on that site).
 - `--dry-run` reads only local sources (wacli's local DB, cardb), prints the guard decision and the would-send payload. Nothing leaves the machine.
 - Exit 10: read the reason, fix or wait. Time the next send from the ledger (`carhunt ledger`), never `sleep N` (a blind retry is refused again).
-- Asks (vet ↔ outreach contract): an `ask` event carries `data.topic` + `data.fact`. Fold it into your next message (one question per message), then `carhunt asks close --car C --topic T --answer "<what the seller said>"` (or `"refused: …"`). Close writes `ask_answered` with `data {ask_event, topic}` and fills the ask's fact (source `seller_said`) unless the car already has a real value. Why: vet decides "have" from facts; a close without the fact = vet re-asks, and a re-ask got us called scammers (11-01).
+- Asks (vet ↔ outreach contract): an `ask` event carries `data.topic` + `data.fact`. Fold it into your next message (one question per message), then `carhunt asks close --car C --topic T --answer "<what the seller said>"` (or `"refused: …"`). Close writes `ask_answered` with `data {ask_event, topic}` and fills the ask's fact (source `seller_said`) unless the car already has a real value. A close without the fact makes vet ask again.
 - Exit 12: the message may have gone out. Check the channel (chat, Sent folder) before any re-send (network errors can hide a delivered message).
 
 ## Guard rules (order) and why
@@ -45,25 +45,25 @@ Each limit: `name`, `channels` (list of names, `sites` = every site channel, or 
 |---|---|---|
 | chat-spacing | WhatsApp + site chats ≥ 180 s apart | ban risk on the owner's number |
 | chat-hourly | ≤ 12 / hour | same |
-| openers-daily | ≤ 20 / day, all channels; last 4 slots reserved for `outreach-home` until 15:00 | ramped 6 → 20 over 4 days; abroad sends used to bypass the cap |
+| openers-daily | ≤ 20 / day, all channels; last 4 slots reserved for `outreach-home` until 15:00 | one budget for all agents |
 | opener-spacing | ≥ 10 min between openers | bursts of cold contacts |
 | email-spacing | ≥ 5 min | dealer mail servers + spam filters |
 | site-spacing | each site ≥ 10 min (per channel) | site anti-bot pacing |
 | followups-daily | ≤ 15 nudges / day | follow-ups are pushy at volume |
 
 ### Nudge predicates (`contact.nudge`)
-`qualify` (any must match) and `exclude` (none may match) are lists of predicates over the cardb car: `{field, eq|ne|in|not_in|between|gte|lte|truthy}`, combinable with `{all: […]}` / `{any: […]}`, optional `why` (shown in the refusal). Dotted fields (`verdict.value`, `seller.type`); computed `power_hp`. Defaults: tier 1, owner 👍, or good deal. Example exclude (EV run: these went quiet even with a 👍):
+`qualify` (any must match) and `exclude` (none may match) are lists of predicates over the cardb car: `{field, eq|ne|in|not_in|between|gte|lte|truthy}`, combinable with `{all: […]}` / `{any: […]}`, optional `why` (shown in the refusal). Dotted fields (`verdict.value`, `seller.type`); computed `power_hp`. Defaults: tier 1, owner 👍, or good deal. Example exclude:
 ```yaml
 exclude:
-  - {field: model_family, in: [BMW iX1, Mercedes EQB, Toyota bZ4X], why: "goes quiet even with a thumbs-up"}
-  - {all: [{field: model_family, in: [VW ID.4, Audi Q4, Skoda Enyaq]}, {field: power_hp, between: [195, 210]}], why: "204 hp variant goes quiet"}
+  - {field: model_family, in: [<model A>, <model B>], why: "sellers of these rarely answer a nudge"}
+  - {all: [{field: model_family, in: [<model C>]}, {field: power_hp, between: [195, 210]}], why: "skip this variant"}
 ```
 
 ## Ledger
 `$CARHUNT_HOME/contact/ledger.jsonl`, one row per send attempt, all channels and agents: `id, t, channel, to, car, kind (opener|reply|nudge|approved), status (sent|failed|unknown), by, text, err, external_id`. Appended inside the send lock with `O_APPEND` + fsync. It is the only send log. cardb gets every row at once with `dedupe_key = id`; a cardb failure never blocks or retries the send; `carhunt ledger reconcile` backfills.
 
 ## Watcher
-- Channels: `contact.watch.channels` (default `[whatsapp, email]`) + site inboxes that have a `poll` (Wallapop has no email alerts: without its own poll replies are seen hours late).
+- Channels: `contact.watch.channels` (default `[whatsapp, email]`) + site inboxes that have a `poll` (Wallapop has no email alerts, so it is polled).
 - One cursor store `$CARHUNT_HOME/contact/cursors.json` (per channel: `since` + recent ids), 5-min overlap, advanced only after the message is logged (so a reply is never skipped as "our own send").
 - Skips our own messages, reactions, empty edit/delete stubs (wacli shows protocolMessages as new).
 - Unknown number (seller writes from a new phone): still goes to the agent inbox with `cardb_error`; the agent attaches it to the car.
@@ -76,16 +76,16 @@ exclude:
 | email | Gmail API, Reply-To plus-address, threaded | message found in Sent by Message-ID | thread by address/`#THREAD` · `after:<epoch>` on label/plus-address | — · — · 4000 | dealer email gets replies where AutoScout24 forms fail; group mailboxes bounce → use the named salesperson |
 | mobile.de | ad form / conversation reply | "Anfrage erfolgreich gesendet" | conversation · (replies come as relay mail → email watcher) | identity · — · 500 | contacted ad has no form → reply in the conversation |
 | autoscout24 | guest contact form (persona name/email) | locale success text or `afterlead` URL | — | lane · — · 500 | .de/.nl forms unreliable → refused unless `force`; prefer dealer email |
-| kleinanzeigen.de | ad chat | our text in the thread, box cleared | thread | identity · — · 500 | success wording never seen in a log |
+| kleinanzeigen.de | ad chat | our text in the thread, box cleared | thread | identity · — · 500 | |
 | subito.it | ad chat / thread reply | our text in the thread | thread · inbox poll | identity · — · 500 | removed ads keep their thread: reply inside it |
 | leboncoin.fr | `/reply/<id>` | our text in the conversation | conversation · inbox poll | plain-chrome · FR · 2500 | account needs a FR IP; stop at the first 403; never "Faire une offre"; gone (404/410) ≠ blocked |
 | wallapop.com | chat | our text in the chat | chat · own poll (no alert mail) | identity · — · 300 | handles "send personal data?" + onboarding modals; cut message → send only the cut part |
-| coches.net | contact POST | site's 2xx to the contact POST (403 = failed) | — (replies = Gmail relay mail) | camoufox · ES · 500 | Imperva flags Playwright for hours; only the stealth browser on an ES residential proxy worked |
+| coches.net | contact POST | site's 2xx to the contact POST (403 = failed) | — (replies = Gmail relay mail) | camoufox · ES · 500 | Imperva blocks Playwright: Camoufox on an ES residential proxy only |
 | standvirtual.com | "Mensagem" chat panel | our text in the thread | thread on the ad URL | identity · — · 500 | |
 | olx.pt | chat | our text in the thread (send selectors unverified) | thread | identity · — · 500 | first real send = verify end to end |
 | custojusto.pt | one-way ad form, then Sendbird chat | "contactado com sucesso" / text in chat | chat · inbox poll | identity · — · 500 | the ad form is one-way; the reply shows in the site inbox only when the seller answers |
 
-Not shipped: marktplaats.nl / 2dehands (no sender ever worked; messaging needs a phone 2FA step). A sender counts as working only after one real send is verified end to end (a script can report success and deliver nothing). Every site sender: no URL in the text, duplicate guard on the first 60 chars of the thread, `unknown` (exit 12) when no site confirmation is seen.
+Not shipped: marktplaats.nl / 2dehands (messaging needs a phone 2FA step). A sender counts as working only after one real send is verified end to end. Every site sender: no URL in the text, duplicate guard on the first 60 chars of the thread, `unknown` (exit 12) when no site confirmation is seen.
 
 ## Setup
 
@@ -94,7 +94,7 @@ Not shipped: marktplaats.nl / 2dehands (no sender ever worked; messaging needs a
 - Keep a sync running: launchd `wacli sync --follow --presence-mode quiet` (quiet = the phone keeps its notifications). Unlinked after ~14 days offline → re-pair by QR.
 - Agents read with `WACLI_READONLY=1` (set it in the agent env); only `carhunt say` lifts it for one send. `carhunt hooks install` (orchestrate) adds the PreToolUse guard that blocks any other wacli write.
 - Never touch wacli's store/session files; only the CLI.
-- **Risk:** unofficial clients breach WhatsApp's ToS. Bans hit spam-shaped behaviour (bulk/fast sends to cold contacts, new numbers). Consequence: WhatsApp on your main number banned (appealable). That is why the limits above exist; don't raise them casually.
+- **Risk:** unofficial clients breach WhatsApp's ToS; bulk/fast sends to cold contacts can get your number banned. Keep the limits above.
 - `send` error "no LID found" = number not on WhatsApp → use the site's chat.
 
 ### Gmail (email channel + mailroute)
@@ -111,7 +111,7 @@ Keys and example values: [`config.example.yaml`](../config.example.yaml) `contac
 
 Site forms never get a phone number (phone fields are emptied before submit).
 
-**`contact.channels` as a plain list** (`[whatsapp, email, sites]`) = the channels allowed to send: `say` refuses any other (exit 10, rule `channel`; `sites` = every site channel), and `watch` polls that list (minus `sites`) when `watch.channels` is unset. The mapping form above only tunes channels and allows all. Why: a list that enforced nothing let a channel the owner left out still send.
+**`contact.channels` as a plain list** (`[whatsapp, email, sites]`) = the channels allowed to send: `say` refuses any other (exit 10, rule `channel`; `sites` = every site channel), and `watch` polls that list (minus `sites`) when `watch.channels` is unset. The mapping form above only tunes channels and allows all.
 
 Other keys contact reads (defaults in `carhunt/contact/settings.py`, example values in `config.example.yaml`):
 

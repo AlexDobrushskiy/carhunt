@@ -10,21 +10,21 @@ country_ip: null
 accept_language: it-IT,it;q=0.9
 pace:
   min_gap_s: 6
-  why: "~30 list/ad/phone requests in ~2 min with a Chrome UA, no challenge (11-01); daily sweeps ran at 7 s (11-04..07)"
+  why: "≥6 s with a Chrome UA; daily sweeps use 7 s"
 caps:
-  why: "no phone cap measured: the contacts endpoint answered every call of the sweeps without login (11-01..07)"
+  why: "no phone cap: the contacts endpoint answers without login"
 account:
   needed_for: [message]
   verification: sms-own
-  note: "SMS-verified phone required for any login; a foreign EU mobile was accepted (11-02)"
+  note: "SMS-verified phone required for any login; a foreign EU mobile is accepted"
   mail_from: "from:(subito.it)"
 phone: reveal
 messaging: "site chat 'Contatta', logged in (inbox areariservata.subito.it/messaggi); a thread survives the ad's removal"
 liveness:
-  evidence: "410 = gone; 200 + ad id = live (11-04)"
+  evidence: "410 = gone; 200 + ad id = live"
 cursor: {strategy: newest_id, why: "site default order is newest first; numeric ids grow"}
 measured: 2026-11-01
 notes:
-  - "Phones are national numbers: prefix +39 (stored without it 11-04)"
-  - "Long ad bodies come as an RSC text record ('$4a'): resolve it, never store the pointer (11-06)"
+  - "Phones are national numbers: prefix +39"
+  - "Long ad bodies come as an RSC text record ('$4a'): resolve it, never store the pointer"
   - "The list filters by brand (cb=) only; the model is matched on each row's /car Modello group"

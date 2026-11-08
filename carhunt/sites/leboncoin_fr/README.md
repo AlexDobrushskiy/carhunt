@@ -31,8 +31,8 @@ cookie → `Blocked("datadome-no-cookie")` before any request: one real-browser 
 - A slider on the refresh page: solve it once in that same non-automated browser; solving it in an automated
   (Playwright) browser → hard block.
 - Reads after the messaging window, or from another exit IP: sweep reads get the messaging IP 403'd.
-- Logged-in actions (phone, message) live on ONE French IP: the account was created with a rented SMS number, so a
-  new SMS challenge = lockout. ≤40 reveals/day, take the slot before the click (a 403 still counts).
+- Logged-in actions (phone, message) live on ONE French IP: an account verified with a rented SMS number has no
+  recovery, so a new SMS challenge = lockout. ≤40 reveals/day, take the slot before the click (a 403 still counts).
 - Residential exit: one sticky session per run, ≤8 loads/55 min, ≥60 s apart — a new IP per load gets a slider within
   a few loads. Datacenter VPN IPs get a messaging soft block.
 - Never "Faire une offre": a price offer is the owner's decision.

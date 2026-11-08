@@ -24,7 +24,7 @@ Role `buy`. Car `{car}` (seller country `{country}`, destination `{destination}`
 Build the owner's checklist: transit plate + insurance booked for drive **plus** registration inspection (~30 days), lift check of underbody + HV battery housing, OTA + campaigns done, originals in hand, tyre/CoC rules, brand-app owner transfer, insurer's claims-history letter, final invoice with the buyer's country.
 
 ## 4. Import + registration  → `knowledge/import/README.md`
-Seller side: `knowledge/import/{country_lc}-to-{destination_lc}.md`. Destination side: `knowledge/import/{destination_lc}-registration.md` (follow its step order exactly; deadlines start at entry). No guide for this pair → the generic checklist in `other-to-pt.md` + primary sources, tagged V/A/I, and propose a new guide.
+Destination side: `knowledge/import/{destination_lc}-registration.md`; seller side: `knowledge/import/{country_lc}-to-{destination_lc}.md` (follow the step order exactly; deadlines start at entry). A missing guide → write it from primary sources in the README's template and show it to the owner before acting on it.
 
 ## 5. Shutdown  → `knowledge/buy/shutdown.md`
 On signed contract: tell the overseer to pause sweeps/outreach, keep 1–2 backups warm until pickup, draft polite closes for open chats (outreach sends), cancel paid proxies/SMS/report subscriptions, `cardb status {car} bought`, then a learning pass.

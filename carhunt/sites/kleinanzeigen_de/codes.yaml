@@ -18,7 +18,7 @@ makes:                    # autos.marke_s slug ("" = not a make on the site: key
 models:                   # autos.model_s slug (only slugs seen in the site's own links / ad attributes)
   Volkswagen: {ID.3: id_3, ID.4: id_4, ID.5: id_5, ID.7: id_7, ID.Buzz: id_buzz}
   Toyota: {bZ4X: bz4x}
-keywords:                 # models without a model_s slug → free-text keyword (the EV runners' method); missing → model name
+keywords:                 # models without a model_s slug → free-text keyword; missing → model name
   Xpeng: {G6: Xpeng G6}
   BYD: {Seal U: Seal U, Sealion 7: Sealion 7}
 fuel:                     # cardb powertrain → autos.fuel_s
@@ -31,5 +31,5 @@ seller:                   # anbieter:
   private: privat
   dealer: gewerblich
 sort:
-  newest: ""              # site default order (the runners' id cursors relied on it)
+  newest: ""              # site default order (newest first; the id cursor relies on it)
 page_size: 27

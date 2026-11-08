@@ -1,6 +1,6 @@
 # Regions that `search.exclude_regions` can name (ISO 3166-2). Matched on the ad's postcode first, then on place
 # names in the location fields only (never the description: dealer prose names other places).
-# Why postcode: a Tenerife car slipped through a city-name-only check (2026-11-04).
+# Postcode first: a city-name-only check misses cars.
 PT-20: {country: PT, name: Azores, postcode: ['^9[5-9]\d\d'], places: [azores, acores, sao miguel, ponta delgada, terceira, angra do heroismo, horta, pico]}
 PT-30: {country: PT, name: Madeira, postcode: ['^9[0-4]\d\d'], places: [madeira, funchal, porto santo, camara de lobos, santa cruz da madeira]}
 ES-CN: {country: ES, name: Canary Islands, postcode: ['^3[58]\d{3}'], places: [canarias, canary, tenerife, las palmas, gran canaria, lanzarote, fuerteventura, la laguna, santa cruz de tenerife, la gomera, el hierro]}

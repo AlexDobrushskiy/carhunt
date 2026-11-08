@@ -1,5 +1,5 @@
 # mobile.de list URL: https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&ms=<make>;<model>;;&<filters>
-# Numeric codes only: a make/model missing here raises Unsupported (no slug fallback). Codes from the EV sweep runners (11-03..07).
+# Numeric codes only: a make/model missing here raises Unsupported (no slug fallback).
 makes:
   Volkswagen: 25200
   Audi: 1900
@@ -34,5 +34,5 @@ sort:
   newest: {sb: doc, od: down}
   price: {sb: p, od: up}
   relevance: {}            # site default order
-page_size: 20              # organic rows per page (regular + eyecatcher); page 1 adds ~4 paid top rows (11-07)
+page_size: 20              # organic rows per page (regular + eyecatcher); page 1 adds ~4 paid top rows
 mirror_seller_id: "7723851"   # mobile.de's kleinanzeigen.de import account: e-mail only, call-tracking phones

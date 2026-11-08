@@ -28,9 +28,9 @@ AI1,AI?,memory_seats,memory for driver seat and exterior mirrors (Audi; comes wi
 PV3,PV?,electric_seats,electric front seats with memory (Audi MY27 option; needs Tech package + 7P1),V
 PV3,PV?,memory_seats,"memory, part of PV3 (Audi MY27)",V
 PV6,PV?,memory_seats,seat memory on other Audi models,A
-1R3,1R?,memory_seats,ergoActive seat with memory (VW component code seen in DE dealer listings),A
+1R3,1R?,memory_seats,ergoActive seat with memory (VW component code),A
 1R3,1R?,electric_seats,VW ergoActive memory seat is always electric in EU MY24+ (memory implies e-seat),I
-8I6,8I?,massage_seats,seat massage (VW component code seen in DE dealer listings; family 8I? otherwise holds headlight codes - check the printout text),A
+8I6,8I?,massage_seats,seat massage (VW component code; family 8I? otherwise holds headlight codes - check the printout text),A
 7P1,7P?,,4-way electric lumbar support (Audi); lumbar alone is NOT electric seats,V
 7P2,7P?,,electric lumbar support variant (unverified per model),I
 7P0,7P?,,none/manual lumbar support,A

@@ -10,18 +10,18 @@ country_ip: null
 accept_language: de-DE,de;q=0.9
 pace:
   min_gap_s: 6
-  why: "18–22 list/ad loads @6 s passed with a Chrome UA, no challenge (11-01); daily sweeps ran at 7 s (11-03..07)"
+  why: "≥6 s with a Chrome UA; daily sweeps use 7 s"
 caps: {}
 account:
   needed_for: [message]
   verification: sms-own
-  note: "email signup + activation link + SMS; the activation link answered 'IP-Bereich vorübergehend gesperrt' on a home ISP range and 403 on datacenter IPs (11-01/02) → open it over mobile data; later logins from the home IP work"
+  note: "email signup + activation link + SMS; the activation link can answer 'IP-Bereich vorübergehend gesperrt' on home ISP ranges and 403 on datacenter IPs → open it over mobile data; later logins from the home IP work"
   mail_from: "from:(kleinanzeigen.de)"
 phone: text-only
 messaging: "site chat, logged in (inbox /m-nachrichten.html); sender lives in contact"
 liveness:
   gone_text: 'Anzeige ist nicht mehr verfügbar'
-  evidence: "404/410 = gone (assumed: no gone sample yet, 11-04); 200 + ad id = live; gone marker from the source's ad reader, not measured"
+  evidence: "404/410 = gone (assumed); 200 + ad id = live; gone marker from the source's ad reader"
 cursor: {strategy: newest_id, why: "site default order is newest first; numeric ids grow"}
 measured: 2026-11-01
 notes:

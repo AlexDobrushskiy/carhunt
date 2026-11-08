@@ -1,5 +1,4 @@
 # Calling codes + national-number shape, for canonical phones (cardb Contact.value = digits with country code, no +).
-# Why: Subito numbers were stored without the 39 prefix and broke WhatsApp lookups (2026-11-04).
 # trunk0: national numbers start with a 0 that is dropped after the country code (DE 030… → 4930…).
 # keep0: Italy keeps the leading 0 of landlines after 39.
 AT: {cc: "43", trunk0: true}

@@ -22,7 +22,7 @@ Names below are the defaults `carhunt browser mcp-config` prints (prefix `browse
 Scripts: `from carhunt.access.session import tab` → `with tab("plain-chrome", site="mobile.de") as t: status = t.goto(url); t.content()` (paced + wall-checked; on browser routes `t` is also the Playwright page); `country="ES"` adds a fail-closed proxy (http, lane, camoufox; plain/identity refuse a country unless a geo lease). Per-site route: [references/site-table.md](references/site-table.md) (generated from `carhunt/sites/*/site.yaml`). **The site row wins over the ladder** (e.g. Imperva: never Playwright).
 
 ## Blocked? Escalation ladder — never settle for "blocked"
-Move up after **ONE** blocked hit per rung. Why: every blocked hit raises the site's bot score; ~10 blocked hits in an hour can flag the home IP.
+Move up after **ONE** blocked hit per rung. Why: every blocked hit raises the site's bot score and can flag the home IP.
 1. `http` (site helper / plain request)
 2. lane (`ch-lane`; subagents their own `ch-lane-x`)
 3. identity MCP (real history; some checks pass only here)
@@ -44,7 +44,7 @@ Never answer from other data because a site blocked you; name every site you cou
 
 **Pacing** (shared IP = shared budget)
 - Before every load/api/phone/send/login on a classified: `carhunt pace take <site> <kind> [--via <CC>]` (Python `pace.acquire`). Exit 3 / `PaceExceeded` → stop and come back at `retry_at` (or `--wait` for a short gap), don't retry. Why: budgets are shared by all agents (e.g. coches ≤2 loads/rolling hour); an unpaced check silently eats a sender's slot.
-- Bursts kill: leboncoin hard ban for hours after fast search bursts; coches 5th load at 10 s = bot page; mobile.de ~25 fast loads per profile, home IP 403 after ~41 sweep loads; custojusto 403 after ~50 ads at 6 s.
+- Bursts get bans that last hours: keep to the site row's pace and per-profile load limits; never burst searches.
 - Day caps (phone reveals, sends) are taken **before** the action and reset at local midnight; missing caps in site.yaml → conservative default.
 
 **Identity**

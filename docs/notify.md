@@ -9,7 +9,7 @@ Pushes to the owner's phone (Telegram, optional) and the way the owner's answers
 | `ask` | a decision that blocks progress today; `--buttons "A\|B"` or a free answer | held |
 | `urgent` | a breach or a dead session the agent could not fix itself (PAUSE first) | sent silent |
 
-Anything else (`fyi`, "sent", "scheduled", heartbeats, research with no ask) is **refused** (exit 10): it goes into the next digest. Why: pushes that ask nothing train the owner to ignore the phone. Per-kind quiet behaviour can be changed: `notify.quiet: {ask: silent}`.
+Anything else (`fyi`, "sent", "scheduled", heartbeats, research with no ask) is **refused** (exit 10): it goes into the next digest. Per-kind quiet behaviour can be changed: `notify.quiet: {ask: silent}`.
 Also refused: buttons on a non-`ask`, empty text, text that looks like a token/key/password.
 
 ## Commands

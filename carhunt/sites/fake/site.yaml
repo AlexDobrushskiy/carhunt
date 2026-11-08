@@ -1,4 +1,4 @@
-# Synthetic marketplace for tests (discover + integrator e2e). Registered only with CARHUNT_FAKE_SITES=1. No network.
+# Synthetic marketplace for tests (discover + e2e). Registered only with CARHUNT_FAKE_SITES=1. No network.
 site: fake
 name: Fake Motors (synthetic)
 kind: marketplace

@@ -28,7 +28,7 @@
       "type": "object",
       "properties": {
         "open_threads": {"type": "array"},
-        "unanswered_inbound": {"type": "array", "description": "Replies received but not answered yet. Required at handover, [] if none: one sat 31 h after a handover (EV run 11-06)."},
+        "unanswered_inbound": {"type": "array", "description": "Replies received but not answered yet. Required at handover, [] if none."},
         "pending_sends": {"type": "array"},
         "scheduled": {"type": "array", "description": "Background chains, wakes and waits the successor must re-arm."},
         "promises": {"type": "array"},

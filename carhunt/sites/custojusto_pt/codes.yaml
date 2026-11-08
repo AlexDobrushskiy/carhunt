@@ -1,7 +1,7 @@
 # CustoJusto list URL: https://www.custojusto.pt/portugal/veiculos/carros-usados/<make>/<model>?o=N
 # 40 rows/page, newest first by default (sortBy SORT_DESC_PUBLISH_DATE). Slugs are the site's own (make "vw").
 # The site's filter params (pe/ps price buckets, rs/re year codes, fu fuel ids) are not mapped for every value:
-# price/year/fuel/seller are filtered on the rows instead (the EV sweep did the same, 11-04…11-07).
+# price/year/fuel/seller are filtered on the rows instead.
 region: portugal          # whole country; districts (e.g. "porto") narrow the path
 makes:
   Volkswagen: vw

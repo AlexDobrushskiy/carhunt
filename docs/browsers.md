@@ -60,7 +60,7 @@ Python: `access.session.tab(route, country=, site=, fresh=)`, `access.pace.acqui
 | Python 3.12 venv | bootstrap (`pip install -e .`) | `carhunt.access` |
 | Docker (optional) | Docker Desktop / colima | only for a VPN-in-container country exit (proxy provider is preferred) |
 | Camoufox (optional) | `pip install camoufox && python -m camoufox fetch` | `camoufox` route: Imperva sites behind a country proxy |
-| Ollama + VLM (optional) | `brew install ollama && ollama pull qwen3.5:4b`; OWLv2 downloads on first use (~GBs, PyTorch/MPS) | captcha image grids; sliders/checkboxes need no model. Tested on an M1 Max 32 GB |
+| Ollama + VLM (optional) | `brew install ollama && ollama pull qwen3.5:4b`; OWLv2 downloads on first use (~GBs, PyTorch/MPS) | captcha image grids; sliders/checkboxes need no model |
 
 `browsers/install [--yes] [--skip-launchd] [--skip-mcp] [--dry-run]` (bootstrap calls it) runs: `npm ci` → `agent-chrome` → launchd jobs (`<launchd_prefix>lanes`, `…identity`, `…identity-a…`, `…agent-chrome-refresh`, `…identity-seed`, `…browser-reaper`; `carhunt browser launchd install`) → MCP registration + hooks (asks) → `carhunt doctor`.
 
@@ -118,8 +118,8 @@ APFS clones (`cp -c`) for Agent Chrome + pool seeding · `codesign` ad-hoc re-si
 
 ## Gaps
 - One proxy provider (Decodo) and one SMS provider (SMSPool) have adapters.
-- Wall data is from a PT residential IP; which sites need which country IP depends on where you live.
+- Which sites need which country IP depends on where you live.
 - Identity leases are enforced by Claude Code hooks only; other agent CLIs must call `pw-identity acquire`.
 - Tests: `pytest carhunt/access` (offline); real-Chrome tests are opt-in with `CARHUNT_TEST_CHROME=1`.
-- Site limits drift; `measured` dates in site.yaml are the staleness signal.
+- Site limits drift; re-measure a site when it starts blocking.
 - Captcha: hCaptcha image tasks unsupported.

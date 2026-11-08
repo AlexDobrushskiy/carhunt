@@ -142,9 +142,8 @@ search:
 ```
 Defaults the example doesn't spell out: `models[].model: ""` = every family of the make; `models[].base_fit` = `ranking.fit.base_default`; `default_tier: 0` = highest model tier + 1; `queue_default_tiers: []` = every tier below `default_tier`; `search.price.max_eur` also drives the ×100 check when a family has no median.
 
-Worked example: `cardb/internal/profile/testdata/ev.yaml`, an EV search (VAG 286 hp RWD = tier 1 via
-`power_hp` + `variant_any` markers, long-range alternatives = tier 2, islands excluded, PL/Baltic history and suspect ads
-filtered, e-seats + power tailgate as `must_have`, per-country default distances).
+Worked example: `cardb/internal/profile/testdata/ev.yaml` (tiers via `power_hp` + `variant_any` markers, exclusions,
+`must_have` options, per-country default distances).
 
 ## API and CLI
 
@@ -166,16 +165,15 @@ every flag: `cardb help COMMAND`.
 | ad gone | (liveness checker only) | `PATCH /listings/{id}` + `ad_check` event |
 | ops | `cardb stats` · `activity --since 24h` · `health` · `backup DEST` | `GET /stats` · `/activity` · `/healthz` |
 
-## Rules for agents (with why)
+## Rules for agents
 
 - **Send the version back.** Read `version` (`cardb show CAR --json`), then `cardb set|status CAR … --if-version N`.
-  On `conflict: car changed (version M)` (exit 1, HTTP 412): re-read, re-decide on the new state, retry. WHY: concurrent
-  agents overwrote each other and a car's status lagged its chat.
+  On `conflict: car changed (version M)` (exit 1, HTTP 412): re-read, re-decide on the new state, retry.
 - **List fields: `--red-flag-add/-rm`, `--question-add/-rm`** (exact text, atomic). `--red-flag`/`--question` replace the
   whole list and drop other agents' items.
 - **Price rejected (exit 1, `price_x100|price_lease|price_net|price_range`)?** Re-read the ad: cents, a monthly rate,
   a net price? Fix the number, or pass `--price-vat gross|net|margin` when the ad states it. `--force` only after
-  checking — the price is stored flagged and the car leaves the fair-price pool. WHY: ×100 prices (cents read as euros) are common.
+  checking — the price is stored flagged and the car leaves the fair-price pool.
 - **Powertrain: nested is the contract** (`powertrain{fuel, battery_net_kwh, …}`; CLI `--fuel --battery-net
   --engine-cc --gearbox --wltp-range …`). Flat `battery_net_kwh` in upsert JSON is still accepted (422 when it
   disagrees with the nested value). Fuel/gearbox accept ad words in seven languages (`elétrico`, `plug-in`, `gasóleo`,
@@ -192,8 +190,7 @@ every flag: `cardb help COMMAND`.
 - `author_kind`: `owner` (= `owner.name`) · `viewer` (a `cardb.users` entry) · `import` (author `import…`) · `agent`.
 - Users = owner + viewers. Verdicts are per user (`up|maybe|down` + note, history as `verdict` events). Cars show the
   owner's verdict unless `?user=` / `--user`; `verdicts` lists everyone's. The queue is per user (default owner).
-- A viewer token is read-only except for that viewer's own verdict (403 otherwise). WHY: household members can rate
-  cars without being able to change anything else.
+- A viewer token is read-only except for that viewer's own verdict (403 otherwise).
 
 ## Ranking, price sanity, versions
 

@@ -12,7 +12,7 @@ pace:
   min_gap_s: 5
   max_loads_per_run: 60
   read_after: "12:00"
-  why: "25 API pages @5 s, no throttling (11-01). ≤60/run + reads after 12:00 (or via a proxy): agents chat with sellers here and read bursts got the home IP 403'd on other messaging sites (11-06)"
+  why: "≥5 s. ≤60/run + reads after 12:00 (or via a proxy): agents chat with sellers here and read bursts can get the home IP 403'd"
 caps: {}
 account:
   needed_for: [message]
@@ -23,7 +23,7 @@ phone: page
 messaging: "logged-in site chat es.wallapop.com/app/chat?itemId=<hash id>; ≤300 chars per message (longer text is cut silently)"
 liveness:
   sold_text: '"flags":\{[^}]*"sold":true'
-  evidence: "page 404 = gone; 200 + legacy id = live; sold flag in the page JSON = gone (measured 11-04)"
+  evidence: "page 404 = gone; 200 + legacy id = live; sold flag in the page JSON = gone"
 cursor: {strategy: newest_id, why: "order_by=newest; bumped rows are older → never a cursor"}
 measured: 2026-11-06
 notes:
@@ -31,4 +31,4 @@ notes:
   - "Item attribute engine=electric_hybrid means battery-electric (site quirk); hybride_plugin = PHEV"
   - "Search is keyword + geo-sorted from lat/lon (default Madrid); 40 rows/page, next_page token"
   - "Bumped rows (bump.type city/country) sit outside the newest order: never a cursor"
-  - "A sold flag in search/API JSON is not a liveness verdict: only is_live decides (an ad-hoc string check marked 2 live cars removed, 11-04)"
+  - "A sold flag in search/API JSON is not a liveness verdict: only is_live decides"

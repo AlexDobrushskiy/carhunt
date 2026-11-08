@@ -13,29 +13,28 @@ pace:
   max_loads_per_run: 150
   read_after: "12:00"
   why: >-
-    fast search bursts hard-banned the IP and the DataDome cookie for hours (10-30); 403 after ~160 ad reads on one
-    IP, ~189 on the FR route (11-03) → ≤150/run; sweep reads 403'd the IP used for messaging (11-05) → reads after
-    the messaging window or from another exit
+    fast search bursts hard-ban the IP and the DataDome cookie for hours; 403 after ~160 ad reads on one IP → ≤150/run;
+    sweep reads can 403 the IP used for messaging → reads after the messaging window or from another exit
 caps:
   phone_per_day: 40
-  why: "≤40 reveals/day on one account (11-05): accounts verified with a rented SMS number have no recovery"
+  why: "≤40 reveals/day on one account: accounts verified with a rented SMS number have no recovery"
 account:
   needed_for: [phone, message]
   verification: sms-once
-  note: "signup needs a French mobile + SMS (foreign SMS never arrives); the account lives on ONE French IP — a login from another IP or a slider solved in an automated browser → hard block (11-01)"
+  note: "signup needs a French mobile + SMS (foreign SMS never arrives); the account lives on ONE French IP — a login from another IP or a slider solved in an automated browser → hard block"
   mail_from: "from:(leboncoin.fr)"
 phone: reveal-login
 messaging: "logged in, French IP only: 'Envoyer un message' → /reply/<id> (2500 chars); from a foreign IP silently dropped"
 liveness:
   gone_text: 'Annonce introuvable'
-  evidence: "410 + title 'Annonce introuvable' = gone (11-04); 200 + ad in page data = live; status != active = gone"
+  evidence: "410 + title 'Annonce introuvable' = gone; 200 + ad in page data = live; status != active = gone"
 proxy: {sticky_minutes: 55}
 cursor: {strategy: newest_id, why: "sort=time desc; list_id is monotonic (never the first row: promoted rows)"}
 measured: 2026-11-06
 notes:
   - "Reads: plain HTTP + a good `datadome` cookie (taken once from a real browser's trust jar); DataDome rotates it on every response — keep the newest for the run"
-  - "A banned cookie in the shared jar blocked every browser until deleted (11-01): if a fresh browser passes while the jar's cookie gets 403, delete the jar row"
-  - "404/410 = ad gone (skip, continue), never a block: two runs stopped on a 410 and left 200 ads undone (11-04/05)"
-  - "Residential exit: one sticky session per run, ≤8 loads/55 min, ≥60 s apart — a new IP per load got a slider on the 3rd load (11-06)"
-  - "Datacenter VPN IPs: messaging soft-blocked (blank /reply form) within days (11-05); commercial VPN ranges are blacklisted"
+  - "A banned cookie in the shared jar blocks every browser until deleted: if a fresh browser passes while the jar's cookie gets 403, delete the jar row"
+  - "404/410 = ad gone (skip, continue), never a block: don't stop a run on a 410"
+  - "Residential exit: one sticky session per run, ≤8 loads/55 min, ≥60 s apart — a new IP per load gets a slider within a few loads"
+  - "Datacenter VPN IPs: messaging soft-blocked (blank /reply form) within days; commercial VPN ranges are blacklisted"
   - "Never 'Faire une offre': a price offer is the owner's call"

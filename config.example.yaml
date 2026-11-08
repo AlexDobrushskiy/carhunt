@@ -35,8 +35,8 @@ cardb:
 
 search:                       # buyer profile: cardb (queue, ranking) + discover (query scope)
   countries: [PT, ES, FR, DE, BE, NL, LU, IT]   # example; ISO-2, empty = any
-  private_sellers_abroad: false   # abroad = dealers only (real-owner test is hard remotely)
-  exclude_regions: [PT-20, PT-30, ES-CN]   # example; islands: transport cost + paperwork (ISO 3166-2)
+  private_sellers_abroad: false   # abroad = dealers only
+  exclude_regions: [PT-20, PT-30, ES-CN]   # example; ISO 3166-2
   exclude_places: []          # extra city words to exclude
   price:
     max_eur: 40000            # example; the only queue price filter (0 = none)
@@ -90,7 +90,7 @@ browsers:
   lanes: 4                    # logged-out lanes ch-lane-a… (one isolated MCP server)
   identity_pool: 4            # logged-in profile copies ch-identity-a…
   headless: true              # MCP servers; plain-chrome is always headed (off-screen)
-  ports: {mcp_base: 18931, debug_base: 19331, plain_debug: 19341}   # clear of a personal stack on 8931/9331
+  ports: {mcp_base: 18931, debug_base: 19331, plain_debug: 19341}   # clear of the usual 8931/9331
   launchd_prefix: carhunt.
   mcp_name_prefix: ch-        # identity lease hooks match these MCP names
   idle_release_s: 180         # identity lease released + browser closed after this idle
@@ -101,7 +101,7 @@ browsers:
     model: qwen3.5:4b
     ollama_url: http://127.0.0.1:11434   # env OLLAMA_HOST when unset
     owlv2: false              # 4x4 grids via the OWLv2 detector (PyTorch, GBs)
-    hcaptcha_vlm: false       # hCaptcha canvas tasks: 0/3 measured
+    hcaptcha_vlm: false       # hCaptcha canvas tasks (unreliable)
     max_attempts: 2           # per run: every failed try raises the site's bot score
     site_budget: 6            # attempts per site per site_window_h
     site_window_h: 6
@@ -130,7 +130,7 @@ sites:
 
 discover:
   windows: {morning: "07:00-09:00", afternoon: "14:00-16:00"}   # may not cross midnight; morning = sites without pace.read_after
-  max_loads_per_site: 60      # per run; min() with site.yaml pace.max_loads_per_run (home IP got a 403 after 41)
+  max_loads_per_site: 60      # per run; min() with site.yaml pace.max_loads_per_run
   max_pages: 5                # per query
   detail_tiers: [1, 2]        # tiers that get detail reads + gallery (null = all)
   max_photos: 40
@@ -155,13 +155,13 @@ contact:
     - {name: site-spacing, channels: [sites], per_channel: true, min_gap_s: 600}
     - {name: followups-daily, channels: "*", kind: nudge, per: day, max: 15}
   reply: {min_seller_age_s: 180, owner_backoff_min: 15}   # instant replies read as a bot; owner typing = his chat
-  opener: {max_chars: 280, max_questions: 2}   # long openers got 4/18 replies vs ~13/13 short
+  opener: {max_chars: 280, max_questions: 2}   # short openers get replies
   nudge:
     after_h: 48
     statuses: [new, to_contact, contacted, talking]
     qualify: [{field: tier, eq: 1}, {field: verdict.value, eq: up}, {field: good_deal, eq: true}]
     exclude:                  # example
-      - {field: model_family, in: [Toyota bZ4X], why: "goes quiet even with a thumbs-up"}
+      - {field: model_family, in: [Toyota bZ4X], why: "sellers rarely answer a nudge"}
   channels:                   # per channel (whatsapp, email, sites, or a site id)
     whatsapp: {max_len: 500}
     email: {seller_hours: true}
@@ -194,7 +194,7 @@ contact:
   # sites: {olx.pt: {selectors: {box: textarea}}}   # pin a sender selector without a code change (docs/contact.md)
 
 vet:
-  destination_country: PT    # example; selects knowledge/import/<dest>-registration.md + <seller>-to-<dest>.md
+  destination_country: PT    # example; selects your knowledge/import/<dest>-registration.md + <seller>-to-<dest>.md
   max_open_asks: 1            # evidence pack: open asks per car at once
 
 orchestrate:

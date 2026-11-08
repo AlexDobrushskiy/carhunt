@@ -2,8 +2,6 @@
 
 Find, vet, contact and buy a used car with a team of Claude Code agents. Marketplace sweeps feed a listings DB (cardb) with a phone UI; agents chat with sellers through one guarded send path, check VINs and history, and walk the buy and import steps. An overseer agent runs the team in agterm.
 
-Helped successfully find the right EV in ~5 days across 8 EU countries.
-
 ## What it looks like
 
 ![Phone web UI: car list, car page, "To rate" queue](docs/img/web-overview.png)

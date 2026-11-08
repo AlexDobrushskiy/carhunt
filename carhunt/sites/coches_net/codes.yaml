@@ -1,5 +1,5 @@
 # coches.net — numeric ids (the site has no make/model slugs in its filters). Source: the list page's own
-# `listFiltersOptions.vehicles` + the request bodies the site's app sent (11-04..07). Every make/model must be listed.
+# `listFiltersOptions.vehicles` + the request bodies the site's app sends. Every make/model must be listed.
 #
 # Page route:    https://www.coches.net/segunda-mano/?MakeIds[i]=…&ModelIds[i]=…&Fueltype2List=3&MinYear&MaxYear&MaxKms
 #                &MinPrice&MaxPrice&st=2&fi=Price&or=1&pg=N   (param names = the site bundle's FILTER_QUERY_PARAMS)

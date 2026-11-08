@@ -4,7 +4,7 @@ Every doc in the repo, one line each. Start with the [README](../README.md), the
 
 ## Overview
 - [README](../README.md) — what carhunt is, requirements, quick start, module map
-- [design.md](design.md) — principles, CLI groups, who calls whom, site.yaml keys, decisions
+- [design.md](design.md) — ground rules, CLI groups, who calls whom, site.yaml keys
 - [testing.md](testing.md) — how to run each suite and the e2e run
 
 ## Module docs
@@ -29,7 +29,7 @@ Every doc in the repo, one line each. Start with the [README](../README.md), the
 - [hooks/README.md](../hooks/README.md) — guard hooks + statusline files
 - [carhunt/core/README.md](../carhunt/core/README.md) · [access](../carhunt/access/README.md) · [sites](../carhunt/sites/README.md) · [discover](../carhunt/discover/README.md) · [contact](../carhunt/contact/README.md) · [vet](../carhunt/vet/README.md) · [orchestrate](../carhunt/orchestrate/README.md) — file maps per package
 - `carhunt/sites/<pkg>/README.md` — per-site notes: [autoscout24](../carhunt/sites/autoscout24/README.md), [carsbat.com](../carhunt/sites/carsbat_com/README.md), [coches.net](../carhunt/sites/coches_net/README.md), [custojusto.pt](../carhunt/sites/custojusto_pt/README.md), [kleinanzeigen.de](../carhunt/sites/kleinanzeigen_de/README.md), [lacentrale.fr](../carhunt/sites/lacentrale_fr/README.md), [leboncoin.fr](../carhunt/sites/leboncoin_fr/README.md), [leparking.fr](../carhunt/sites/leparking_fr/README.md), [marktplaats.nl](../carhunt/sites/marktplaats_nl/README.md), [milanuncios.com](../carhunt/sites/milanuncios_com/README.md), [mobile.de](../carhunt/sites/mobile_de/README.md), [olx.pt](../carhunt/sites/olx_pt/README.md), [standvirtual.com](../carhunt/sites/standvirtual_com/README.md), [subito.it](../carhunt/sites/subito_it/README.md), [wallapop.com](../carhunt/sites/wallapop_com/README.md)
-- [tests/e2e/README.md](../tests/e2e/README.md) — cross-module end-to-end tests on a clean HOME
+- [tests/e2e/README.md](../tests/e2e/README.md) — end-to-end tests on a clean HOME
 
 ## Skills (agent rules)
 - [skills/README.md](../skills/README.md) — what ships, how bootstrap links it
@@ -45,6 +45,6 @@ Every doc in the repo, one line each. Start with the [README](../README.md), the
 
 ## Knowledge (vet / buy / import playbooks)
 - [knowledge/README.md](../knowledge/README.md) — map + order of use
-- Vet: [vin-sources](../knowledge/vin-sources.md) · [battery-soh](../knowledge/battery-soh.md) · [pr-codes-vag](../knowledge/pr-codes-vag.md) · [coverage-rules](../knowledge/coverage-rules.md) · [residual-risk](../knowledge/residual-risk.md)
+- Vet: [pr-codes-vag](../knowledge/pr-codes-vag.md)
 - Buy: [doc-verify](../knowledge/buy/doc-verify.md) · [contract-checklist](../knowledge/buy/contract-checklist.md) · [deposit-payment](../knowledge/buy/deposit-payment.md) · [pickup-day](../knowledge/buy/pickup-day.md) · [shutdown](../knowledge/buy/shutdown.md)
-- Import: [import/README](../knowledge/import/README.md) (how it works, adding a destination) · [pt-registration](../knowledge/import/pt-registration.md) · [de-to-pt](../knowledge/import/de-to-pt.md) · [fr-to-pt](../knowledge/import/fr-to-pt.md) · [es-to-pt](../knowledge/import/es-to-pt.md) · [be-to-pt](../knowledge/import/be-to-pt.md) · [other-to-pt](../knowledge/import/other-to-pt.md)
+- Import: [import/README](../knowledge/import/README.md) (how agents use import guides; template for writing your own)

@@ -1,7 +1,7 @@
-# La Centrale list URL (as used 11-01):
+# La Centrale list URL:
 #   https://www.lacentrale.fr/listing?makesModelsCommercialNames=<MAKE>:<MODEL>[,<MAKE>:<MODEL>]&energies=elec
 #     &yearMin=2021&mileageMax=50000&priceMax=36000&customerFamilyCodes=PRO&sortBy=priceAsc&page=N
-# Only the params seen in those URLs are mapped; other SearchQuery filters are left to discover's scope filter.
+# Only these params are mapped; other SearchQuery filters are left to discover's scope filter.
 params:               # SearchQuery field → URL param
   year_min: yearMin
   km_max: mileageMax
@@ -10,7 +10,7 @@ fuel:                 # cardb powertrain → energies
   bev: elec
 seller:               # customerFamilyCodes; no `private`: the private filter returned 0 (dealer-only listings)
   dealer: PRO
-sort:                 # newest/relevance: not measured → site default order
+sort:                 # newest/relevance: site default order
   price: priceAsc
 models:               # makesModelsCommercialNames (MAKE:MODEL, upper case); unknown models → Unsupported
   Volkswagen: {ID.4: "VOLKSWAGEN:ID.4", ID.5: "VOLKSWAGEN:ID.5"}

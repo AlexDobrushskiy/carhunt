@@ -3,13 +3,13 @@
 
 flags:
   lease_transfer:
-    why: 11 lease transfers got into the DB on day 1; the ask is a monthly rate, not a price (2026-11-03)
+    why: the ask is a monthly rate, not a price
     match: >-
       leasing ?ubernahme|leasinguebernahme|leasing[- ]ubernahme|reprise de (?:leasing|loa|lld|contrat)|
       subentro (?:leasing|noleggio)|cesion de (?:leasing|renting)|\bcuota\s*/\s*mes\b|overname lease|
       lease ?overname|lease takeover|take over (?:the )?lease|transferencia de leasing|retoma de leasing
   damaged:
-    why: several non-running / crashed cars were contacted before anyone read the text (2026-11-03); never auto-contact
+    why: non-running / crashed cars; never auto-contact
     match: >-
       incidentat[ao]|sinistrat[ao]|accidentad[oa]|siniestrad[oa]|unfallwagen|unfallfahrzeug|unfallschaden|hagel(?:schaden)?|
       grele|nicht fahrbereit|fahrzeug defekt|motorschaden|batterieschaden|crash[- ]?sensor|airbag ausgelost|
@@ -22,17 +22,17 @@ flags:
     why: net asks look 16–23 % cheaper than they are; keep the ask but flag for gross confirmation
     match: \bnetto\b|\bht\b|hors taxes?|iva esclusa|\+ ?iva|mas iva|sem iva|excl\.?\s*(?:btw|vat|iva)|exkl\.?\s*mwst|zzgl\.?\s*mwst|ex\.? btw
   history_abroad:
-    why: cars with PL/LT/LV/EE history had clocked km / salvage pasts; verify history before contact
+    why: PL/LT/LV/EE history raises clocked-km / salvage risk; verify history before contact
     match: poland|polonia|polen|pologne|lithuan|litauen|lituan|latvia|letton|lettland|estonia|estland|estonie
 
 # "price for cash" beats a finance-conditional headline price (ES dealers: headline assumes their loan).
 cash_price:
-  why: ES headline prices assumed dealer financing; the cash ask in the text was €2–4k higher (2026-11-04)
+  why: ES headline prices can assume dealer financing; the cash ask in the text is higher
   match: \b(?:precio|pvp)\s+(?:al\s+)?contado\s*[:=-]?\s*(?:eur|euros|€)?\s*([0-9][0-9 .,]{2,15})|\bprecio\s+sin\s+financiar\s*[:=-]?\s*(?:eur|euros|€)?\s*([0-9][0-9 .,]{2,15})
 
 # A vehicle ask stated net of VAT in the description (IT dealers). Battery "netto" kWh is not an ask.
 net_ask:
-  why: IT dealer asks "IVA esclusa" passed the price filter as gross (2026-11-05)
+  why: IT dealer asks "IVA esclusa" would pass the price filter as gross
   match: \bprezzo\s+(?:e\s+)?(?:da\s+ritenere\s+)?(?:al\s+netto\s+di\s+iva|iva\s+esclusa|\+\s*iva)\b|\bprix\s+ht\b|\bpreis\s+netto\b|\bnettopreis\b
 
 facts:
@@ -48,7 +48,7 @@ facts:
     match: \b(11|22)\s*kw\s*(?:ac|onboard|bordlader|chargeur|cargador|caricatore|carregador|lader)|(?:ac|onboard|bordlader|chargeur embarque|cargador|caricatore|carregador)\D{0,12}\b(11|22)\s*kw\b
 
 fuel:   # site/ad fuel label → cardb powertrain.fuel
-  why: wallapop labels BEVs `electric_hybrid` (2026-11-04); every site has its own vocabulary
+  why: every site has its own vocabulary (wallapop labels BEVs `electric_hybrid`)
   map:
     - [bev, '^(?:bev|ev|electric|electrico|electrique|elettrica|elektro|elektrisch|eletrico|electric_hybrid|el)$|^elektr|^electri|^eletri|100 ?% ?electri']
     - [phev, 'plug.?in|phev|hybride? rechargeable|hibrido enchufable|ibrida plug|hybride_plugin|hibrido plug|recharg']
@@ -61,7 +61,7 @@ fuel:   # site/ad fuel label → cardb powertrain.fuel
     - [hydrogen, 'hydrogen|wasserstoff|hidrogeno|idrogeno|fcev']
 
 drive:  # structured drive labels (site field) → fwd/rwd/awd
-  why: structured source field first, then text words, then the variant rule — 49 % were unknown until backfilled (2026-11-03)
+  why: structured source field first, then text words, then the variant rule
   labels:
     fwd: [front, frontantrieb, vorderradantrieb, voorwielaandrijving, traction avant, traction, trazione anteriore, traccion delantera, tracao dianteira, fwd]
     rwd: [rear, heck, heckantrieb, hinterradantrieb, achterwielaandrijving, propulsion, trazione posteriore, traccion trasera, tracao traseira, rwd]
@@ -73,4 +73,4 @@ drive:  # structured drive labels (site field) → fwd/rwd/awd
 # VIN WMI prefixes of China-market builds of EU models (grey imports: other spec, no EU warranty). Not every L… VIN:
 # EU-market cars built in China (Tesla, Polestar, MG, BYD…) are fine.
 vin_wmi_flags:
-  china_market: {wmi: [LFV, LSV], why: "VW-group China joint ventures; grey imports showed up in ES/IT listings (2026-11)"}
+  china_market: {wmi: [LFV, LSV], why: "VW-group China joint venture (China-market build)"}
