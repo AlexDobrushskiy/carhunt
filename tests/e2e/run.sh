@@ -131,7 +131,12 @@ cleanup() {
   fi
   print_summary
   if [ "${KEEP:-0}" = 1 ]; then info "KEEP=1: work dir kept at $W (HOME=$HOME)"
-  else chmod -R u+w "$W" 2>/dev/null; rm -rf "$W"; fi
+  else
+    case "$W" in  # only ever the mktemp dir made by the outer half: non-empty, named carhunt-e2e.XXXXXX
+      /?*/carhunt-e2e.??????) chmod -R u+w "$W" 2>/dev/null; rm -rf -- "$W" ;;
+      *) info "refusing to delete unexpected work dir '$W'" ;;
+    esac
+  fi
   exit $rc
 }
 trap cleanup EXIT
