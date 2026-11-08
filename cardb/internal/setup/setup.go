@@ -89,14 +89,23 @@ func (c *Config) Backend(kind, home string) (secrets.Backend, error) {
 }
 
 // DataDir is the server data dir: env CARDB_DATA_DIR > config cardb.data_dir > <home>/cardb.
+// In cardb.data_dir, $CARHUNT_HOME / ${CARHUNT_HOME} mean <home> and a relative path is relative to <home>,
+// so a config copied between homes (tests, a second profile) never points at another home's data.
 func DataDir(home, configured string) string {
 	if d := os.Getenv("CARDB_DATA_DIR"); d != "" {
 		return d
 	}
-	if configured != "" {
-		return expand(configured)
+	if configured == "" {
+		return filepath.Join(home, "cardb")
 	}
-	return filepath.Join(home, "cardb")
+	for _, v := range []string{"${CARHUNT_HOME}", "$CARHUNT_HOME"} {
+		configured = strings.ReplaceAll(configured, v, home)
+	}
+	configured = expand(configured)
+	if !filepath.IsAbs(configured) {
+		configured = filepath.Join(home, configured)
+	}
+	return configured
 }
 
 // HashPrefix marks a hashed tokens-file entry: `name:sha256:<64 hex of sha256(token)>`.
