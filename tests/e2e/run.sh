@@ -47,12 +47,16 @@ SH
     "_E2E_INNER=1" "_E2E_WORK=$W" "_E2E_SELF=$SELF" "_E2E_REAL_HOME=$REAL_HOME" "_E2E_REAL_LAUNCHCTL=$REAL_LAUNCHCTL"
     "CARHUNT_SECRETS_BACKEND=file" "CARHUNT_FAKE_SITES=1"
   )
-  for k in E2E_SRC E2E_REF KEEP E2E_KEEP_GOING E2E_SKIP E2E_COMPOSE E2E_CACHES E2E_VERBOSE; do
+  for k in E2E_SRC E2E_REF E2E_PATCH KEEP E2E_KEEP_GOING E2E_SKIP E2E_COMPOSE E2E_CACHES E2E_VERBOSE; do
     [ -n "${!k:-}" ] && envs+=("$k=${!k}")
   done
-  # agtermctl finds agterm through this socket; the default path is under the real HOME.
+  # agtermctl looks for agterm's control socket under $HOME only (AGTERM_SOCKET is ignored): link the real one in.
   sock=${AGTERM_SOCKET:-$REAL_HOME/Library/Application Support/agterm/agterm.sock}
-  [ -S "$sock" ] && envs+=("AGTERM_SOCKET=$sock")
+  if [ -S "$sock" ]; then
+    mkdir -p "$W/home/Library/Application Support/agterm"
+    ln -s "$sock" "$W/home/Library/Application Support/agterm/agterm.sock"
+    envs+=("AGTERM_SOCKET=$sock")
+  fi
   # Warm caches by default (content-addressed, safe to share); E2E_CACHES=cold = a true first-time machine.
   if [ "${E2E_CACHES:-warm}" != cold ]; then
     command -v go >/dev/null && envs+=("GOMODCACHE=$(go env GOMODCACHE)" "GOCACHE=$(go env GOCACHE)")
@@ -160,6 +164,10 @@ step_clone() {
   git clone -q "$src" "$CLONE"
   git -C "$CLONE" checkout -q "$ref"
   info "HEAD $(git -C "$CLONE" log -1 --format='%h %s')"
+  if [ -n "${E2E_PATCH:-}" ]; then  # try uncommitted fixes: comma list of diff files, applied in order
+    local p; IFS=, read -ra patches <<<"$E2E_PATCH"
+    for p in "${patches[@]}"; do git -C "$CLONE" apply --index "$p" || die "E2E_PATCH $p does not apply"; info "applied $p"; done
+  fi
 }
 
 step_home() {
@@ -227,20 +235,29 @@ step_compose() {  # optional (E2E_COMPOSE=1): the Docker path builds and serves 
   info "compose cardb healthy on 127.0.0.1:$port"
 }
 
-# Doctor warns that are expected on a fresh machine with only the required pieces set up.
-DOCTOR_ALLOWED_WARN='^(notify|telegram|proxy|sms|gmail|wacli)'
+# Doctor warns expected on a fresh machine with only the required pieces (check-name prefix  # why it may warn):
+DOCTOR_ALLOWED_WARN=(
+  'notify'                  # optional Telegram notifier, unset
+  'access: proxy'           # optional residential proxy, unset
+  'access: sms'             # optional one-time SMS provider, unset
+  'access: captcha.'        # optional local captcha solver: off by default
+  'contact.secret.gmail_'   # optional Gmail channel: no OAuth secrets
+  'contact.wacli'           # optional WhatsApp CLI: not installed / not linked
+  'access: mcp servers'     # browser MCP servers run under launchd: skipped here (--skip-browsers-launchd)
+  'access: identity master' # needs the owner's one-time site logins (pw-identity login): manual by design
+  'orchestrate.schedule'    # launchd day schedule: skipped here (--skip-schedule)
+)
 step_doctor() {
   local rc=0
   carhunt doctor >"$LOGS/doctor.txt" 2>&1 || rc=$?
   carhunt doctor --json >"$LOGS/doctor.json" 2>/dev/null || true
   cat "$LOGS/doctor.txt"
-  venv python - "$LOGS/doctor.json" "$DOCTOR_ALLOWED_WARN" <<'PY'
-import json, re, sys
-data = json.load(open(sys.argv[1]))
-rows = data if isinstance(data, list) else data.get("checks") or data.get("results") or []
-allowed = re.compile(sys.argv[2], re.I)
+  venv python - "$LOGS/doctor.json" "${DOCTOR_ALLOWED_WARN[@]}" <<'PY'
+import json, sys
+rows = json.load(open(sys.argv[1]))
+allowed = tuple(sys.argv[2:])
 bad = [r for r in rows if r.get("status") == "fail"]
-odd = [r for r in rows if r.get("status") == "warn" and not allowed.search(str(r.get("name", "")))]
+odd = [r for r in rows if r.get("status") == "warn" and not str(r.get("name", "")).startswith(allowed)]
 for r in bad: print(f"  doctor FAIL: {r.get('name')}: {r.get('detail', '')}")
 for r in odd: print(f"  doctor unexpected warn: {r.get('name')}: {r.get('detail', '')}")
 print(f"  {len(rows)} checks, {len(bad)} fail, {len(odd)} unexpected warn")
