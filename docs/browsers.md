@@ -40,7 +40,7 @@ Python: `access.session.tab(route, country=, site=)`, `access.pace.acquire(site,
 | Camoufox (optional) | `pip install camoufox && python -m camoufox fetch` | `camoufox` route: Imperva sites behind a country proxy |
 | Ollama + VLM (optional) | `brew install ollama && ollama pull qwen3.5:4b`; OWLv2 downloads on first use (~GBs, PyTorch/MPS) | captcha image grids; sliders/checkboxes need no model. Measured on M1 Max 32 GB; smaller Macs unknown |
 
-Bootstrap runs: `npm ci` → `agent-chrome` → launchd jobs (`<launchd_prefix>lanes`, `…identity`, `…identity-a…`, `…agent-chrome-refresh`, `…identity-seed`, `…browser-reaper`; `carhunt browser launchd install`) → MCP registration + hooks (asks) → `carhunt doctor`.
+`browsers/install [--yes] [--skip-launchd] [--skip-mcp] [--dry-run]` (bootstrap calls it) runs: `npm ci` → `agent-chrome` → launchd jobs (`<launchd_prefix>lanes`, `…identity`, `…identity-a…`, `…agent-chrome-refresh`, `…identity-seed`, `…browser-reaper`; `carhunt browser launchd install`) → MCP registration + hooks (asks) → `carhunt doctor`.
 
 ## First run
 1. **Identity master login:** `pw-identity login https://<site>` opens a visible window on the master profile; sign in to Google (if you'll use it) and any site you want agents to share. Agents can do site logins themselves later; only Google + phone-code steps need you.
@@ -94,16 +94,23 @@ browsers:
   mcp_name_prefix: ch-        # MCP names ch-lane, ch-lane-a…, ch-identity, ch-identity-a… (identity hooks match these)
   idle_release_s: 180         # identity lease released + browser closed after this idle
   reaper_max_age_h: 6         # throwaway browsers older than this count as leaked
+  identity_reseed_hours: 24   # pool copies older than this get re-seeded from the master
   captcha:
-    enabled: false            # image grids need Ollama + a VLM (GBs)
+    enabled: false            # image grids need Ollama + a VLM (GBs); sliders need only OpenCV
     model: qwen3.5:4b
     ollama_url: http://127.0.0.1:11434
+    owlv2: false              # 4x4 grids: OWLv2 detector (PyTorch, GBs) instead of VLM per square
+    max_attempts: 2           # per run
+    site_budget: 6            # per site per site_window_h
+    site_window_h: 6
 
 net:
   proxy:
     provider: none            # decodo | none
     credentials: secret:proxy_credentials
     sticky_minutes: 30        # one sticky exit per run
+    # gateway: gate.decodo.com:7000   echo_url: <IP-echo endpoint used for the fail-closed exit check>
+  geo: {}                     # per country {tz, locale} overrides for geo browsers, e.g. fr: {tz: Europe/Paris, locale: fr-FR}
 
 accounts:
   email: you@example.com      # site signups; codes are read from this mailbox
@@ -122,5 +129,6 @@ APFS clones (`cp -c`) for Agent Chrome + pool seeding · `codesign` ad-hoc re-si
 - Only one proxy provider (Decodo) and one SMS provider (SMSPool) measured; costs per site per month unknown beyond one campaign (66 MB ≈ $0.33).
 - All wall measurements are from one PT residential IP; which sites need which country IP depends on where you live.
 - Identity leases are enforced by Claude Code hooks only; other agent CLIs must call `pw-identity acquire`.
+- Tests: `pytest carhunt/access` (offline); real-Chrome smoke tests are opt-in with `CARHUNT_TEST_CHROME=1`. Tests force `CARHUNT_SECRETS_BACKEND=file` (a first run on the Keychain default wrote synthetic test creds to the real Keychain).
 - Site limits drift (mobile.de tightened three times in two weeks); `measured` dates in site.yaml are the staleness signal.
 - Captcha VLM benchmarked on one machine; hCaptcha image tasks unsupported.
