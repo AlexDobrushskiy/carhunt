@@ -1,7 +1,7 @@
 import { expect, hydrated, seeded, test, viewAs } from "./fixtures";
 import { HOME_CITY, OWNER, VIEWER } from "./stack";
 
-test.describe.configure({ mode: "serial" });
+test.describe.configure({ mode: process.env.E2E_NO_SERIAL ? "default" : "serial" });
 
 test("list → filter → car page → verdict → note (owner)", async ({ page }) => {
   const { bev, ice } = seeded();

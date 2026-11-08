@@ -62,7 +62,7 @@ No config.yaml section: labels, tiers, option keys, home city and time zone come
 3. Seeds 4 cars over REST (BEV with photos/options/facts/needs flag, diesel, two queue cars).
 4. `npm run build` (skip: `E2E_SKIP_BUILD=1`), starts the web on another free port; teardown kills both and removes the temp dir and `dist/` (its server key trips gitleaks).
 
-Specs (`e2e/web.spec.ts`): list → fuel filter → car page (powertrain block, distance label) → verdict + note, persisted; diesel page; viewer identity (read-only controls, own verdict, proxy 403, owner's verdict untouched); `Needs <owner>` tab; queue rate → collapse → undo, tier toggle; lightbox; no token in HTML, cross-site and off-list writes refused. `E2E_VERBOSE=1` shows cardb's request log.
+Specs (`e2e/web.spec.ts`): list → fuel filter → car page (powertrain block, distance label) → verdict + note, persisted; diesel page; viewer identity (read-only controls, own verdict, proxy 403, owner's verdict untouched); `Needs <owner>` tab; queue rate → collapse → undo, tier toggle; lightbox; no token in HTML, cross-site and off-list writes refused. `E2E_VERBOSE=1` shows cardb's request log; `E2E_NO_SERIAL=1` keeps running after a failure (to see every failing spec at once).
 
 ## Docker / compose
 
