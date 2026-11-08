@@ -1,0 +1,161 @@
+---
+import type { FilterState } from "@/lib/filters";
+import type { ModelFamilies } from "@/lib/cardb";
+import { SORTS, FUELS, familyGroups, familySummary } from "@/lib/filters";
+import { SELLER_TYPES, STATUSES, STATUS_LABEL, FUEL_LABEL, optionLabel } from "@/lib/vocab";
+import { flag } from "@/lib/format";
+import { homeLabel } from "@/lib/profile";
+interface Props { f: FilterState; count: number; families: ModelFamilies | null; optionKeys: string[] }
+const { f, count, families, optionKeys } = Astro.props;
+const { profile } = Astro.locals;
+const groups = familyGroups(families?.families ?? [], f.families);
+const unmapped = families?.unmapped ?? 0;
+const showUnmapped = unmapped > 0 || f.families.includes("none");
+// Without the list (API hiccup) keep the selection so Apply does not silently drop it.
+if (!families) for (const x of f.families.filter((x) => x !== "none")) if (!groups.some((g) => g.items.some((i) => i.family === x))) groups.push({ make: "Selected", items: [{ family: x, label: x, count: 0 }] });
+const legacyModelHref = (() => {
+  const u = new URLSearchParams(Astro.url.searchParams);
+  u.delete("model");
+  return `/?${u}`;
+})();
+// The profile's search countries; any country already in the URL stays selectable.
+const COUNTRIES = [...new Set([...(profile.homeCountry ? [profile.homeCountry] : []), ...profile.countries, ...f.lists.country.map((c) => c.toUpperCase())])];
+const VERDICT_OPTS = [["up", "👍"], ["maybe", "🤔"], ["down", "👎"], ["none", "none yet"]];
+const num = (k: keyof FilterState["nums"]) => f.nums[k] ?? "";
+const chip = "inline-flex items-center h-8 px-3 rounded-full border border-line bg-surface-2 text-sm cursor-pointer select-none has-[:checked]:border-accent has-[:checked]:bg-accent-bg has-[:checked]:text-accent";
+const dealChip = "inline-flex items-center justify-center w-full h-10 px-3 rounded-lg border border-line bg-surface-2 text-sm cursor-pointer select-none has-[:checked]:border-good has-[:checked]:bg-good-bg has-[:checked]:text-good has-[:checked]:font-medium";
+const input = "w-full h-10 px-3 rounded-lg border border-line bg-surface-2 text-sm placeholder:text-muted";
+const label = "block text-xs font-medium text-muted mb-1";
+---
+<details class="group" data-testid="filters" open={false}>
+  <summary class="list-none cursor-pointer inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-line bg-surface-2 text-sm [&::-webkit-details-marker]:hidden">
+    ⚙ Filters{count ? <span class="rounded-full bg-accent text-bg text-xs px-1.5 font-semibold">{count}</span> : null}
+  </summary>
+  <form method="get" action="/" class="mt-3 mb-2 p-3 rounded-xl border border-line bg-surface flex flex-col gap-4">
+    <input type="hidden" name="view" value={f.view} />
+    <div class="grid grid-cols-2 gap-3">
+      <div class="col-span-2"><label class={label} for="f-q">Search</label><input id="f-q" class={input} type="search" name="q" value={f.q} placeholder="model, city, seller, notes…" /></div>
+      <div class="col-span-2 min-w-0">
+        <span class={label} id="f-family-label">Model</span>
+        <details class="group/fam min-w-0" data-testid="family-filter" open={false}>
+          <summary aria-labelledby="f-family-label" class={`${input} list-none cursor-pointer flex items-center gap-2 [&::-webkit-details-marker]:hidden`}>
+            <span data-family-summary class={`flex-1 min-w-0 truncate ${f.families.length ? "" : "text-muted"}`}>{familySummary(f.families)}</span>
+            <span aria-hidden="true" class="shrink-0 text-muted group-open/fam:rotate-180 transition-transform">▾</span>
+          </summary>
+          <div class="mt-1 max-h-80 overflow-y-auto overscroll-contain rounded-lg border border-line bg-surface-2 py-1">
+            {groups.map((g) => (
+              <div role="group" aria-label={g.make}>
+                <p class="px-3 pt-2 pb-0.5 text-xs font-semibold uppercase tracking-wide text-muted">{g.make}</p>
+                {g.items.map((i) => (
+                  <label class="flex items-center gap-3 min-h-10 px-3 text-sm cursor-pointer select-none has-[:checked]:bg-accent-bg">
+                    <input type="checkbox" name="family" value={i.family} checked={f.families.includes(i.family)} class="size-4 shrink-0 accent-[var(--accent)]" />
+                    <span class="flex-1 min-w-0 truncate">{i.label}</span>
+                    <span class="shrink-0 text-xs text-muted tabular">{i.count}</span>
+                  </label>
+                ))}
+              </div>
+            ))}
+            {showUnmapped ? (
+              <label class="flex items-center gap-3 min-h-10 px-3 mt-1 border-t border-line text-sm cursor-pointer select-none has-[:checked]:bg-accent-bg">
+                <input type="checkbox" name="family" value="none" checked={f.families.includes("none")} class="size-4 shrink-0 accent-[var(--accent)]" />
+                <span class="flex-1 min-w-0">Unmapped</span>
+                <span class="shrink-0 text-xs text-muted tabular">{unmapped}</span>
+              </label>
+            ) : null}
+            {!families ? <p class="px-3 py-2 text-xs text-muted">Couldn't load the model list.</p> : null}
+          </div>
+        </details>
+        {f.model ? (
+          <p class="mt-1 text-xs text-muted">
+            <input type="hidden" name="model" value={f.model} />
+            Also: model text contains “{f.model}” · <a href={legacyModelHref}>remove</a>
+          </p>
+        ) : null}
+      </div>
+      <div><label class={label} for="f-market">Market</label>
+        <select id="f-market" name="market" class={input}>
+          <option value="" selected={!f.market}>Any</option>
+          <option value="home" selected={f.market === "home"}>Home{profile.homeCountry ? ` ${flag(profile.homeCountry)}` : ""}</option>
+          <option value="abroad" selected={f.market === "abroad"}>Abroad</option>
+        </select>
+      </div>
+      <div><span class={label}>Deal</span>
+        <label class={dealChip}><input class="sr-only" type="checkbox" name="good_deal" value="1" checked={f.goodDeal} />★ Good deal</label>
+      </div>
+      <div><label class={label} for="f-ymin">Year from</label><input id="f-ymin" class={input} inputmode="numeric" name="year_min" value={num("year_min")}  /></div>
+      <div><label class={label} for="f-ymax">Year to</label><input id="f-ymax" class={input} inputmode="numeric" name="year_max" value={num("year_max")} /></div>
+      <div><label class={label} for="f-pmin">Price from €</label><input id="f-pmin" class={input} inputmode="numeric" name="price_min" value={num("price_min")} /></div>
+      <div><label class={label} for="f-pmax">Price to €</label><input id="f-pmax" class={input} inputmode="numeric" name="price_max" value={num("price_max")} /></div>
+      <div><label class={label} for="f-hpmin">Power from hp</label><input id="f-hpmin" class={input} type="number" min="0" step="1" inputmode="numeric" name="hp_min" value={num("hp_min")} /></div>
+      <div><label class={label} for="f-hpmax">Power to hp</label><input id="f-hpmax" class={input} type="number" min="0" step="1" inputmode="numeric" name="hp_max" value={num("hp_max")} /></div>
+      <div><label class={label} for="f-km">Max km</label><input id="f-km" class={input} inputmode="numeric" name="km_max" value={num("km_max")} /></div>
+      <div><label class={label} for="f-dist">Max km to {homeLabel(profile)}</label><input id="f-dist" class={input} inputmode="numeric" name="distance_km_max" value={num("distance_km_max")} /></div>
+    </div>
+    <fieldset><legend class={label}>Drive</legend>
+      <div class="flex flex-wrap gap-2">{["fwd", "rwd", "awd", "unknown"].map((d) => <label class={chip}><input class="sr-only" type="checkbox" name="drive" value={d} checked={f.lists.drive.includes(d)} />{d === "unknown" ? "Unknown" : d.toUpperCase()}</label>)}</div>
+    </fieldset>
+    <fieldset><legend class={label}>Fuel</legend>
+      <div class="flex flex-wrap gap-2">{FUELS.map((x) => <label class={chip}><input class="sr-only" type="checkbox" name="fuel" value={x} checked={f.lists.fuel.includes(x)} />{x === "unknown" ? "Unknown" : FUEL_LABEL[x] ?? x}</label>)}</div>
+    </fieldset>
+    <fieldset><legend class={label}>Country</legend>
+      <div class="flex flex-wrap gap-2">{COUNTRIES.map((c) => <label class={chip}><input class="sr-only" type="checkbox" name="country" value={c} checked={f.lists.country.includes(c)} />{c}</label>)}</div>
+    </fieldset>
+    <fieldset><legend class={label}>Seller</legend>
+      <div class="flex flex-wrap gap-2">{SELLER_TYPES.map((s) => <label class={chip}><input class="sr-only" type="checkbox" name="seller_type" value={s} checked={f.lists.seller_type.includes(s)} />{s}</label>)}</div>
+    </fieldset>
+    <fieldset><legend class={label}>Status (overrides the tab)</legend>
+      <div class="flex flex-wrap gap-2">{STATUSES.map((s) => <label class={chip}><input class="sr-only" type="checkbox" name="status" value={s} checked={f.lists.status.includes(s)} />{STATUS_LABEL[s]}</label>)}</div>
+    </fieldset>
+    <fieldset><legend class={label}>Verdict</legend>
+      <div class="flex flex-wrap gap-2">{VERDICT_OPTS.map(([v, l]) => <label class={chip}><input class="sr-only" type="checkbox" name="verdict" value={v} checked={f.lists.verdict.includes(v)} />{l}</label>)}</div>
+    </fieldset>
+    <fieldset><legend class={label}>Options</legend>
+      <div class="grid grid-cols-2 gap-3">
+        {optionKeys.map((key) => (
+          <label class="text-sm">{optionLabel(key)}
+            <select name={`opt_${key}`} class={`${input} mt-1`}>
+              {[["", "any"], ["yes", "✓ yes"], ["yes_or_unknown", "✓ or ?"], ["no", "✗ no"], ["unknown", "? unknown"]].map(([v, l]) => <option value={v} selected={(f.options[key] ?? "") === v}>{l}</option>)}
+            </select>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+    <div class="grid grid-cols-2 gap-3">
+      <div><label class={label} for="f-sort">Sort by</label>
+        <select id="f-sort" name="sort" class={input}>{SORTS.map((s) => <option value={s.key} selected={f.sort === s.key}>{s.label}</option>)}</select>
+      </div>
+      <div><label class={label} for="f-order">Order</label>
+        <select id="f-order" name="order" class={input}>
+          <option value="" selected={!f.order}>Default</option>
+          <option value="asc" selected={f.order === "asc"}>Low → high</option>
+          <option value="desc" selected={f.order === "desc"}>High → low</option>
+        </select>
+      </div>
+    </div>
+    <div class="flex gap-2">
+      <button type="submit" class="flex-1 h-10 rounded-lg bg-accent text-bg font-medium">Apply</button>
+      <a href={`/?view=${f.view}`} class="h-10 px-4 grid place-items-center rounded-lg border border-line text-fg no-underline">Reset</a>
+    </div>
+  </form>
+</details>
+<script>
+  // Live summary for the model dropdown (the form works without it).
+  document.querySelectorAll<HTMLDetailsElement>('[data-testid="family-filter"]').forEach((d) => {
+    const out = d.querySelector<HTMLElement>("[data-family-summary]");
+    d.addEventListener("change", () => {
+      const names = [...d.querySelectorAll<HTMLInputElement>('input[name="family"]:checked')].map((i) => (i.value === "none" ? "Unmapped" : i.value));
+      if (!out) return;
+      out.textContent = names.length ? names.join(", ") : "Any model";
+      out.classList.toggle("text-muted", !names.length);
+    });
+  });
+  // Drop empty fields so shared URLs stay short.
+  document.querySelectorAll<HTMLFormElement>('[data-testid="filters"] form').forEach((form) => {
+    form.addEventListener("submit", () => {
+      form.querySelectorAll<HTMLInputElement | HTMLSelectElement>("input[name], select[name]").forEach((el) => {
+        if ((el instanceof HTMLInputElement && el.type === "checkbox") || el.value !== "") return;
+        el.disabled = true;
+      });
+    });
+  });
+</script>

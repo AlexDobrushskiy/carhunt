@@ -1,0 +1,23 @@
+---
+import type { Event } from "@/lib/cardb";
+import { when } from "@/lib/format";
+interface Props { events: Event[] }
+const { events } = Astro.props;
+const { profile } = Astro.locals;
+const ICON: Record<string, string> = {
+  created: "✦", status_change: "→", price_change: "€", listing_added: "+", listing_removed: "✗", listing_relisted: "↺",
+  spec_change: "✎", option_change: "✎", fact_change: "✎", verdict: "★", good_deal: "★", price_sanity_override: "⚠", ad_check: "🔎", ask: "?", ask_answered: "✓", vin_check: "🔎", report: "📄", visit: "📍",
+  call: "📞", merge: "⇄", split: "⇵", duplicate_proposed: "≈", note: "✎", message_deleted: "🗑", message_restored: "↩",
+};
+---
+{events.length === 0 ? <p class="text-sm text-muted">Nothing yet.</p> : (
+  <ol class="relative border-l border-line ml-2 flex flex-col gap-3" data-testid="timeline">
+    {events.map((e) => (
+      <li class="pl-4 relative">
+        <span class="absolute -left-[9px] top-0.5 w-[17px] h-[17px] rounded-full bg-surface-2 border border-line grid place-items-center text-[10px]">{ICON[e.type ?? ""] ?? "•"}</span>
+        <p class="text-sm">{e.summary}</p>
+        <p class="text-xs text-muted">{when(e.at, profile.tz)} · {e.type}{e.author ? ` · ${e.author}` : ""}</p>
+      </li>
+    ))}
+  </ol>
+)}

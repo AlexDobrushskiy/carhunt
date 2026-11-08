@@ -1,0 +1,15 @@
+---
+// "★ Good deal · T1-3"; the note shows on hover (title) and on tap (<details>).
+interface Props { note?: string | null; rank?: string | null }
+const { note, rank } = Astro.props;
+const text = `★ Good deal${rank ? ` · ${rank}` : ""}`;
+const pill = "inline-flex items-center gap-1 text-xs font-medium rounded-full px-2 py-0.5 bg-good-bg text-good whitespace-nowrap";
+---
+{note ? (
+  <details class="group/deal min-w-0" data-testid="good-deal-badge" title={note}>
+    <summary class={`${pill} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>{text}<span aria-hidden="true" class="opacity-70 group-open/deal:rotate-180 transition-transform">▾</span></summary>
+    <p class="mt-1 text-sm rounded-lg bg-good-bg px-2.5 py-1.5 break-words">{note}</p>
+  </details>
+) : (
+  <span class={`${pill} self-start`} data-testid="good-deal-badge" title="Good deal">{text}</span>
+)}

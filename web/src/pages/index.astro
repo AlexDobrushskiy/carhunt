@@ -1,0 +1,64 @@
+---
+import Base from "@/layouts/Base.astro";
+import CarCard from "@/components/CarCard.astro";
+import FilterSheet from "@/components/FilterSheet.astro";
+import QuickVerdictScript from "@/components/QuickVerdictScript.astro";
+import ViewTabs from "@/components/ViewTabs.astro";
+import type { CarSummary, Stats, ModelFamilies } from "@/lib/cardb";
+import { SORTS, parseFilters, toApiQuery, activeFilterCount, resolveFamilies } from "@/lib/filters";
+import { filterOptionKeys } from "@/lib/profile";
+
+const { db, profile } = Astro.locals;
+const sp = Astro.url.searchParams;
+const optionKeys = filterOptionKeys(profile);
+const f = parseFilters(sp, optionKeys);
+let cars: CarSummary[] = [];
+let total = 0;
+let stats: Stats | null = null;
+let error = "";
+// The dropdown's options; a failure only costs the dropdown, never the list.
+const familiesP = db.getModelFamilies().catch(() => null);
+// "To rate" tab count (default tiers); a queue failure only drops the number.
+const queueTotalP = db.getQueue({ limit: 1 }).then((q) => q.total).catch(() => null);
+let families: ModelFamilies | null = null;
+let ignoredFamilies: string[] = [];
+try {
+  if (f.families.length) {
+    // The API 400s on unknown names: keep only canonical ones (old or mistyped URLs).
+    families = await familiesP;
+    const resolved = resolveFamilies(f.families, families?.known);
+    ignoredFamilies = f.families.filter((x) => !resolved.some((r) => r.localeCompare(x, undefined, { sensitivity: "base" }) === 0));
+    f.families = resolved;
+  }
+  const [list, st, fams] = await Promise.all([db.listCars(toApiQuery(f)), db.getStats().catch(() => null), familiesP]);
+  cars = list.cars;
+  total = list.total;
+  stats = st;
+  families = fams;
+} catch (e) {
+  error = (e as Error).message;
+}
+const queueTotal = await queueTotalP;
+const nFilters = activeFilterCount(f);
+const sortLabel = SORTS.find((s) => s.key === f.sort)?.label ?? f.sort;
+Astro.response.headers.set("Cache-Control", "no-store");
+---
+<Base title="carhunt">
+  <ViewTabs slot="subheader" active={f.view} sp={sp} stats={stats} queueTotal={queueTotal} />
+
+  <div class="flex items-center gap-2 py-3">
+    <FilterSheet f={f} count={nFilters} families={families} optionKeys={optionKeys} />
+  </div>
+  <p class="text-sm text-muted mb-3" data-testid="result-count">{total} car{total === 1 ? "" : "s"} · sorted by {sortLabel.toLowerCase()}{nFilters ? <> · <a href={`/?view=${f.view}`}>clear filters</a></> : null}{ignoredFamilies.length ? <> · ignored unknown model {ignoredFamilies.join(", ")}</> : null}</p>
+
+  {error ? (
+    <div class="rounded-xl border border-bad bg-bad-bg text-bad p-4 text-sm">Couldn't load cars: {error}</div>
+  ) : cars.length === 0 ? (
+    <p class="text-muted py-12 text-center">No cars match.</p>
+  ) : (
+    <div class="flex flex-col gap-3">
+      {cars.map((c) => <CarCard car={c} />)}
+    </div>
+  )}
+  <QuickVerdictScript />
+</Base>

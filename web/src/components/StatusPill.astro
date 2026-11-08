@@ -1,0 +1,7 @@
+---
+import { STATUS_LABEL, STATUS_TONE, type StatusKey } from "@/lib/vocab";
+interface Props { status: string; class?: string }
+const { status, class: cls = "" } = Astro.props;
+const key = status as StatusKey;
+---
+<span class={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap ${STATUS_TONE[key] ?? "bg-surface-2 text-muted"} ${cls}`}>{STATUS_LABEL[key] ?? status}</span>

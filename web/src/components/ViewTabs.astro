@@ -1,0 +1,33 @@
+---
+// View tab bar: "To rate" (/queue) first, then the list presets (/?view=…).
+import { VIEWS, hrefWith, viewCount, type ViewKey } from "@/lib/filters";
+import { needsLabel } from "@/lib/profile";
+import type { Stats } from "@/lib/cardb";
+interface Props { active: ViewKey | "queue"; sp?: URLSearchParams; stats: Stats | null; queueTotal: number | null }
+const { active, sp = new URLSearchParams(), stats, queueTotal } = Astro.props;
+const { profile } = Astro.locals;
+const tabs = [
+  { key: "queue", label: "To rate", href: "/queue", n: queueTotal },
+  ...VIEWS.map((v) => ({
+    key: v.key,
+    label: v.key === "needs" ? needsLabel(profile) : v.label,
+    href: hrefWith(sp, { view: v.key, status: null, verdict: null }),
+    n: viewCount(v.key, stats),
+  })),
+];
+---
+<nav class="max-w-3xl mx-auto scroll-x" aria-label="Views">
+  <ul class="flex gap-1.5 px-4 pb-2 w-max">
+    {tabs.map((t) => {
+      const on = t.key === active;
+      return (
+        <li>
+          <a href={t.href} aria-current={on ? "page" : undefined} data-testid={t.key === "queue" ? "queue-tab" : `view-${t.key}`}
+             class={`inline-flex items-center gap-1 h-8 px-3 rounded-full text-sm whitespace-nowrap no-underline hover:no-underline ${on ? "bg-fg text-bg font-medium" : "bg-surface-2 text-fg"}`}>
+            {t.label}{t.n != null ? <span class={on ? "opacity-70" : "text-muted"} data-queue-tab-count={t.key === "queue" ? "" : undefined}>{t.n}</span> : null}
+          </a>
+        </li>
+      );
+    })}
+  </ul>
+</nav>

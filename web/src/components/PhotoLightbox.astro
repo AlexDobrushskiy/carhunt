@@ -1,0 +1,229 @@
+---
+// Full-screen photo viewer for every `a[data-lightbox="<photo id>"]` on the page (gallery + chat
+// attachments). Plain clicks open it; modifier/middle clicks keep the link's new-tab behaviour.
+---
+<dialog data-lightbox-dialog aria-label="Photo viewer" class="lb">
+  <div class="lb-stage" data-lb-stage>
+    <img data-lb-img alt="" decoding="async" draggable="false" />
+    <div class="lb-spinner" aria-hidden="true"></div>
+  </div>
+  <p class="lb-counter tabular" data-lb-counter aria-live="polite"></p>
+  <button type="button" class="lb-btn lb-close" data-lb-close aria-label="Close">✕</button>
+  <button type="button" class="lb-btn lb-prev" data-lb-prev aria-label="Previous photo">‹</button>
+  <button type="button" class="lb-btn lb-next" data-lb-next aria-label="Next photo">›</button>
+  <p class="lb-caption" data-lb-caption></p>
+</dialog>
+
+<style is:global>
+  dialog.lb {
+    position: fixed; inset: 0; margin: 0; padding: 0; border: 0;
+    width: 100vw; height: 100vh; height: 100dvh; max-width: none; max-height: none;
+    background: transparent; color: #f2f3f5; overflow: hidden; touch-action: pinch-zoom;
+  }
+  dialog.lb::backdrop { background: rgb(5 6 8 / 0.97); }
+  dialog.lb:not([open]) { display: none; }
+  .lb-stage {
+    /* Definite 1×1 track so the image's max-width/max-height: 100% resolve against it. */
+    position: absolute; inset: 0; display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); place-items: center;
+    padding: calc(env(safe-area-inset-top) + 52px) env(safe-area-inset-right) calc(env(safe-area-inset-bottom) + 40px) env(safe-area-inset-left);
+  }
+  .lb-stage img {
+    grid-area: 1 / 1; max-width: 100%; max-height: 100%; width: auto; height: auto;
+    object-fit: contain; user-select: none; -webkit-user-select: none; transition: transform 0.18s ease-out;
+  }
+  .lb-stage img.lb-dragging { transition: none; }
+  .lb-spinner {
+    grid-area: 1 / 1; width: 28px; height: 28px; border-radius: 50%; pointer-events: none;
+    border: 3px solid rgb(255 255 255 / 0.2); border-top-color: rgb(255 255 255 / 0.8);
+    animation: lb-spin 0.8s linear infinite; visibility: hidden;
+  }
+  dialog.lb[data-loading] .lb-spinner { visibility: visible; }
+  @keyframes lb-spin { to { transform: rotate(360deg); } }
+  .lb-counter {
+    position: absolute; left: calc(env(safe-area-inset-left) + 16px); top: calc(env(safe-area-inset-top) + 14px);
+    margin: 0; font-size: 14px; color: rgb(242 243 245 / 0.85);
+  }
+  .lb-caption {
+    position: absolute; left: 16px; right: 16px; bottom: calc(env(safe-area-inset-bottom) + 10px);
+    margin: 0; font-size: 12px; text-align: center; color: rgb(242 243 245 / 0.7);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .lb-btn {
+    position: absolute; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 9999px;
+    border: 0; background: rgb(20 22 26 / 0.6); color: #f2f3f5; font-size: 20px; line-height: 1; cursor: pointer;
+  }
+  .lb-btn:hover { background: rgb(40 44 52 / 0.85); }
+  .lb-btn:focus-visible { outline: 2px solid #5cb3ff; outline-offset: 2px; }
+  .lb-close { right: calc(env(safe-area-inset-right) + 6px); top: calc(env(safe-area-inset-top) + 4px); }
+  .lb-prev, .lb-next { top: 50%; transform: translateY(-50%); font-size: 30px; padding-bottom: 3px; }
+  .lb-prev { left: calc(env(safe-area-inset-left) + 6px); }
+  .lb-next { right: calc(env(safe-area-inset-right) + 6px); }
+  dialog.lb[data-single] .lb-prev, dialog.lb[data-single] .lb-next { display: none; }
+</style>
+
+<script>
+  import { buildItems, step, swipeDelta, type LightboxItem } from "@/lib/lightbox";
+
+  const dlg = document.querySelector<HTMLDialogElement>("dialog[data-lightbox-dialog]");
+  if (dlg) setup(dlg);
+
+  function setup(dlg: HTMLDialogElement) {
+    const img = dlg.querySelector<HTMLImageElement>("[data-lb-img]")!;
+    const counter = dlg.querySelector<HTMLElement>("[data-lb-counter]")!;
+    const caption = dlg.querySelector<HTMLElement>("[data-lb-caption]")!;
+    let items: LightboxItem[] = [];
+    let index = 0;
+    let opener: HTMLElement | null = null;
+    let historyPushed = false;
+    let prevOverflow = "";
+    let ignoreClickUntil = 0;
+    const preloaded = new Map<string, HTMLImageElement>();
+
+    function load(src: string): HTMLImageElement {
+      let im = preloaded.get(src);
+      if (!im) {
+        im = new Image();
+        im.decoding = "async";
+        im.src = src;
+        preloaded.set(src, im);
+      }
+      return im;
+    }
+
+    function show(i: number) {
+      index = i;
+      const it = items[i];
+      dlg.dataset.index = String(i);
+      dlg.dataset.photoId = it.id;
+      counter.textContent = `${i + 1} / ${items.length}`;
+      caption.textContent = it.caption;
+      img.alt = `Photo ${i + 1} of ${items.length}`;
+      img.style.transform = "";
+      const hi = load(it.full);
+      if (hi.complete && hi.naturalWidth) {
+        img.src = it.full;
+        delete dlg.dataset.loading;
+      } else {
+        // Medium size (often cached by the gallery) first, the full one when it arrives.
+        img.src = it.medium;
+        dlg.dataset.loading = "";
+        const done = () => {
+          if (items[index]?.id !== it.id) return;
+          if (hi.naturalWidth) img.src = it.full;
+          delete dlg.dataset.loading;
+        };
+        hi.addEventListener("load", done, { once: true });
+        hi.addEventListener("error", done, { once: true });
+      }
+      if (items.length > 1) {
+        load(items[step(i, 1, items.length)].full);
+        load(items[step(i, -1, items.length)].full);
+      }
+    }
+
+    function go(delta: number) {
+      if (items.length > 1) show(step(index, delta, items.length));
+    }
+
+    function open(anchor: HTMLAnchorElement) {
+      const triggers = [...document.querySelectorAll<HTMLAnchorElement>("a[data-lightbox]")];
+      const built = buildItems(triggers.map((a) => ({ photoId: a.dataset.lightbox ?? "", caption: a.dataset.lightboxCaption })));
+      items = built.items;
+      opener = anchor;
+      if (items.length > 1) delete dlg.dataset.single;
+      else dlg.dataset.single = "";
+      show(built.indexOf[triggers.indexOf(anchor)] ?? 0);
+      prevOverflow = document.documentElement.style.overflow;
+      document.documentElement.style.overflow = "hidden";
+      dlg.showModal();
+      dlg.querySelector<HTMLButtonElement>("[data-lb-close]")!.focus({ preventScroll: true });
+      // Phone back button / back swipe closes the viewer instead of leaving the page. Same URL.
+      history.pushState({ evLightbox: true }, "");
+      historyPushed = true;
+    }
+
+    function close(fromHistory = false) {
+      if (!dlg.open) return;
+      dlg.close();
+      document.documentElement.style.overflow = prevOverflow;
+      opener?.focus({ preventScroll: true });
+      if (historyPushed && !fromHistory) history.back();
+      historyPushed = false;
+    }
+
+    document.addEventListener("click", (e) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const a = (e.target as Element | null)?.closest?.<HTMLAnchorElement>("a[data-lightbox]");
+      if (!a || dlg.contains(a)) return;
+      e.preventDefault();
+      open(a);
+    });
+
+    window.addEventListener("popstate", () => {
+      if (dlg.open) {
+        historyPushed = false;
+        close(true);
+      }
+    });
+
+    dlg.addEventListener("cancel", (e) => {
+      e.preventDefault();
+      close();
+    });
+
+    dlg.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowRight") { e.preventDefault(); go(1); }
+      else if (e.key === "ArrowLeft") { e.preventDefault(); go(-1); }
+    });
+
+    dlg.addEventListener("click", (e) => {
+      const t = e.target as Element;
+      if (t.closest("[data-lb-prev]")) return go(-1);
+      if (t.closest("[data-lb-next]")) return go(1);
+      if (t.closest("[data-lb-close]")) return close();
+      if (Date.now() < ignoreClickUntil || t === img) return;
+      close(); // backdrop
+    });
+
+    // Swipe left/right on touch screens; the photo follows the finger.
+    let sx = 0, sy = 0, tracking = false;
+    dlg.addEventListener("touchstart", (e) => {
+      const zoomed = (window.visualViewport?.scale ?? 1) > 1.05;
+      tracking = e.touches.length === 1 && !zoomed && items.length > 1 && !(e.target as Element).closest(".lb-btn");
+      if (!tracking) return;
+      sx = e.touches[0].clientX;
+      sy = e.touches[0].clientY;
+      img.classList.add("lb-dragging");
+    }, { passive: true });
+    dlg.addEventListener("touchmove", (e) => {
+      if (!tracking) return;
+      if (e.touches.length !== 1) {
+        tracking = false;
+        img.classList.remove("lb-dragging");
+        img.style.transform = "";
+        return;
+      }
+      const dx = e.touches[0].clientX - sx;
+      if (Math.abs(dx) > Math.abs(e.touches[0].clientY - sy)) img.style.transform = `translateX(${dx}px)`;
+    }, { passive: true });
+    dlg.addEventListener("touchend", (e) => {
+      if (!tracking) return;
+      tracking = false;
+      img.classList.remove("lb-dragging");
+      const t = e.changedTouches[0];
+      const delta = swipeDelta(t.clientX - sx, t.clientY - sy);
+      img.style.transform = "";
+      if (delta) {
+        ignoreClickUntil = Date.now() + 400;
+        go(delta);
+      } else if (Math.abs(t.clientX - sx) > 10 || Math.abs(t.clientY - sy) > 10) {
+        ignoreClickUntil = Date.now() + 400;
+      }
+    });
+    dlg.addEventListener("touchcancel", () => {
+      tracking = false;
+      img.classList.remove("lb-dragging");
+      img.style.transform = "";
+    });
+  }
+</script>

@@ -1,0 +1,275 @@
+---
+import Base from "@/layouts/Base.astro";
+import Gallery from "@/components/Gallery.astro";
+import PhotoLightbox from "@/components/PhotoLightbox.astro";
+import Conversation from "@/components/Conversation.astro";
+import Timeline from "@/components/Timeline.astro";
+import Listings from "@/components/Listings.astro";
+import AdLinks from "@/components/AdLinks.astro";
+import OptionIcons from "@/components/OptionIcons.astro";
+import StatusPill from "@/components/StatusPill.astro";
+import VerdictControl from "@/components/VerdictControl.tsx";
+import NotesPanel from "@/components/NotesPanel.tsx";
+import StatusControl from "@/components/StatusControl.tsx";
+import DuplicateList from "@/components/DuplicateList.tsx";
+import GoodDealControl from "@/components/GoodDealControl.tsx";
+import OtherVerdicts from "@/components/OtherVerdicts.astro";
+import type { CarDetail, Contact } from "@/lib/cardb";
+import { ApiError } from "@/lib/http";
+import { adBadgeFromListings } from "@/lib/queue";
+import { price, power, km, flag, regDate, when, num, distance } from "@/lib/format";
+import { optionLabel, sourceLabel, optionMark, humanKey, readableRef, powertrainRows, powertrainShort, HEALTH_FACTS } from "@/lib/vocab";
+import { iconKeys, homeLabel, needsLabel } from "@/lib/profile";
+
+const { db, profile, viewer } = Astro.locals;
+const tz = profile.tz;
+const canEdit = viewer.role !== "viewer";
+const id = Astro.params.id ?? "";
+let car: CarDetail;
+try {
+  car = await db.getCar(id);
+} catch (e) {
+  if (e instanceof ApiError && e.status === 404) return new Response("Car not found", { status: 404 });
+  throw e;
+}
+// An alias or a merged id resolves to the live car: keep one canonical URL.
+if (String(car.id) !== id) return Astro.redirect(`/cars/${car.id}`, 302);
+Astro.response.headers.set("Cache-Control", "no-store");
+
+const ad = adBadgeFromListings(car.listings);
+const back = Astro.request.headers.get("referer")?.match(/^https?:\/\/[^/]+(\/(\?.*)?)$/)?.[1] ?? "/";
+const dash = (v: unknown) => (v == null || v === "" ? null : String(v));
+const specRows: [string, string | null][] = [
+  ["Model family", car.model_family ? `${car.model_family}${car.model_family_manual ? " (manual)" : ""}` : null],
+  ["Registered", dash(regDate(car.reg_date))],
+  ["Mileage", car.km != null ? `${num(car.km)} km` : null],
+  ["Power", car.power_kw != null ? power(car.power_kw) : null],
+  ["Drive", car.drive && car.drive !== "unknown" ? car.drive.toUpperCase() : null],
+  ["Seats", dash(car.seats)],
+  ["Body", dash(car.body)],
+  ["Colour", dash(car.colour)],
+  ["Interior", car.interior ? `${car.interior}${car.interior_tone && car.interior_tone !== "unknown" ? ` (${car.interior_tone})` : ""}` : null],
+  ["Wheels", car.wheels_in ? `${car.wheels_in}"` : null],
+  ["Location", [`${flag(car.country)} ${car.city ?? ""}`.trim(), distance(car.distance_km, car.distance_source, homeLabel(profile))].filter(Boolean).join(" · ") || null],
+  ["VIN", dash(car.vin)],
+  ["Plate", dash(car.plate)],
+];
+
+// Powertrain block: battery for EVs, engine/gearbox for combustion; health facts move here from the fact lists.
+const ptRows = powertrainRows(car.powertrain, car.facts);
+const healthKeys = new Set([...HEALTH_FACTS.battery, ...HEALTH_FACTS.engine].filter((k) => ptRows.some(([, v]) => car.facts.some((f) => f.key === k && f.value === v))));
+const keyOptions = iconKeys(profile);
+const optByKey = new Map(car.options.map((o) => [o.key ?? "", o]));
+const options = [
+  ...keyOptions.map((k) => optByKey.get(k) ?? { key: k, value: "unknown" as const }),
+  ...car.options.filter((o) => !keyOptions.includes(o.key ?? "")),
+];
+const facts = car.facts.filter((f) => !healthKeys.has(f.key ?? ""));
+const sellerFacts = facts.filter((f) => f.source === "seller_said");
+const otherFacts = facts.filter((f) => f.source !== "seller_said");
+const others = Object.entries(car.verdicts ?? {}).filter((e): e is [string, NonNullable<(typeof e)[1]>] => e[0] !== viewer.name && e[1] != null);
+
+function contactHref(c: Contact): string | null {
+  const digits = c.value.replace(/\D/g, "");
+  if (c.kind === "phone") return `tel:+${digits}`;
+  if (c.kind === "whatsapp") return `https://wa.me/${digits}`;
+  if (c.kind === "email") return `mailto:${c.value}`;
+  if (/^https?:\/\//.test(c.value)) return c.value;
+  return null;
+}
+const CONTACT_ICON: Record<string, string> = { phone: "📞", whatsapp: "🟢", email: "✉️", site_chat: "💬", web: "🔗" };
+const s = car.seller;
+
+const sections = [
+  ["overview", "Overview"],
+  ["chat", `Chat ${car.messages.length}`],
+  ["notes", `Notes ${car.notes.length}`],
+  ["ads", `Ads ${car.listings.length}`],
+  ["timeline", "Timeline"],
+];
+const h2 = "text-xs font-semibold uppercase tracking-wide text-muted mb-2";
+---
+<Base title={car.title} back={back}>
+  <nav slot="subheader" class="max-w-3xl mx-auto scroll-x" aria-label="Sections">
+    <ul class="flex gap-1.5 px-4 pb-2 w-max">
+      {sections.map(([a, l]) => <li><a href={`#${a}`} class="inline-flex items-center h-8 px-3 rounded-full bg-surface-2 text-fg text-sm no-underline whitespace-nowrap">{l}</a></li>)}
+    </ul>
+  </nav>
+
+  <div class="flex flex-col gap-5 pt-3">
+    <section id="overview" class="flex flex-col gap-3 scroll-mt-28">
+      <Gallery photos={car.photos} />
+      <div class="flex items-start gap-3">
+        <div class="flex-1 min-w-0">
+          <h1 class="text-xl font-semibold leading-tight" data-testid="car-title">{car.title}</h1>
+          <p class="text-sm text-muted mt-0.5">#{car.id}{car.aliases.length ? ` · ${car.aliases.join(", ")}` : ""}</p>
+        </div>
+        <div class="text-right">
+          <div class="text-xl font-semibold tabular">{price(car.price)}</div>
+          {car.listings.some((l) => l.price_flags?.length) ? <a href="#ads" class="block text-xs text-warn no-underline" data-testid="price-flag">⚠ price forced past sanity check</a> : null}
+          <StatusPill status={car.status} />
+          {ad ? <div><a href="#ads" class="inline-flex mt-1 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap bg-bad-bg text-bad no-underline" data-testid={ad.kind === "removed" ? "ad-removed-badge" : "ad-gone-badge"}>{ad.label}</a></div> : null}
+        </div>
+      </div>
+      {car.price_note ? <p class="text-sm text-muted -mt-1">{car.price_note}</p> : null}
+      <p class="text-sm tabular" data-testid="car-specs">{[regDate(car.reg_date), car.km != null ? km(car.km) : null, powertrainShort(car.powertrain), car.power_kw != null ? power(car.power_kw) : null, `${flag(car.country)} ${car.city ?? ""}`.trim(), distance(car.distance_km, car.distance_source)].filter(Boolean).join(" · ")}</p>
+      <OptionIcons values={Object.fromEntries(car.options.map((o) => [o.key ?? "", o.value]))} sources={Object.fromEntries(car.options.map((o) => [o.key ?? "", o.source]))} class="-mt-2 -ml-1.5" />
+      <AdLinks listings={car.listings} />
+
+      <div class="rounded-xl border border-line bg-surface p-3 flex flex-col gap-3">
+        <div>
+          <p class={h2}>Your verdict{viewer.name ? ` · ${viewer.name}` : ""}</p>
+          <VerdictControl client:load car={car.id} value={car.verdict?.value ?? null} note={car.verdict?.note ?? ""} />
+          {others.length ? <div class="mt-2"><OtherVerdicts verdicts={others} /></div> : null}
+        </div>
+        {canEdit ? (
+          <div>
+            <p class={h2}>Status{car.status_changed_at ? ` · since ${when(car.status_changed_at, tz)}` : ""}</p>
+            <StatusControl client:load car={car.id} status={car.status} needsOwner={Boolean(car.needs_owner)} needsOwnerReason={car.needs_owner_reason} needsLabel={needsLabel(profile)} version={car.version ?? null} />
+            {car.status_reason ? <p class="text-xs text-muted mt-1">{car.status_reason}</p> : null}
+          </div>
+        ) : (
+          <div data-testid="status-readonly">
+            <p class={h2}>Status{car.status_changed_at ? ` · since ${when(car.status_changed_at, tz)}` : ""}</p>
+            <StatusPill status={car.status} />
+            {car.needs_owner ? <p class="text-sm rounded-lg bg-warn-bg text-warn px-2.5 py-1.5 mt-2">⚑ {car.needs_owner_reason || needsLabel(profile)}</p> : null}
+          </div>
+        )}
+        {canEdit ? (
+          <div>
+            <p class={h2}>Good deal</p>
+            <GoodDealControl client:load car={car.id} goodDeal={Boolean(car.good_deal)} note={car.good_deal_note} by={car.good_deal_by} at={car.good_deal_at} rank={car.deal_rank} tz={tz} />
+          </div>
+        ) : null}
+      </div>
+
+      {car.duplicates.length && canEdit ? <DuplicateList client:load car={car.id} dups={car.duplicates} /> : null}
+
+      {car.summary ? <p class="text-sm">{car.summary}</p> : null}
+      {car.red_flags?.length ? (
+        <div class="rounded-xl border border-bad/50 bg-bad-bg p-3">
+          <p class={`${h2} !text-bad`}>Watch-outs</p>
+          <ul class="list-disc pl-5 text-sm flex flex-col gap-1">{car.red_flags.map((r) => <li>{r}</li>)}</ul>
+        </div>
+      ) : null}
+
+      <div>
+        <p class={h2}>Options</p>
+        <ul class="rounded-xl border border-line bg-surface divide-y divide-line" data-testid="options">
+          {options.map((o) => {
+            const m = optionMark(o.value);
+            const src = "source" in o ? sourceLabel(o.source, profile.ownerName) : null;
+            const ref = "source_ref" in o ? readableRef(o.source_ref) : null;
+            const note = "note" in o ? o.note : null;
+            return (
+              <li class="px-3 py-2 flex items-start gap-2.5 text-sm">
+                <b class={`w-4 text-center ${m.cls}`}>{m.sym}</b>
+                <div class="flex-1 min-w-0">
+                  <span>{optionLabel(o.key ?? "")}</span>
+                  {src || ref || note ? <p class="text-xs text-muted">{[src, ref, note].filter(Boolean).join(" · ")}</p> : null}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+
+      {sellerFacts.length ? (
+        <div>
+          <p class={h2}>Confirmed by seller</p>
+          <dl class="rounded-xl border border-line bg-surface divide-y divide-line">
+            {sellerFacts.map((f) => (
+              <div class="px-3 py-2 text-sm">
+                <dt class="text-xs text-muted">{humanKey(f.key ?? "")}{f.updated_at ? ` · ${when(f.updated_at, tz)}` : ""}</dt>
+                <dd>{f.value}{readableRef(f.source_ref) ? <span class="text-muted"> · {readableRef(f.source_ref)}</span> : null}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      ) : null}
+
+      {car.open_questions?.length ? (
+        <div>
+          <p class={h2}>Still to find out</p>
+          <ul class="list-disc pl-5 text-sm flex flex-col gap-1">{car.open_questions.map((q) => <li>{q}</li>)}</ul>
+        </div>
+      ) : null}
+
+      {ptRows.length ? (
+        <div>
+          <p class={h2}>Powertrain</p>
+          <dl class="rounded-xl border border-line bg-surface divide-y divide-line" data-testid="powertrain">
+            {ptRows.map(([k, v]) => (
+              <div class="px-3 py-2 flex gap-3 text-sm"><dt class="w-28 shrink-0 text-muted">{k}</dt><dd class="min-w-0 break-words">{v}</dd></div>
+            ))}
+          </dl>
+        </div>
+      ) : null}
+
+      <div>
+        <p class={h2}>Specs</p>
+        <dl class="rounded-xl border border-line bg-surface divide-y divide-line">
+          {specRows.filter(([, v]) => v).map(([k, v]) => (
+            <div class="px-3 py-2 flex gap-3 text-sm"><dt class="w-24 shrink-0 text-muted">{k}</dt><dd class="min-w-0 break-words">{v}</dd></div>
+          ))}
+        </dl>
+      </div>
+
+      {otherFacts.length ? (
+        <details class="group">
+          <summary class={`${h2} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>From the ad, photos & checks ({otherFacts.length}) <span class="group-open:hidden">▸</span><span class="hidden group-open:inline">▾</span></summary>
+          <dl class="rounded-xl border border-line bg-surface divide-y divide-line">
+            {otherFacts.map((f) => (
+              <div class="px-3 py-2 text-sm">
+                <dt class="text-xs text-muted">{humanKey(f.key ?? "")} · {sourceLabel(f.source, profile.ownerName)}{readableRef(f.source_ref) ? ` (${readableRef(f.source_ref)})` : ""}</dt>
+                <dd class="break-words">{f.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </details>
+      ) : null}
+
+      {s ? (
+        <div>
+          <p class={h2}>Seller</p>
+          <div class="rounded-xl border border-line bg-surface p-3 text-sm flex flex-col gap-1.5">
+            <p><b>{s.name ?? "Unknown"}</b>{s.company ? ` · ${s.company}` : ""} <span class="text-muted">· {s.type}{s.city ? ` · ${s.city}` : ""}</span></p>
+            {s.note ? <p class="text-muted">{s.note}</p> : null}
+            {(s.contacts ?? []).length ? (
+              <ul class="flex flex-col gap-1">
+                {(s.contacts ?? []).map((c) => {
+                  const href = contactHref(c);
+                  return <li>{CONTACT_ICON[c.kind] ?? "•"} {href ? <a href={href} target={href.startsWith("http") ? "_blank" : undefined} rel="noopener">{c.value}</a> : c.value}{c.note ? <span class="text-muted"> · {c.note}</span> : null}</li>;
+                })}
+              </ul>
+            ) : null}
+            {(s.car_ids ?? []).filter((x) => x !== car.id).length ? (
+              <p class="text-xs text-muted">Also sells: {(s.car_ids ?? []).filter((x) => x !== car.id).map((x, i) => <>{i ? ", " : ""}<a href={`/cars/${x}`}>#{x}</a></>)}</p>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+    </section>
+
+    <section id="chat" class="scroll-mt-28">
+      <p class={h2}>Conversation ({car.messages.length})</p>
+      <Conversation messages={car.messages} />
+    </section>
+
+    <section id="notes" class="scroll-mt-28">
+      <p class={h2}>Notes</p>
+      <NotesPanel client:load car={car.id} notes={car.notes.map((n) => ({ ...n, id: n.id ?? 0, text: n.text ?? "" }))} me={viewer.name} tz={tz} readOnly={!canEdit} />
+    </section>
+
+    <section id="ads" class="scroll-mt-28">
+      <p class={h2}>Ads ({car.listings.length})</p>
+      <Listings listings={car.listings} />
+    </section>
+
+    <section id="timeline" class="scroll-mt-28">
+      <p class={h2}>Timeline</p>
+      <Timeline events={car.events} />
+    </section>
+  </div>
+  <PhotoLightbox />
+</Base>

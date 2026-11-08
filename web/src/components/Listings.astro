@@ -1,0 +1,36 @@
+---
+import type { Listing } from "@/lib/cardb";
+import { price, when } from "@/lib/format";
+import { listingStatus } from "@/lib/queue";
+interface Props { listings: Listing[] }
+const { listings } = Astro.props;
+const { profile } = Astro.locals;
+const tz = profile.tz;
+---
+<ul class="flex flex-col gap-3" data-testid="listings">
+  {listings.map((l) => {
+    const hist = l.price_history ?? [];
+    const st = listingStatus(l.status);
+    return (
+      <li class="rounded-xl border border-line bg-surface p-3">
+        <div class="flex items-start gap-2">
+          <div class="flex-1 min-w-0">
+            <a href={l.url} target="_blank" rel="noopener" class="font-medium">{l.site ?? "ad"} ↗</a>
+            <span class={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap ml-1.5 ${st.tone}`} data-testid="listing-status" data-status={l.status}>{st.label}</span>
+            {l.title ? <p class="text-sm text-muted truncate">{l.title}</p> : null}
+          </div>
+          <div class="text-right font-semibold tabular">{price(l.price)}</div>
+        </div>
+        {l.price_note ? <p class="text-xs text-muted mt-1">{l.price_note}</p> : null}
+        {l.price_vat && l.price_vat !== "gross" && l.price_vat !== "unknown" ? <p class="text-xs text-muted mt-1">price is {l.price_vat === "net" ? "net of VAT" : "margin scheme (no VAT shown)"}</p> : null}
+        {l.price_flags?.length ? <p class="text-xs text-warn mt-1" data-testid="listing-price-flags">⚠ price stored past the sanity check: {l.price_flags.map((x) => x.replace(/^price_/, "")).join(", ")}</p> : null}
+        {hist.length > 1 ? (
+          <ol class="mt-2 text-xs text-muted tabular flex flex-wrap gap-x-2">
+            {hist.map((p, i) => <li>{i ? "→ " : ""}{price(p.price)} <span class="opacity-70">({when(p.at, tz).split(" ").slice(0, 3).join(" ")})</span></li>)}
+          </ol>
+        ) : null}
+        <p class="text-xs text-muted mt-1">seen {when(l.first_seen_at, tz)} → {when(l.last_seen_at, tz)}{l.removed_at ? ` · removed ${when(l.removed_at, tz)}` : ""}</p>
+      </li>
+    );
+  })}
+</ul>

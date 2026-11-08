@@ -1,0 +1,85 @@
+---
+import Base from "@/layouts/Base.astro";
+import ViewTabs from "@/components/ViewTabs.astro";
+import QueueRow from "@/components/QueueRow.astro";
+import QueueScript from "@/components/QueueScript.astro";
+import type { Queue, Stats } from "@/lib/cardb";
+import { parseQueueParams, queueTiers, queueHref, hiddenTiers, queueSpecs, QUEUE_LIMIT, QUEUE_LIMIT_MAX } from "@/lib/queue";
+import { optionLabel } from "@/lib/vocab";
+
+const { db, profile } = Astro.locals;
+const p = parseQueueParams(Astro.url.searchParams);
+const tiers = profile.tiers.map((t) => t.tier);
+const hidden = hiddenTiers(tiers, profile.defaultTiers);
+const specs = queueSpecs(profile.mustHave, optionLabel);
+if (!specs.length) p.spec = "";
+let queue: Queue | null = null;
+let error = "";
+const statsP = db.getStats().catch(() => null);
+// The spec filter narrows counts too, so the tab's unfiltered number needs its own (1-row) request.
+const tabP = p.spec ? db.getQueue({ limit: 1 }).catch(() => null) : null;
+try {
+  queue = await db.getQueue({ tier: queueTiers(p.all, tiers, profile.defaultTiers), spec: p.spec, limit: p.limit });
+} catch (e) {
+  error = (e as Error).message;
+}
+const stats: Stats | null = await statsP;
+const counts: Record<string, number> = queue?.counts ?? {};
+// counts ignore the tier param, so the tab's default-tier number comes from the same response.
+const tabCounts: Record<string, number> | null = tabP ? (await tabP)?.counts ?? null : queue ? counts : null;
+const defaults = profile.defaultTiers.length ? profile.defaultTiers : Object.keys(counts).map(Number);
+const tabTotal = tabCounts ? defaults.reduce((a, t) => a + (tabCounts[String(t)] ?? 0), 0) : null;
+const shownTiers = (p.all ? tiers : defaults).filter((t) => String(t) in counts);
+const hiddenCount = hidden.reduce((a, t) => a + (counts[String(t)] ?? 0), 0);
+const items = queue?.items ?? [];
+const more = queue && items.length < queue.total && p.limit < QUEUE_LIMIT_MAX ? queueHref({ all: p.all, spec: p.spec, limit: p.limit + QUEUE_LIMIT }) : null;
+const tierLabel = (t: number) => profile.tiers.find((x) => x.tier === t);
+Astro.response.headers.set("Cache-Control", "no-store");
+---
+<Base title="To rate · carhunt">
+  <ViewTabs slot="subheader" active="queue" stats={stats} queueTotal={tabTotal} />
+
+  <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-3">
+    <p class="text-sm text-muted tabular">
+      <b class="text-fg text-base" data-testid="queue-count">{queue?.total ?? 0}</b> to rate
+      {shownTiers.map((t) => <> · <span title={tierLabel(t)?.rules.join("\n") || tierLabel(t)?.label}>T{t}</span> <span data-tier-count={t} data-default-tier={defaults.includes(t) ? "" : undefined}>{counts[String(t)]}</span></>)}
+    </p>
+    {hidden.length ? (
+      <a href={queueHref({ all: !p.all, spec: p.spec, limit: p.limit })} data-testid="tiers-toggle" role="switch" aria-checked={p.all ? "true" : "false"}
+         class="inline-flex items-center gap-2 h-10 -mr-1 px-1 text-sm text-fg no-underline hover:no-underline">
+        <span aria-hidden="true" class={`relative inline-block w-9 h-5 rounded-full transition ${p.all ? "bg-accent" : "bg-surface-2 border border-line"}`}>
+          <span class={`absolute top-0.5 size-4 rounded-full bg-fg transition-all ${p.all ? "left-4.5 bg-bg" : "left-0.5"}`}></span>
+        </span>
+        Show {hidden.length === 1 ? `tier ${hidden[0]}` : `tiers ${hidden.join(", ")}`}{!p.all ? <span class="text-muted">{hiddenCount}</span> : null}
+      </a>
+    ) : null}
+  </div>
+  {specs.length ? (
+    <div class="flex flex-wrap gap-2 -mt-1 pb-3" data-testid="spec-filters">
+      {specs.map((s) => {
+        const on = p.spec === s.value;
+        return (
+          <a href={queueHref({ all: p.all, spec: on ? "" : s.value, limit: p.limit })} data-testid={`spec-${s.value}`} aria-pressed={on ? "true" : "false"} title={s.title}
+            class={`inline-flex items-center h-9 px-3 rounded-full border text-sm no-underline hover:no-underline whitespace-nowrap ${on ? "border-accent bg-accent-bg text-accent font-medium" : "border-line bg-surface-2 text-fg"}`}>{s.label}{on ? " ×" : ""}</a>
+        );
+      })}
+    </div>
+  ) : null}
+
+  {error ? (
+    <div class="rounded-xl border border-bad bg-bad-bg text-bad p-4 text-sm">Couldn't load the queue: {error}</div>
+  ) : (
+    <>
+      <div class="flex flex-col gap-3" data-testid="queue">
+        {items.map((it) => <QueueRow item={it} />)}
+      </div>
+      <p data-queue-empty hidden={items.length > 0} class="text-muted py-12 text-center">Nothing left to rate{p.all || !hidden.length ? "" : ` in tiers ${defaults.join(", ")}`}{p.spec ? " with this filter" : ""}.</p>
+      {more ? (
+        <a href={more} class="mt-4 flex items-center justify-center h-11 rounded-xl border border-line bg-surface text-sm text-fg no-underline hover:no-underline">
+          Show {Math.min(QUEUE_LIMIT, (queue?.total ?? 0) - items.length)} more ({items.length} of {queue?.total})
+        </a>
+      ) : null}
+    </>
+  )}
+  <QueueScript />
+</Base>

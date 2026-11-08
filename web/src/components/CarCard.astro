@@ -1,0 +1,68 @@
+---
+import type { CarSummary } from "@/lib/cardb";
+import { price, power, km, flag, ago, regDate, distance } from "@/lib/format";
+import { powertrainShort } from "@/lib/vocab";
+import { needsLabel } from "@/lib/profile";
+import OptionIcons from "./OptionIcons.astro";
+import StatusPill from "./StatusPill.astro";
+import QuickVerdict from "./QuickVerdict.astro";
+import GoodDealBadge from "./GoodDealBadge.astro";
+import OtherVerdicts from "./OtherVerdicts.astro";
+import { adBadge } from "@/lib/queue";
+
+interface Props { car: CarSummary }
+const { car } = Astro.props;
+const href = `/cars/${car.id}`;
+const specs = [
+  regDate(car.reg_date) || car.year,
+  car.km != null ? km(car.km) : null,
+  powertrainShort(car.powertrain),
+  car.power_kw != null ? power(car.power_kw) : null,
+  car.drive && car.drive !== "unknown" ? car.drive.toUpperCase() : null,
+].filter(Boolean).join(" · ");
+const place = [
+  `${flag(car.country)} ${car.city ?? ""}`.trim(),
+  distance(car.distance_km, car.distance_source),
+  car.seller_type && car.seller_type !== "unknown" ? car.seller_type : null,
+].filter(Boolean).join(" · ");
+const ad = adBadge(car);
+const { profile, viewer } = Astro.locals;
+const others = Object.entries(car.verdicts ?? {}).filter((e): e is [string, NonNullable<(typeof e)[1]>] => e[0] !== viewer.name && e[1] != null);
+const lastMsg = car.last_message_at ? `${car.last_message_direction === "in" ? "↙" : "↗"} ${ago(car.last_message_at, profile.tz)}` : null;
+---
+<article class="rounded-xl border border-line bg-surface overflow-hidden" data-car-id={car.id} data-testid="car-card">
+  <a href={href} class="flex gap-3 p-3 text-fg no-underline hover:no-underline">
+    <div class="shrink-0 w-24 h-18 sm:w-32 sm:h-24 rounded-lg bg-surface-2 overflow-hidden grid place-items-center text-2xl text-muted">
+      {car.cover_photo_id
+        ? <img src={`/photos/${car.cover_photo_id}?size=thumb`} alt="" loading="lazy" decoding="async" width="128" height="96" class="w-full h-full object-cover" />
+        : <span aria-hidden="true">🚗</span>}
+    </div>
+    <div class="min-w-0 flex-1">
+      <div class="flex items-start gap-2">
+        <h2 class="flex-1 min-w-0 font-semibold leading-snug line-clamp-2">{car.title}</h2>
+        <div class="text-right shrink-0">
+          <div class="font-semibold tabular">{price(car.price)}</div>
+          {car.price_flags?.length ? <div class="text-xs text-warn" title={car.price_flags.join(", ")} data-testid="price-flag">⚠ price</div> : null}
+          {car.price_drop && car.price_drop > 0 ? <div class="text-xs text-good tabular">↓ {price(car.price_drop)}</div> : null}
+        </div>
+      </div>
+      <p class="text-sm text-muted tabular mt-0.5">{specs}</p>
+      <p class="text-sm text-muted truncate">{place}</p>
+    </div>
+  </a>
+  <div class="px-3 pb-3 -mt-1 flex flex-col gap-2">
+    {car.good_deal ? <GoodDealBadge note={car.good_deal_note} rank={car.deal_rank} /> : null}
+    <div class="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+      <StatusPill status={car.status} />
+      {(car.listing_count ?? 0) > 1 ? <span class="text-xs rounded-full px-2 py-0.5 bg-surface-2 text-muted" title={(car.sites ?? []).join(", ")}>{car.listing_count} ads</span> : null}
+      {car.duplicate_candidate_count ? <span class="text-xs rounded-full px-2 py-0.5 bg-warn-bg text-warn">possible dup ×{car.duplicate_candidate_count}</span> : null}
+      {ad ? <span class="text-xs rounded-full px-2 py-0.5 bg-bad-bg text-bad" data-testid={ad.kind === "removed" ? "ad-removed-badge" : "ad-gone-badge"}>{ad.label}</span> : null}
+      {car.message_count ? <span class="text-xs text-muted">💬 {car.message_count}{lastMsg ? ` · ${lastMsg}` : ""}</span> : null}
+    </div>
+    <OptionIcons values={car.options} sources={car.option_sources} class="-ml-1.5" />
+    {car.needs_owner ? <p class="text-sm rounded-lg bg-warn-bg text-warn px-2.5 py-1.5" data-testid="needs-owner">⚑ {car.needs_owner_reason || needsLabel(profile)}</p> : null}
+    {car.summary ? <p class="text-sm text-muted line-clamp-2">{car.summary}</p> : null}
+    <QuickVerdict car={car.id} value={car.verdict?.value ?? null} note={car.verdict?.note ?? ""} />
+    {others.length ? <OtherVerdicts verdicts={others} /> : null}
+  </div>
+</article>
