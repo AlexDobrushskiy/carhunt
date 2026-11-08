@@ -162,3 +162,13 @@ def test_settings_accept_channel_list_from_example_config():
 
     s = contact_settings({"contact": {"channels": ["whatsapp", "email", "site"]}})
     assert s["enabled"] == ["whatsapp", "email", "site"] and s["channels"]["whatsapp"]["max_len"] == 500
+
+
+def test_channels_list_is_an_enabled_list(tree):
+    tree.config.setdefault("contact", {})["channels"] = ["email", "sites"]
+    tree.write()
+    code, out = tree.run(*OPEN)
+    assert code == 10 and "not in contact.channels" in out, out
+    tree.config["contact"]["channels"] = ["whatsapp"]
+    tree.write()
+    assert tree.run(*OPEN)[0] == 0

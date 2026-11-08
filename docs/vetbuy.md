@@ -9,7 +9,7 @@ Facts about one car → evidence pack → visit-ready gate → buy → import. O
 | `carhunt vin check-digit VIN` | expected position-9 digit | 0 match · 3 mismatch · 1 bad input |
 | `carhunt vin rdw PLATE [--json]` | NL RDW open data (`m9d7-ebf2` + recalls `t49b-isb7`): import date, odometer verdict, open recall, APK, export flag; prints the `cardb fact` line | 0 · 3 not found |
 | `carhunt vin prcodes CODES… [--brand vag] [--json]` | sticker codes → options, unknown codes, `cardb opt` args (source `vin_pr_code`) | 0 |
-| `carhunt evidence CAR [--write-asks] [--max-asks N] [--json]` | evidence-pack state from cardb; with `--write-asks` posts the next `ask` event(s) | 0 visit-ready · 4 not |
+| `carhunt evidence CAR [--write-asks] [--max-asks N] [--json]` | evidence-pack state from cardb; with `--write-asks` posts the next `ask` event(s) | 0 visit-ready · 4 not · 1 no config / cardb error |
 | `python -m carhunt.vet.md2html F.md [-o F.html] [--cards]` | phone-friendly HTML report (light/dark, V/A/I + risk pills) | 0 |
 
 Doctor (`carhunt doctor`): bundled WMI + PR-code tables load, `markdown` present, `knowledge/import/<dest>-registration.md` exists for `vet.destination_country`.

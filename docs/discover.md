@@ -37,10 +37,14 @@ Site states: `ok`, `blocked` (signature), `pace`, `budget`, `deferred` (read_aft
 
 ## Config
 ```yaml
+owner:
+  home: {city: …, country: PT, lat: …, lon: …}   # distance origin; home country = "abroad" rules
+sites:
+  enabled: [standvirtual.com, …]  # site ids (site.yaml `site:`) the sweep runs; default = every plugin
 search:                           # shared with cardb (ranking); discover reads:
   countries: [PT, ES, …]          # ISO-2; site countries outside → no query
   exclude_regions: [PT-20, PT-30, ES-CN]   # ISO 3166-2, see data/regions.yaml
-  price: {max_eur: 40000, min_eur: 0}      # gross
+  price: {max_eur: 40000, min_eur: 1500}   # gross; min_eur = the one price floor (discover drop + cardb 422), default 1500
   year_min: 2021
   km_max: 80000
   powertrain: [BEV]               # cardb fuel vocabulary: bev phev hev mhev petrol diesel …
@@ -50,8 +54,8 @@ search:                           # shared with cardb (ranking); discover reads:
   models:                         # make/model (+ optional `match:` regex override) + tier
     - {make: Volkswagen, model: "ID.4", tier: 1}
   hard_filters:                   # cardb's grammar: {field: powertrain.battery_net_kwh, min} · {fact(s), min|max|words} · {flag: damaged}; mentions_country left to cardb's queue
-    - {fact: battery_net_kwh, min: 70}
-    - {flag: damaged, exclude: true}
+    - {field: powertrain.battery_net_kwh, min: 70}
+    - {flag: damaged}
   options_wanted: {heat_pump: 3, pano: 2}  # keys drive the ask list (weights are cardb's)
 
 discover:
@@ -61,7 +65,7 @@ discover:
   detail_tiers: [1, 2]            # tiers that get detail reads + gallery; others card-only (default: all)
   max_photos: 40
   cursor: {coches.net: full}      # per-site override: newest_id | first_seen | full (else site.yaml cursor, else first_seen)
-  price_sanity: {min_eur: 1000, max_eur: 250000}
+  price_sanity: {max_eur: 250000}  # ×100 parse-error ceiling; the floor is search.price.min_eur
   thin: {min_photos: 8, min_info: 3}
   heuristics: [vag_meb]           # plug-ins to load (default: all in carhunt/discover/heuristics/)
   distance: {geocoder: nominatim, router: null, user_agent: "carhunt/1.0 (…)"}   # geocoder none = offline

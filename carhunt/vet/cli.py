@@ -34,7 +34,12 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     pr.add_argument("--json", action="store_true")
     pr.set_defaults(func=_prcodes)
 
-    e = subparsers.add_parser("evidence", help="evidence-pack state for a car; optional ask events")
+    e = subparsers.add_parser(
+        "evidence", help="evidence-pack state for a car; optional ask events",
+        description="Evidence-pack state of one car from cardb; --write-asks queues the next ask(s) for outreach.",
+        epilog="exit codes: 0 visit-ready · 4 not visit-ready (missing items / red flags; see the output) · "
+               "1 no config, or cardb unreachable / car not found (message on stderr)",
+        formatter_class=argparse.RawDescriptionHelpFormatter)
     e.add_argument("car", help="cardb id or alias")
     e.add_argument("--write-asks", action="store_true",
                    help="write the next `ask` event(s) for the outreach agent (vet never messages sellers)")
@@ -116,10 +121,14 @@ def _prcodes(a) -> int:
 def _evidence(a) -> int:
     from carhunt.core import config, db  # needs a running cardb
 
-    cfg = config.load()
-    max_asks = a.max_asks if a.max_asks is not None else int(cfg.get("vet.max_open_asks", 1) or 1)
-    client = db.Client.from_config(cfg)
-    st = evidence_pack.run(client, a.car, write_asks=a.write_asks, max_asks=max_asks)
+    try:
+        cfg = config.load()
+        max_asks = a.max_asks if a.max_asks is not None else int(cfg.get("vet.max_open_asks", 1) or 1)
+        client = db.Client.from_config(cfg)
+        st = evidence_pack.run(client, a.car, write_asks=a.write_asks, max_asks=max_asks)
+    except (config.ConfigError, db.ApiError) as ex:
+        print(f"evidence: {ex}", file=sys.stderr)
+        return 1
     _out(st.to_dict(), a.json, evidence_pack.render(st)
          + ("" if a.write_asks or not st.asks else "\n(dry: pass --write-asks to queue them)"))
     return 0 if st.visit_ready else 4
