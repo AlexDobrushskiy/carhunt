@@ -1,0 +1,15 @@
+# Synthetic fixture for test_sitetable.py (not a real site).
+name: tablefix-alpha.example.invalid
+wall: DataDome
+route: [http, plain-chrome]
+country_ip: FR
+pace: {min_gap_s: 12, max_loads_per_run: 60}
+caps: {phone_per_day: 40, send_per_day: 10}
+account:
+  needed_for: [phone, message]
+  verification: email + SMS (domestic mobile)
+messaging: logged in, country IP only, 2500 chars
+measured: 2026-11-06
+notes: |
+  stop at first 403/429/challenge; 404|410 = ad gone
+  never warm up on /
