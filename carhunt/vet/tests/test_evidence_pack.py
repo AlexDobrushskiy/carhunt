@@ -2,7 +2,7 @@
 from carhunt.vet import evidence_pack as ep
 from carhunt.vet import vin
 
-GOOD_VIN = "WVG" + "ZZZE2Z" + "S" + "P" + "000001"
+GOOD_VIN = "WVWZZZ1KZLW000001"  # privacy-check: allow (synthetic VIN)
 REQUIRED_FACTS = ["registration_doc", "service_history", "soh", "recall_status", "odometer_photo",
                   "warranty", "accidents", "vin_check"]
 
@@ -23,7 +23,7 @@ class StubDB:
 
 
 def car(**kw):
-    base = {"id": 7, "vin": GOOD_VIN, "reg_date": "2024-10", "powertrain": {"fuel": "BEV"},
+    base = {"id": 7, "vin": GOOD_VIN, "reg_date": "2020-05", "powertrain": {"fuel": "BEV"},
             "facts": [], "events": []}
     base.update(kw)
     return base
