@@ -14,4 +14,4 @@
 | `heuristics/` | model plug-ins (YAML); `vag_meb.yaml` example |
 | `data/` | VAT, regions, phone codes, keywords, option cues |
 | `cli.py`, `doctor.py` | `carhunt sweep`, doctor checks |
-| `_env.py`, `_cardb.py` | core bridge + fallback cardb client until core is on main |
+| `_env.py` | discover's view of `carhunt.core` (config dict, paths, clock, cardb client) |
