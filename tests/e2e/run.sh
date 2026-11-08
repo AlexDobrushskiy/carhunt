@@ -337,13 +337,22 @@ SH
   info "decision exit $rc; wacli calls: $(wc -l <"$LOGS/wacli.calls" 2>/dev/null | tr -d ' ' || echo 0), none of them send"
 }
 
-step_evidence() {
-  CARDB_URL=$CARDB_URL carhunt evidence "$CAR_ID" --json >"$LOGS/evidence.json" 2>"$LOGS/evidence.err" \
-    || { cat "$LOGS/evidence.err"; die "evidence failed"; }
-  head -c 1500 "$LOGS/evidence.json"; echo
-  CARDB_URL=$CARDB_URL carhunt evidence "$CAR_ID" --write-asks --json >"$LOGS/evidence-asks.json" 2>"$LOGS/evidence.err" \
-    || { cat "$LOGS/evidence.err"; die "evidence --write-asks failed"; }
-  info "evidence pack + ask events written for car $CAR_ID"
+step_evidence() {  # exit 0 = visit-ready, 4 = items missing (a fresh swept car): both are a working evidence check
+  local rc=0 rc2=0
+  CARDB_URL=$CARDB_URL carhunt evidence "$CAR_ID" --json >"$LOGS/evidence.json" 2>"$LOGS/evidence.err" || rc=$?
+  case $rc in 0|4) ;; *) cat "$LOGS/evidence.err"; die "evidence exited $rc" ;; esac
+  CARDB_URL=$CARDB_URL carhunt evidence "$CAR_ID" --write-asks --json >"$LOGS/evidence-asks.json" 2>"$LOGS/evidence.err" || rc2=$?
+  case $rc2 in 0|4) ;; *) cat "$LOGS/evidence.err"; die "evidence --write-asks exited $rc2" ;; esac
+  venv python - "$LOGS/evidence.json" <<'PY' || die "evidence JSON lacks items"
+import json, sys
+d = json.load(open(sys.argv[1]))
+assert d.get("items"), d
+print(f"  {sum(i['state'] == 'have' for i in d['items'])}/{len(d['items'])} evidence items present, visit_ready={d.get('visit_ready')}")
+PY
+  # items are missing on a fresh car, so --write-asks must leave an `ask` event for the outreach agent
+  CARDB_URL=$CARDB_URL cardb events "$CAR_ID" --json >"$LOGS/events.json" || die "cardb events failed"
+  grep -Eq '"type": *"ask"' "$LOGS/events.json" || die "no ask event in cardb after evidence --write-asks"
+  info "ask event written to cardb"
 }
 
 step_agent() {  # launch a dummy role in a real agterm session with a stub agent CLI, check it ran, close it
