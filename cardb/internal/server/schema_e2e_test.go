@@ -127,7 +127,7 @@ func TestPowertrainRoundTripAndPatchMerge(t *testing.T) {
 	if *p.Powertrain.BatteryNetKwh != 74.5 {
 		t.Fatalf("flat battery patch: %s", mustJSONT(t, p.Powertrain))
 	}
-	for _, bad := range []string{`{"powertrain": {"fuel": "steam"}}`, `{"powertrain": {"gearbox": "cvt"}}`, `{"powertrain": {"turbo": true}}`,
+	for _, bad := range []string{`{"powertrain": {"fuel": "steam"}}`, `{"powertrain": {"gearbox": "sequential"}}`, `{"powertrain": {"turbo": true}}`,
 		`{"powertrain": {"engine_cc": -1}}`, `{"powertrain": "bev"}`, `{"fuel": "bev"}`} {
 		c.call("PATCH", fmt.Sprintf("/api/v1/cars/%d", r.CarID), bad, 422, nil)
 	}
@@ -526,5 +526,102 @@ func TestUpsertLegacyFlatBattery(t *testing.T) {
 	_, body, _ := c.send("GET", fmt.Sprintf("/api/v1/cars/%d", d.ID), nil, nil)
 	if strings.Count(string(body), `"battery_net_kwh"`) != 1 || !strings.Contains(string(body), `"powertrain":{"battery_net_kwh":58`) {
 		t.Fatalf("read shape: flat battery key leaked: %s", body)
+	}
+}
+
+// Fuel/gearbox words from ads map to the enums on every write path and in the fuel filter.
+func TestPowertrainSynonyms(t *testing.T) {
+	c := newServer(t)
+	for i, tc := range []struct{ fuel, gearbox, wantFuel, wantGearbox string }{
+		{"Elétrico", "Automático", "bev", "automatic"},
+		{"eléctrico", "DSG", "bev", "automatic"},
+		{"électrique", "automatique", "bev", "automatic"},
+		{"Elektro", "Automatik", "bev", "automatic"},
+		{"EV", "auto", "bev", "automatic"},
+		{"Plug-in", "manuell", "phev", "manual"},
+		{"PHEV", "manuelle", "phev", "manual"},
+		{"Híbrido", "Manual", "hev", "manual"},
+		{"hybride", "S tronic", "hev", "automatic"},
+		{"Gasolina", "cvt", "petrol", "automatic"},
+		{"Benzin", "", "petrol", ""},
+		{"essence", "", "petrol", ""},
+		{"gasoline", "", "petrol", ""},
+		{"Gasóleo", "", "diesel", ""},
+		{"gasoil", "", "diesel", ""},
+		{"GPL", "", "lpg", ""},
+		{"GNV", "", "cng", ""},
+		{"mild-hybrid", "", "mhev", ""},
+	} {
+		pt := map[string]any{"fuel": tc.fuel}
+		if tc.gearbox != "" {
+			pt["gearbox"] = tc.gearbox
+		}
+		r := c.upsert(map[string]any{"url": fmt.Sprintf("https://example.invalid/syn/%d", i), "make": "SYNTH", "model": fmt.Sprintf("Syn %d", i),
+			"price": 20000 + i, "powertrain": pt})
+		got := c.car(r.CarID).Powertrain
+		if *got.Fuel != tc.wantFuel || (tc.wantGearbox != "" && *got.Gearbox != tc.wantGearbox) {
+			t.Errorf("%s/%s: got %s", tc.fuel, tc.gearbox, mustJSONT(t, got))
+		}
+	}
+	var p api.CarDetail
+	c.call("PATCH", "/api/v1/cars/1", `{"powertrain": {"fuel": "Diesel", "gearbox": "Automatik"}}`, 200, &p)
+	if *p.Powertrain.Fuel != "diesel" || *p.Powertrain.Gearbox != "automatic" {
+		t.Fatalf("patch synonyms: %s", mustJSONT(t, p.Powertrain))
+	}
+	if n := len(c.list("fuel=electric,Plug-in").Cars); n != 6 { // 4 bev (car 1 is diesel now) + 2 phev
+		t.Fatalf("fuel=electric,Plug-in: %d cars", n)
+	}
+	c.call("GET", "/api/v1/cars?fuel=steam", nil, 400, nil)
+	c.call("PATCH", "/api/v1/cars/1", `{"powertrain": {"fuel": "coal"}}`, 422, nil)
+}
+
+// Different known fuels are never the same car: no auto-link, no proposal (like a different make). VIN still wins.
+func TestDedupeFuelContradiction(t *testing.T) {
+	c := newServer(t)
+	base := func(url, fuel string, extra map[string]any) map[string]any {
+		in := map[string]any{"url": url, "make": "SYNTH", "model": "Twin 1.5", "reg_date": "2024-03", "km": 20000, "price": 30000,
+			"colour": "blue", "city": "Porto",
+			"seller": map[string]any{"type": "private", "contacts": []map[string]any{{"kind": "phone", "value": "+351 555 000 111"}}}}
+		if fuel != "" {
+			in["powertrain"] = map[string]any{"fuel": fuel}
+		}
+		for k, v := range extra {
+			in[k] = v
+		}
+		return in
+	}
+	a := c.upsert(base("https://example.invalid/fd/a", "petrol", nil))
+
+	// Same private phone + model + year/km/colour would auto-link; a diesel twin is a different car, not even proposed.
+	d := c.upsert(base("https://example.invalid/fd/d", "Gasóleo", nil))
+	if d.CarID == a.CarID || d.LinkedBy != nil || len(d.DuplicateCandidates) != 0 {
+		t.Fatalf("diesel vs petrol: car %d (a=%d) linked %v dupes %+v", d.CarID, a.CarID, d.LinkedBy, d.DuplicateCandidates)
+	}
+	// Unknown fuel doesn't contradict: it links as before.
+	u := c.upsert(base("https://example.invalid/fd/u", "", nil))
+	if u.CarID != a.CarID || u.LinkedBy == nil {
+		t.Fatalf("unknown fuel: car %d (a=%d) linked %v", u.CarID, a.CarID, u.LinkedBy)
+	}
+	// A mild hybrid listed as petrol elsewhere is not a contradiction.
+	m := c.upsert(base("https://example.invalid/fd/m", "mhev", nil))
+	if m.CarID != a.CarID {
+		t.Fatalf("mhev vs petrol: car %d (a=%d)", m.CarID, a.CarID)
+	}
+	// A BEV twin with no phone in common is not proposed either; a same-VIN listing still links whatever the fuel says.
+	e := c.upsert(base("https://example.invalid/fd/e", "bev", map[string]any{"seller": nil}))
+	if e.CarID == a.CarID || len(e.DuplicateCandidates) != 0 {
+		t.Fatalf("bev vs petrol: %+v", e)
+	}
+	c.call("PATCH", fmt.Sprintf("/api/v1/cars/%d", a.CarID), map[string]any{"vin": "SYNVIN00000000001"}, 200, nil)
+	v := c.upsert(base("https://example.invalid/fd/v", "bev", map[string]any{"seller": nil, "vin": "SYNVIN00000000001"}))
+	if v.CarID != a.CarID || v.LinkedBy == nil || *v.LinkedBy != "vin" {
+		t.Fatalf("same VIN, different fuel: car %d (a=%d) linked %v", v.CarID, a.CarID, v.LinkedBy)
+	}
+	var dupes []api.DuplicateCandidate
+	c.call("GET", "/api/v1/duplicates", nil, 200, &dupes)
+	for _, dc := range dupes {
+		if (dc.CarA == a.CarID && (dc.CarB == d.CarID || dc.CarB == e.CarID)) || (dc.CarB == a.CarID && (dc.CarA == d.CarID || dc.CarA == e.CarID)) {
+			t.Fatalf("proposal across fuels: %+v", dc)
+		}
 	}
 }

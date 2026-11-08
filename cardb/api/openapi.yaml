@@ -168,7 +168,10 @@ paths:
         `red_flags` / `open_questions` replace the whole list; prefer `red_flags_add` / `red_flags_remove` /
         `open_questions_add` / `open_questions_remove` (exact-text items, applied atomically, add is a no-op for an existing item).
         `powertrain` is merged field by field (send `null` for a field to clear it; `"powertrain": null` clears all of it).
-        Fuel/gearbox are case-insensitive, stored lower case; an unknown value or powertrain key is 422. Flat
+        Fuel/gearbox are case-insensitive, stored lower case, and accept common ad words (elétrico/elektro/EV → bev,
+        plug-in → phev, híbrido/hybride → hev, gasolina/benzin/essence → petrol, gasóleo/gasoil → diesel, GPL → lpg,
+        GNV → cng; automático/automatik/DSG/auto → automatic, manuell/manuelle → manual) on every write and in the
+        `fuel` filter; an unknown value or powertrain key is 422. Flat
         `battery_net_kwh` / `battery_gross_kwh` are still accepted (pre-v2 clients); other powertrain keys only nested.
         The same flat battery keys are accepted on POST /listings/upsert and POST /cars (folded into powertrain,
         fill-if-empty); a flat value that differs from the nested one in the same request is 422. Reads only nest.
@@ -545,6 +548,8 @@ paths:
       summary: Create or update a listing by URL (idempotent). Main entry point for agents/imports.
       description: |
         - URL is normalized (scheme/host lowercased, tracking params and fragment dropped, site ad id extracted).
+        - Different known make, model family or fuel (mhev is compatible with petrol/diesel/hev) means a different car:
+          never linked or proposed unless VIN or plate match.
         - New listing → dedupe against existing cars: a *certain* match (same VIN, same plate, same private-seller
           phone + same model, or ≥2 distinctive matching photos with agreeing make/model/specs on a car that is not closed — see
           DESIGN.md § Dedupe) attaches the listing to that car (`linked_by`); otherwise a new car

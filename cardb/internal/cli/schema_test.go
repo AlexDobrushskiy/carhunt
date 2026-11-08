@@ -52,11 +52,19 @@ func TestCLIPowertrain(t *testing.T) {
 	e.fails(2, "set", car, "--fuel", "steam")
 	e.fails(2, "set", car, "--gearbox", "manual", "--clear", "gearbox")
 
-	diesel := e.upsert("--url", "https://example.invalid/cli/pt2", "--make", "SYNTH", "--model", "Oil", "--price", "20000", "--fuel", "diesel").CarID
+	diesel := e.upsert("--url", "https://example.invalid/cli/pt2", "--make", "SYNTH", "--model", "Oil", "--price", "20000", "--fuel", "Gasóleo").CarID
 	var l api.CarList
 	e.okJSON(&l, "ls", "--fuel", "diesel,unknown")
 	if len(l.Cars) != 1 || l.Cars[0].ID != diesel {
 		t.Fatalf("ls --fuel diesel: %+v", l.Cars)
+	}
+	e.okJSON(&l, "ls", "--fuel", "electric")
+	if len(l.Cars) != 1 || l.Cars[0].ID != r.CarID {
+		t.Fatalf("ls --fuel electric: %+v", l.Cars)
+	}
+	e.ok("set", car, "--gearbox", "Automático")
+	if g := *e.show(car).Powertrain.Gearbox; g != "automatic" {
+		t.Fatalf("--gearbox Automático: %q", g)
 	}
 }
 

@@ -25,6 +25,7 @@ type probe struct {
 	CarID      int64
 	Make       string
 	Model      string
+	Fuel       string // "" = unknown
 	Year       int
 	Km         int64
 	HasKm      bool
@@ -46,6 +47,9 @@ func probeFromSpecs(specs map[string]any) *probe {
 	}
 	p := &probe{
 		Make: str("make"), Model: str("model"), RegDate: str("reg_date"), Colour: str("colour"), City: str("city"),
+	}
+	if f := str("fuel"); f != "unknown" {
+		p.Fuel = f
 	}
 	if v, ok := specs["vin"].(string); ok {
 		p.VIN = NormalizeVIN(v)
@@ -214,10 +218,14 @@ func modelFamily(model string) string {
 	return ""
 }
 
-// identityConflict: both cars say what they are and it differs (make or model family). Only a VIN or plate overrides it.
+// identityConflict: both cars say what they are and it differs (make, model family or fuel). Only a VIN or plate
+// overrides it.
 func identityConflict(p, c *probe) string {
 	if p.Make != "" && c.Make != "" && p.Make != c.Make {
 		return "make " + p.Make + " vs " + c.Make
+	}
+	if fuelConflict(p.Fuel, c.Fuel) {
+		return "fuel " + p.Fuel + " vs " + c.Fuel
 	}
 	if fp, fc := modelFamily(p.Model), modelFamily(c.Model); fp != "" && fc != "" && fp != fc {
 		return "model " + p.Model + " vs " + c.Model

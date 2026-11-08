@@ -153,13 +153,12 @@ func parseSpecValue(sf specField, raw string) (any, error) {
 	case "vin", "plate":
 		return strings.ToUpper(raw), nil
 	case "powertrain.fuel", "powertrain.gearbox":
-		allowed := api.Fuels
+		allowed, v := api.Fuels, api.NormFuel(raw)
 		if sf.key == "powertrain.gearbox" {
-			allowed = api.Gearboxes
+			allowed, v = api.Gearboxes, api.NormGearbox(raw)
 		}
-		v := strings.ToLower(raw)
-		if !slices.Contains(allowed, v) {
-			return nil, usageErrorf("--%s: %q is not one of %s", sf.flag, raw, strings.Join(allowed, "|"))
+		if v == "" {
+			return nil, usageErrorf("--%s: %q is not one of %s (or a common synonym)", sf.flag, raw, strings.Join(allowed, "|"))
 		}
 		return v, nil
 	}

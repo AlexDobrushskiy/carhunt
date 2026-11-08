@@ -75,8 +75,7 @@ func cmdLs(e *env, args []string) error {
 		return usageErrorf("--min-hp must not exceed --max-hp")
 	}
 	for _, fu := range splitList(fuels) {
-		fu = strings.ToLower(fu)
-		if !contains(api.Fuels, fu) {
+		if fu = api.NormFuel(fu); fu == "" {
 			return usageErrorf("--fuel: want %s", strings.Join(api.Fuels, "|"))
 		}
 		flt.Fuels = append(flt.Fuels, fu)
