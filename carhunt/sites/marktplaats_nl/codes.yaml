@@ -1,0 +1,33 @@
+# marktplaats.nl / 2dehands.be / 2ememain.be — one Adevinta platform, same JSON API and attribute ids on every host.
+# GET <origin>/lrp/api/search?l1CategoryId=91&limit=30&offset=N&query=<text>&attributesById[]=<id>
+#     &attributeRanges[]=<key>:<min|null>:<max|null>&sortBy=…&sortOrder=…
+domains:        # country (BE-fr = French mirror, SearchQuery.extra lang=fr) → [origin, Accept-Language, ad country]
+  NL: [https://www.marktplaats.nl, "nl-NL,nl;q=0.9", NL]
+  BE: [https://www.2dehands.be, "nl-BE,nl;q=0.9", BE]
+  BE-fr: [https://www.2ememain.be, "fr-BE,fr;q=0.9", BE]
+category: 91    # l1CategoryId Auto's / Autos
+page_size: 30
+seller:         # attributesById: Adverteerder
+  private: 10898   # Particulier
+  dealer: 10899    # Bedrijf
+fuel:           # attributesById: Brandstof (others: leave unfiltered)
+  bev: 11756       # Elektrisch: every row on 11-05..07 was Elektrisch with it, mixed fuels without it (11-04)
+sort:
+  newest: {sortBy: SORT_INDEX, sortOrder: DECREASING}
+  price: {sortBy: PRICE, sortOrder: INCREASING}
+  relevance: {}    # site default
+range_keys: {year: constructionYear, km: mileage, price_cents: PriceCents}
+phone_cc: {NL: "+31", BE: "+32"}   # national "0…" numbers on ad pages
+query:          # free-text `query` per make/model (missing → "<make> <model>")
+  Volkswagen: {ID.4: ID.4, ID.5: ID.5, ID.3: ID.3}
+  Audi: {Q4 e-tron: Q4 e-tron}
+  Skoda: {Enyaq: Enyaq}
+  BMW: {iX1: iX1}
+  Hyundai: {Ioniq 5: Ioniq 5}
+  Toyota: {bZ4X: bZ4X}
+  Mercedes-Benz: {EQA: EQA, EQB: EQB}
+  Kia: {EV6: EV6}
+  Cupra: {Tavascan: Tavascan}
+  MINI: {Countryman: Countryman}
+  Xpeng: {G6: Xpeng G6}
+  BYD: {Seal U: BYD Seal U, Sealion 7: BYD Sealion 7}

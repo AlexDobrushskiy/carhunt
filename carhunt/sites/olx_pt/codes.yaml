@@ -1,0 +1,31 @@
+# OLX.pt offers API (called inside the site's own tab): /api/v1/offers/?offset&limit=40&category_id=378&query=…&filters
+# No make/model filter is known: the model goes in as free text (`query`), as the EV sweep did 11-04…11-07.
+# Measured filters: filter_float_year:from, filter_float_quilometros:to, filter_float_price:to, owner_type=private.
+# The other bound of each range follows the API's own `:from`/`:to` scheme.
+category: 378            # Carros
+limit: 40                # organic rows per page; promoted rows come on top (metadata.promoted)
+filters:                 # SearchQuery field → API param
+  year_min: "filter_float_year:from"
+  year_max: "filter_float_year:to"
+  price_min: "filter_float_price:from"
+  price_max: "filter_float_price:to"
+  km_max: "filter_float_quilometros:to"
+owner_type:              # server-side seller filter (only `private` measured; dealer = business flag, filtered here)
+  private: private
+fuel:                    # cardb powertrain → `combustivel` param key; filtered on the rows (no API filter known)
+  bev: electrico
+  phev: plugin-hybrid
+  petrol: gasolina
+queries:                 # make → model → free-text query
+  Volkswagen: {ID.3: ID.3, ID.4: ID.4, ID.5: ID.5}
+  Audi: {Q4 e-tron: Q4}
+  Skoda: {Enyaq: Enyaq}
+  BMW: {iX1: iX1}
+  Hyundai: {Ioniq 5: Ioniq 5}
+  Toyota: {bZ4X: bZ4X}
+  Mercedes-Benz: {EQA: EQA, EQB: EQB}
+  Kia: {EV6: EV6}
+  Cupra: {Tavascan: Tavascan}
+  MINI: {Countryman: Countryman}
+  XPeng: {G6: Xpeng G6}
+  BYD: {Seal U: BYD Seal U, Sealion 7: BYD Sealion 7}

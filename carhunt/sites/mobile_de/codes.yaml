@@ -1,0 +1,38 @@
+# mobile.de list URL: https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&ms=<make>;<model>;;&<filters>
+# Numeric codes only: a make/model missing here raises Unsupported (no slug fallback). Codes from the EV sweep runners (11-03..07).
+makes:
+  Volkswagen: 25200
+  Audi: 1900
+  Skoda: 22900
+  Hyundai: 11600
+  Kia: 13200
+  Cupra: 3
+  Mercedes-Benz: 17200
+  BMW: 3500
+  Toyota: 24100
+  Mini: 17500
+models:       # make → model → model code; a list = the site files the model under several codes (searched in turn)
+  Volkswagen: {ID.4: 82, ID.5: 93}
+  Audi: {Q4 e-tron: [61, 57]}
+  Skoda: {Enyaq: 25}
+  Hyundai: {Ioniq 5: 58}
+  Kia: {EV6: 52}
+  Cupra: {Tavascan: 8}
+  Mercedes-Benz: {EQB: 350, EQA: 346}
+  BMW: {iX1: 337}
+  Toyota: {bZ4X: 87}
+  Mini: {Countryman: 51}
+model_pages:  # models without a known ms code: the site's model page /auto/<slug>.html takes the same filters
+  Xpeng: {G6: xpeng-g6}
+  BYD: {Seal U: byd-seal-u, Sealion 7: byd-sealion-7}
+fuel:         # cardb powertrain → ft (others: leave unfiltered)
+  bev: ELECTRICITY
+seller:       # adLimitation
+  private: ONLY_FSBO_ADS
+  dealer: ONLY_DEALER_ADS
+sort:
+  newest: {sb: doc, od: down}
+  price: {sb: p, od: up}
+  relevance: {}            # site default order
+page_size: 20              # organic rows per page (regular + eyecatcher); page 1 adds ~4 paid top rows (11-07)
+mirror_seller_id: "7723851"   # mobile.de's kleinanzeigen.de import account: e-mail only, call-tracking phones

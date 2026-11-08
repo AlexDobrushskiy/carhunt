@@ -1,0 +1,9 @@
+# leparking list URL: https://www.leparking.fr/voiture-occasion/<make>-<model>.html (all countries, all sellers).
+# Country/seller filters exist only as in-page JS (ctrl.set_criteria): see `filters`.
+models:               # <make>-<model> slug; unknown models → Unsupported (slug rule not measured)
+  Toyota: {bZ4X: toyota-bz4x}
+filters:              # ctrl.set_criteria(<field>, <id>, <label>, window)
+  country:
+    FR: {field: id_pays, id: 18, label: FRANCE}
+  seller:
+    private: {field: id_vendeur, id: 1, label: Particuliers}

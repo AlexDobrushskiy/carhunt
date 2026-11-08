@@ -1,0 +1,271 @@
+{
+ "id": "8000000001",
+ "originAdId": null,
+ "status": "ACTIVE",
+ "title": "Volkswagen ID.4 Pro Performance",
+ "url": "https://www.standvirtual.com/carros/anuncio/volkswagen-id-4-pro-synthetic-ID0SYN01x.html",
+ "images": {
+  "photos": [
+   {
+    "id": "1",
+    "url": "https://img.example.invalid/sv/a.jpg"
+   },
+   {
+    "id": "2",
+    "url": "https://img.example.invalid/sv/b.jpg"
+   }
+  ],
+  "thumbnails": []
+ },
+ "price": {
+  "value": "31900",
+  "currency": "EUR",
+  "labels": [
+   "IVA Discriminado"
+  ],
+  "isUnderBudget": false
+ },
+ "phoneNumbers": [
+  "__PHONE__"
+ ],
+ "hasAssignmentPhones": false,
+ "description": "<p>Carro <b>sintético</b> para testes.</p>",
+ "seller": {
+  "type": "STAND",
+  "name": "Synthetic Dealer",
+  "numberOfActiveAds": 12,
+  "sellerUrl": "https://dealer.example.invalid",
+  "location": {
+   "address": "Rua Exemplo 1",
+   "city": "Aveiro",
+   "region": "Aveiro",
+   "country": "Portugal",
+   "postalCode": "3800-000",
+   "shortAddress": "Aveiro"
+  },
+  "id": "900001",
+  "uuid": "00000000-0000-4000-8000-0000000000aa",
+  "standId": "700001"
+ },
+ "equipment": [
+  {
+   "key": "comfort",
+   "label": "Conforto",
+   "values": [
+    {
+     "key": "heat_pump",
+     "label": "Bomba de calor"
+    },
+    {
+     "key": "navigation_system",
+     "label": "Navegação"
+    }
+   ]
+  }
+ ],
+ "createdAt": "2026-11-01T10:00:00Z",
+ "parametersDict": {
+  "make": {
+   "label": "make",
+   "values": [
+    {
+     "value": "vw",
+     "label": "VW"
+    }
+   ]
+  },
+  "model": {
+   "label": "model",
+   "values": [
+    {
+     "value": "id-4",
+     "label": "ID.4"
+    }
+   ]
+  },
+  "version": {
+   "label": "version",
+   "values": [
+    {
+     "value": "ver-pro",
+     "label": "Pro Performance"
+    }
+   ]
+  },
+  "version_label": {
+   "label": "version_label",
+   "values": [
+    {
+     "value": "Pro Performance",
+     "label": "Pro Performance"
+    }
+   ]
+  },
+  "fuel_type": {
+   "label": "fuel_type",
+   "values": [
+    {
+     "value": "electric",
+     "label": "Elétrico"
+    }
+   ]
+  },
+  "first_registration_month": {
+   "label": "first_registration_month",
+   "values": [
+    {
+     "value": "3",
+     "label": "Março"
+    }
+   ]
+  },
+  "first_registration_year": {
+   "label": "first_registration_year",
+   "values": [
+    {
+     "value": "2023",
+     "label": "2023"
+    }
+   ]
+  },
+  "mileage": {
+   "label": "mileage",
+   "values": [
+    {
+     "value": "42000",
+     "label": "42 000 km"
+    }
+   ]
+  },
+  "engine_power": {
+   "label": "engine_power",
+   "values": [
+    {
+     "value": "204",
+     "label": "204 cv"
+    }
+   ]
+  },
+  "battery_capacity": {
+   "label": "battery_capacity",
+   "values": [
+    {
+     "value": "77",
+     "label": "77 kWh"
+    }
+   ]
+  },
+  "transmission": {
+   "label": "transmission",
+   "values": [
+    {
+     "value": "rear-wheel-drive",
+     "label": "Tracção traseira"
+    }
+   ]
+  },
+  "gearbox": {
+   "label": "gearbox",
+   "values": [
+    {
+     "value": "automatic",
+     "label": "Automática"
+    }
+   ]
+  },
+  "body_type": {
+   "label": "body_type",
+   "values": [
+    {
+     "value": "suv",
+     "label": "SUV / TT"
+    }
+   ]
+  },
+  "color": {
+   "label": "color",
+   "values": [
+    {
+     "value": "grey",
+     "label": "Cinzento"
+    }
+   ]
+  },
+  "door_count": {
+   "label": "door_count",
+   "values": [
+    {
+     "value": "5",
+     "label": "5"
+    }
+   ]
+  },
+  "nr_seats": {
+   "label": "nr_seats",
+   "values": [
+    {
+     "value": "5",
+     "label": "5"
+    }
+   ]
+  },
+  "number_of_registrations": {
+   "label": "number_of_registrations",
+   "values": [
+    {
+     "value": "1",
+     "label": "1"
+    }
+   ]
+  },
+  "complete_review_book": {
+   "label": "complete_review_book",
+   "values": [
+    {
+     "value": "1",
+     "label": "Sim"
+    }
+   ]
+  },
+  "origin": {
+   "label": "origin",
+   "values": [
+    {
+     "value": "national",
+     "label": "Nacional"
+    }
+   ]
+  },
+  "vendors_warranty_valid_until_date": {
+   "label": "vendors_warranty_valid_until_date",
+   "values": [
+    {
+     "value": "18",
+     "label": "18 Meses"
+    }
+   ]
+  },
+  "vin": {
+   "label": "vin",
+   "values": [
+    {
+     "value": "__VIN__",
+     "label": "__VIN__"
+    }
+   ]
+  }
+ },
+ "advertPriceForPriceDrop": {
+  "__typename": "AdNetGrossPrice",
+  "isNet": false,
+  "showNet": false
+ },
+ "electricVehicleBatteryEstimation": {
+  "health": {
+   "level": 1,
+   "lowerPct": 90,
+   "upperPct": 96,
+   "averagePct": 93
+  }
+ }
+}

@@ -1,0 +1,24 @@
+site: autoscout24
+name: AutoScout24
+kind: marketplace
+countries: [DE, AT, IT, ES, FR, NL, BE, LU]
+hosts: ['(^|\.)autoscout24\.(de|at|it|es|fr|nl|be|lu|com|pl)$']
+ad_id: ['([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})']
+wall: none (CloudFront, no challenge seen)
+route: http
+country_ip: null
+pace:
+  min_gap_s: 6
+  max_loads_per_run: 120
+  why: "~19 loads @6 s across 8 domains, no block (11-01); sweeps ran at 7 s"
+caps: {}
+account: {needed_for: [], verification: "Google-only login; not needed: guest contact form"}
+phone: page
+messaging: "guest 'E-Mail senden' form (no login); .de/.nl form unreliable 11-05 → dealer's own email"
+liveness: {evidence: "410 = gone; 308 = slug moved (same uuid) → follow once; 200 + uuid = live"}
+cursor: {strategy: newest_first, key: created, why: "sort=age desc; uuids are unordered → created timestamp + first organic id per model"}
+measured: 2026-11-06
+notes:
+  - "Belgium needs a language prefix (/nl/ or /fr/): bare /lst is 404"
+  - "Private sellers' phones are in the page data (list and ad), no reveal click"
+  - "Sponsored rows (searchResultType != Organic) can violate filters: never a cursor"

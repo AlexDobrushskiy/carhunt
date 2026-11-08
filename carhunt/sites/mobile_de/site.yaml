@@ -1,0 +1,33 @@
+site: mobile.de
+name: mobile.de
+kind: marketplace
+countries: [DE]
+hosts: ['(^|\.)mobile\.de$']
+ad_id: ['[?&]id=(\d+)', '/(\d{6,})\.html']
+wall: Akamai
+route: plain-chrome
+country_ip: null
+tab_home: https://www.mobile.de/
+accept_language: de-DE,de;q=0.9
+pace:
+  min_gap_s: 12
+  max_loads_per_run: 60
+  fresh_profile_every: 20
+  read_after: "12:00"
+  why: "Akamai burst limit is per profile: ~25 fast loads (10-30), 403 after ~60 paced loads on one profile (11-04) → 12 s, fresh profile per 20; the home IP itself got 403 after 41 sweep loads (11-06) → ≤60/run, reads after the morning messaging window"
+caps: {}
+account:
+  needed_for: [message]
+  verification: "email + password (password reset by emailed code); no SMS"
+phone: page
+messaging: "'E-Mail schreiben' form (/checkout/core/<id>), logged in only; sender lives in contact"
+liveness:
+  mode: goto
+  gone_title: 'nicht verfügbar'
+  evidence: "404 'Dieses Fahrzeug ist nicht verfügbar' = gone; 200 + ad id = live (11-04). The phrase is in every page's i18n bundle and a hidden h2 → match the <title> only"
+cursor: {strategy: newest_first, key: site_ref, why: "sb=doc desc; ids come in two widths → one numeric cursor per width"}
+measured: 2026-11-06
+notes:
+  - "curl, any Playwright-launched Chrome (lane, identity MCP, headed PW) and --headless all get 'Zugriff verweigert' 403; a plainly launched Chrome attached after the first load passes (10-25)"
+  - "Ad ids come in two widths (old 9-digit, new 14-digit); keep one numeric cursor per width"
+  - "Seller 7723851 = kleinanzeigen.de mirrors: e-mail only, partner-vip link to the original, +49 30 92 10… numbers are call-tracking proxies"

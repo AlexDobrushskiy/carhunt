@@ -1,0 +1,31 @@
+site: custojusto.pt
+name: CustoJusto
+kind: marketplace
+countries: [PT]
+hosts: ['(^|\.)custojusto\.pt$']
+ad_id: ['-(\d{6,})(?:[?#]|$)']
+wall: client-fingerprint 403 (plain HTTP clients blocked; the same IP passes in a real browser)
+route: lane
+tab_home: https://www.custojusto.pt/
+country_ip: null
+accept_language: "pt-PT,pt;q=0.9"
+pace:
+  min_gap_s: 13
+  why: "plain HTTP at 6 s/ad + 3 s/phone got 403 after ~50 ads (11-03); browser reads at 12.5–13 s clean 11-04→11-07"
+caps:
+  phone_per_day: 0
+  why: "phone POST /api/ad/phone 403s even from the ad page in a real browser (11-04, 11-05, 11-06) → contact form"
+account:
+  needed_for: [message]
+  verification: "email login; only one profile held the session (clones lacked it, 11-04): check login first"
+phone: none
+messaging: "'Enviar mensagem' = contact form (one-way); the seller's reply opens a thread in the CJ inbox (11-05)"
+liveness:
+  mode: fetch
+  gone_redirect: '[?&]gone=\d+'
+  evidence: "redirect to the list with ?gone=<id> = gone; 200 + id = live (in-tab fetch, measured 11-04)"
+cursor: {strategy: newest_first, key: site_ref, why: "default order is newest first; numeric ids grow"}
+measured: 2026-11-07
+notes:
+  - "Plain HTTP stayed 403 for hours (11-03) while a browser on the same IP loaded pages (11-04): read in a browser tab, stop at the first 403"
+  - "km is shown only as a range (base.mileage): RawAd.km stays empty, extra.km_range/km_min/km_max carry it — ask the seller for the cluster photo"

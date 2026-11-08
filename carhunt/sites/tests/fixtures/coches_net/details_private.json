@@ -1,0 +1,58 @@
+{
+ "ad": {
+  "id": "900000102",
+  "title": "KIA EV6 Air",
+  "description": "",
+  "vehicle": {
+   "specs": {
+    "make": "KIA",
+    "model": "EV6",
+    "version": "Air 77kWh RWD",
+    "doors": 5,
+    "bodyTypeId": 6,
+    "power": 229,
+    "fuelTypeId": 3,
+    "transmissionTypeId": 1,
+    "seatingCapacity": 5,
+    "makeId": 22,
+    "modelId": 1369,
+    "versionId": 1,
+    "drivenWheelsId": 4
+   },
+   "hasVehicleHistory": false,
+   "km": 20002,
+   "colorId": 9,
+   "year": 2023,
+   "isCertified": false,
+   "plateRegistrationDate": "03/2023"
+  },
+  "photos": [
+   "https://img.example.invalid/cn/p1.jpg"
+  ],
+  "privateSeller": {
+   "userId": "7",
+   "name": "Synthetic",
+   "phone": "",
+   "provinceId": 28
+  },
+  "price": {
+   "price": 30002,
+   "hasTaxes": false,
+   "taxTypeId": 1
+  },
+  "status": "active",
+  "url": "/kia-ev6-air-5p-electrico-hibrido-2023-en-madrid-900000102-covo.aspx",
+  "creationDate": "2026-11-03T11:00:00+01:00"
+ },
+ "privateSeller": {
+  "id": 7,
+  "name": "Synthetic",
+  "lastName": "Seller",
+  "phone": "",
+  "provinceId": 28,
+  "zipCode": "28002",
+  "email": "seller@example.com",
+  "hidePhone": true,
+  "userId": 7
+ }
+}

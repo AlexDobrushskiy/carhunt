@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "carhunt site.yaml",
+  "type": "object",
+  "required": ["site", "name", "countries", "hosts", "ad_id", "wall", "route", "pace", "account", "messaging", "phone", "cursor", "measured"],
+  "additionalProperties": false,
+  "properties": {
+    "site": {"type": "string", "pattern": "^[a-z0-9.\\-]+$", "description": "id used in config and cardb"},
+    "name": {"type": "string"},
+    "countries": {"type": "array", "items": {"type": "string", "pattern": "^[A-Z]{2}$"}, "minItems": 1},
+    "hosts": {"type": "array", "items": {"type": "string"}, "minItems": 1, "description": "regexes on the URL host"},
+    "ad_id": {"type": "array", "items": {"type": "string"}, "description": "regexes with one group = the site's ad id"},
+    "kind": {"enum": ["marketplace", "aggregator", "vin-history"], "default": "marketplace"},
+    "wall": {"type": "string", "description": "bot wall vendor or none"},
+    "route": {"enum": ["http", "lane", "identity", "plain-chrome", "camoufox"], "description": "read route that passes"},
+    "country_ip": {"type": ["string", "null"], "pattern": "^[A-Z]{2}$", "description": "exit country needed for reads (null = any)"},
+    "tab_home": {"type": "string", "description": "page a browser-route tab opens first (same-origin fetches)"},
+    "accept_language": {"type": "string"},
+    "pace": {
+      "type": "object", "additionalProperties": false, "required": ["min_gap_s"],
+      "properties": {
+        "min_gap_s": {"type": "number", "minimum": 0},
+        "max_loads_per_run": {"type": "integer", "minimum": 1},
+        "max_loads_per_hour": {"type": "integer", "minimum": 1},
+        "max_loads_per_day": {"type": "integer", "minimum": 1},
+        "fresh_profile_every": {"type": "integer", "minimum": 1},
+        "read_after": {"type": "string", "pattern": "^\\d{2}:\\d{2}$", "description": "messaging sites: reads only after this local time"},
+        "why": {"type": "string"}
+      }
+    },
+    "caps": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "phone_per_day": {"type": "integer", "minimum": 0},
+        "phone_per_session": {"type": "integer", "minimum": 0},
+        "send_per_day": {"type": "integer", "minimum": 0},
+        "login_per_day": {"type": "integer", "minimum": 0},
+        "why": {"type": "string"}
+      }
+    },
+    "account": {
+      "type": "object", "additionalProperties": false, "required": ["needed_for"],
+      "properties": {
+        "needed_for": {"type": "array", "items": {"enum": ["read", "phone", "message", "vin", "search"]}},
+        "verification": {"type": "string"}
+      }
+    },
+    "phone": {"enum": ["page", "decode", "reveal", "reveal-login", "text-only", "none"], "description": "where phones come from"},
+    "messaging": {"type": "string", "description": "how sellers are contacted (senders live in contact)"},
+    "liveness": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "supported": {"type": "boolean"},
+        "mode": {"enum": ["fetch", "goto"]},
+        "gone_redirect": {"type": "string"},
+        "gone_text": {"type": "string"},
+        "gone_title": {"type": "string"},
+        "sold_text": {"type": "string"},
+        "proxy_country": {"type": "string", "pattern": "^[A-Z]{2}$", "description": "priority checks via this exit when the home pace budget is used up"},
+        "evidence": {"type": "string"}
+      }
+    },
+    "cursor": {
+      "type": "object", "additionalProperties": false, "required": ["strategy"],
+      "description": "how discover resumes a sweep",
+      "properties": {
+        "strategy": {"enum": ["newest_first", "full"], "description": "newest_first: stop at the last seen ad; full: page the whole filtered set every run"},
+        "key": {"enum": ["site_ref", "created"], "description": "what orders ads: monotonic site_ref, or created timestamp (+ first organic id)"},
+        "why": {"type": "string"}
+      }
+    },
+    "proxy": {"type": "object", "properties": {"sticky_minutes": {"type": "integer"}}, "additionalProperties": false},
+    "measured": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+    "notes": {"type": "array", "items": {"type": "string"}}
+  }
+}

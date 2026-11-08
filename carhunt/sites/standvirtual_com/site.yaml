@@ -1,0 +1,28 @@
+site: standvirtual.com
+name: Standvirtual
+kind: marketplace
+countries: [PT]
+hosts: ['(^|\.)standvirtual\.com$']
+ad_id: ['-(ID\w{5,})\.html']    # URL token; site_ref = the advert's numeric id (cursor order)
+wall: none (CloudFront, no challenge on reads; reCAPTCHA v3 only on the site's VIN reveal button)
+route: http
+country_ip: null
+accept_language: "pt-PT,pt;q=0.9"
+pace:
+  min_gap_s: 6
+  why: "6 s helper default; daily sweeps at 7 s (15 models × ≤5 pages + new ads) never blocked 11-01→11-07"
+caps:
+  why: "no reveal call: phones and VIN are decoded from the ad page itself"
+account:
+  needed_for: [message]
+  verification: "OLX Group email login (shared with olx.pt); reads, phones and VIN need none"
+phone: decode
+messaging: "site chat, logged in (OLX Group account); sender lives in contact"
+liveness: {evidence: "410 = gone; 200 + ad id = live (measured 11-04)"}
+cursor: {strategy: newest_first, key: site_ref, why: "created_at desc but createdAt is bumped by refreshes → numeric advert id is the cursor"}
+measured: 2026-11-07
+notes:
+  - "Phones (advert.phoneNumbers) and VIN (parametersDict.vin) are AES-GCM tokens decoded offline with the site's own client salt (read once from its JS bundles, cached)"
+  - "Dealer-stand sellers (seller.type STAND) key their phone tokens on seller.standId, not seller.uuid (11-03)"
+  - "Never click 'Mostrar VIN': reCAPTCHA v3 sits on it; the decoded VIN is the same value"
+  - "newest = created_at:desc; createdAt is bumped by refreshes, so the cursor is the numeric advert id"

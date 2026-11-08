@@ -1,0 +1,35 @@
+# AutoScout24 list URL: https://www.autoscout24.<tld>[/nl]/lst/<make>/<model>?<filters>
+# Slugs are lowercase site slugs; missing entries fall back to slugify(name) ("Q4 e-tron" → q4-e-tron).
+domains:      # country → [tld, path prefix, cy code]
+  DE: [de, "", D]
+  AT: [at, "", A]
+  IT: [it, "", I]
+  ES: [es, "", E]
+  FR: [fr, "", F]
+  NL: [nl, "", NL]
+  BE: [be, /nl, B]
+  LU: [lu, "", L]
+fuel:         # cardb powertrain → AS24 fuel code (others: leave unfiltered)
+  bev: E
+  petrol: B
+  diesel: D
+seller:       # custtype
+  private: P
+  dealer: D
+sort:
+  newest: {sort: age, desc: "1"}
+  price: {sort: price, desc: "0"}
+  relevance: {sort: standard, desc: "0"}
+makes:
+  Mercedes-Benz: mercedes-benz
+models:
+  Volkswagen: {ID.4: id.4, ID.5: id.5, ID.3: id.3}
+  Audi: {Q4 e-tron: q4-e-tron}
+  Skoda: {Enyaq: enyaq}
+  BMW: {iX1: ix1}
+  Hyundai: {Ioniq 5: ioniq-5}
+  Toyota: {bZ4X: bz4x}
+  Mercedes-Benz: {EQA: eqa, EQB: eqb}
+  Kia: {EV6: ev6}
+  Cupra: {Tavascan: tavascan}
+  BYD: {Seal U: seal-u, Sealion 7: sealion-7}

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- carhunt liveness: daily run before the morning sweep. Rendered by `carhunt liveness --plist`;
+     installed by `carhunt schedule install` (orchestrate). Label prefix carhunt. so it never clashes
+     with other launchd jobs. -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>carhunt.liveness</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>${carhunt}</string>
+    <string>liveness</string>
+    <string>--daily</string>
+    <string>--proxy-priority</string>
+    <string>--until</string><string>${until}</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>CARHUNT_HOME</key><string>${home}</string>
+    <key>CARDB_AUTHOR</key><string>liveness</string>
+  </dict>
+  <key>StartCalendarInterval</key>
+  <dict><key>Hour</key><integer>${hour}</integer><key>Minute</key><integer>${minute}</integer></dict>
+  <key>StandardOutPath</key><string>${logs}</string>
+  <key>StandardErrorPath</key><string>${logs}</string>
+  <key>LowPriorityIO</key><true/>
+</dict>
+</plist>
