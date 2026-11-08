@@ -16,6 +16,8 @@ from typing import Any, Protocol
 from carhunt.vet import vin as vinmod
 
 ELECTRIC = {"BEV", "PHEV"}
+# Same keys as cardb's ranking.health_facts for bev/phev (docs/db.md); vet writes battery_soh.
+HEALTH_FACTS = ("battery_soh", "soh", "battery_health", "battery_report", "battery_cert", "battery_test")
 NOT_IN = ("unknown", "pending", "asked", "missing", "n/a", "?")
 
 
@@ -44,7 +46,7 @@ ITEMS: tuple[Item, ...] = (
     Item("service_history", "Brand service record", ("service_history",),
          "Do you have the service record (stamped booklet or a dealer printout)?",
          "km trail, recalls done"),
-    Item("battery_health", "Battery health evidence", ("soh",),
+    Item("battery_health", "Battery health evidence", HEALTH_FACTS,
          "Is there a battery health report (dealer certificate, Aviloo) or a screenshot of the car app?",
          "battery is ~40% of the car's value", when="electric"),
     Item("recall_status", "Recall / campaign status", ("recall_status", "recall"),
@@ -105,11 +107,12 @@ class EvidenceState:
 
 
 def fuel_of(car: dict) -> str | None:
+    """Upper-case fuel from cardb's nested powertrain (flat keys from older rows); None = unknown."""
     pt = car.get("powertrain") or {}
-    fuel = pt.get("fuel") or car.get("fuel")
-    if fuel:
-        return str(fuel).upper()
-    if car.get("battery_net_kwh") or car.get("battery_gross_kwh"):
+    fuel = str(pt.get("fuel") or car.get("fuel") or "").strip().upper()
+    if fuel and fuel != "UNKNOWN":
+        return fuel
+    if any(d.get(k) for d in (pt, car) for k in ("battery_net_kwh", "battery_gross_kwh")):
         return "BEV"
     return None
 
@@ -211,7 +214,7 @@ def plan_asks(car: dict, state: EvidenceState, max_asks: int = 1) -> list[dict]:
             continue
         n = asked.get(it.key, 0)
         out.append({"type": "ask", "summary": it.ask,
-                    "data": {"topic": it.key, "why": it.why, "item": it.label},
+                    "data": {"topic": it.key, "fact": it.facts[0], "why": it.why, "item": it.label},
                     "key": f"ask:{state.car}:{it.key}:{n + 1}"})
         budget -= 1
     return out

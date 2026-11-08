@@ -37,9 +37,18 @@ def _table(report: dict) -> str:
 
 
 def run(args: argparse.Namespace) -> int:
+    from carhunt.core.config import ConfigError
+    from carhunt.core.db import Unreachable
     from carhunt.discover import runner
 
-    cfg = _env.config()
+    try:
+        cfg = _env.config()
+    except ConfigError as e:
+        print(f"sweep refused: {e}", file=sys.stderr)
+        return 1
+    if not cfg:  # no config = no search scope: never sweep every site blind
+        print("sweep refused: no config (run scripts/bootstrap)", file=sys.stderr)
+        return 1
     if _env.pause_file().exists() and not args.dry_run:
         print("sweep refused: PAUSE file present (carhunt unpause)", file=sys.stderr)
         return 10
@@ -59,9 +68,7 @@ def run(args: argparse.Namespace) -> int:
                              log=lambda m: print(f"sweep: {m}", file=sys.stderr))
         try:
             report = sweep.run(plans)
-        except Exception as e:
-            if type(e).__name__ != "Unreachable":
-                raise
+        except Unreachable as e:
             print(f"sweep stopped: {e} (start it: docker compose -f deploy/compose.yaml up -d)", file=sys.stderr)
             return 1
     if args.json:

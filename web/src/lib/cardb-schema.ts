@@ -936,7 +936,7 @@ export interface paths {
         /**
          * "To rate" queue: cars `user` (default owner) has not rated that pass the profile's hard filters, ranked
          * @description Eligible = no verdict from `user`; status not closed/dropped/bought; at least one live listing; and every
-         *     `search` hard filter of the profile: `year_min`, `price.max_eur` (+ `price.min_eur`), `km_max`, `countries`,
+         *     `search` hard filter of the profile: `year_min`, `price.max_eur` (`price.min_eur`/`cap_eur` are write-time price sanity only), `km_max`, `countries`,
          *     `exclude_regions` (ISO 3166-2, matched on the city; a known car country must be the region's) + `exclude_places`,
          *     `powertrain` (fuels), and each `hard_filters` rule: `field` min/max; `fact`/`facts` + min/max (first number),
          *     `words` (folded whole words) or `mentions_country` (country names in EU languages), or truthy; `flag` = a truthy
@@ -1629,6 +1629,8 @@ export interface paths {
                 query?: {
                     url?: string;
                     site?: string;
+                    /** @description listing.site_ref as cardb derived it from the URL (may differ from a site's internal data id) */
+                    site_ref?: string;
                     status?: components["schemas"]["ListingStatus"];
                 };
                 header?: never;
@@ -2250,7 +2252,7 @@ export interface components {
             verdicts?: {
                 [key: string]: components["schemas"]["Verdict"];
             };
-            version?: number;
+            version: number;
             needs_owner?: boolean;
             needs_owner_reason?: string | null;
             summary?: string | null;
@@ -2404,7 +2406,7 @@ export interface components {
              * @description default now; imports pass the original time
              */
             seen_at?: string;
-            /** @description attach a new listing to this car (id/alias) */
+            /** @description attach a new listing to this car (id/alias; a JSON number id is accepted too) */
             car?: string;
             slug?: string;
             aliases?: string[];
@@ -2565,7 +2567,10 @@ export interface components {
             matched_by?: "external_id" | "dedupe_key" | "near_duplicate";
         };
         MessageInput: {
+            /** @description car id or alias (a JSON number id is accepted too); else listing_url, else counterpart resolves the car */
             car?: string;
+            /** @description alias of car (the Message shape); car wins */
+            car_id?: number;
             listing_url?: string;
             counterpart?: string;
             channel: components["schemas"]["Channel"];
