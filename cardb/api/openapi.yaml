@@ -350,7 +350,7 @@ paths:
       summary: "\"To rate\" queue: cars `user` (default owner) has not rated that pass the profile's hard filters, ranked"
       description: |
         Eligible = no verdict from `user`; status not closed/dropped/bought; at least one live listing; and every
-        `search` hard filter of the profile: `year_min`, `price.max_eur` (+ `price.min_eur`), `km_max`, `countries`,
+        `search` hard filter of the profile: `year_min`, `price.max_eur` (`price.min_eur`/`cap_eur` are write-time price sanity only), `km_max`, `countries`,
         `exclude_regions` (ISO 3166-2, matched on the city; a known car country must be the region's) + `exclude_places`,
         `powertrain` (fuels), and each `hard_filters` rule: `field` min/max; `fact`/`facts` + min/max (first number),
         `words` (folded whole words) or `mentions_country` (country names in EU languages), or truthy; `flag` = a truthy
