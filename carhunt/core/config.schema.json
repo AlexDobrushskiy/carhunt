@@ -148,10 +148,6 @@
         },
         "label": {
           "type": "string"
-        },
-        "exclude": {
-          "const": true,
-          "description": "deprecated: only discover's current flag rules need it (they ignore a flag without it); cardb warns on it. Drop once discover excludes on flag alone"
         }
       },
       "oneOf": [
@@ -182,11 +178,6 @@
                 "required": [
                   "mentions_country"
                 ]
-              },
-              {
-                "required": [
-                  "exclude"
-                ]
               }
             ]
           }
@@ -203,16 +194,7 @@
                 "facts"
               ]
             }
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "exclude"
-                ]
-              }
-            ]
-          }
+          ]
         },
         {
           "required": [

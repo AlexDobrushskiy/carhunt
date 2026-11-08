@@ -12,7 +12,7 @@ Seller contact: one guarded send path (`carhunt say`), channel adapters, one led
 | `watch.py` | `carhunt watch`: inbound → cardb + agent inbox + stdout |
 | `mailroute.py`, `gmail.py` | `carhunt mailroute`: car mail out of the inbox; filter XML; launchd template |
 | `asks.py` | vet asks (`ask` events) → `ask_answered` |
-| `deps.py` | bridge to `carhunt.core` (fallbacks until core is merged) |
+| `deps.py` | contact's view of `carhunt.core` (config dict, clock, lock, paths, secrets, cardb client) |
 | `cli.py`, `doctor.py` | CLI groups `say watch mailroute ledger asks`; doctor checks |
 
 Tests: `CARHUNT_HOME=$(mktemp -d) python -m pytest carhunt/contact -q` (offline: fake wacli, cardb stub, fake Gmail, local fake pages).

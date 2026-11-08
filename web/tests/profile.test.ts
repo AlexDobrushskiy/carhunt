@@ -3,7 +3,7 @@ import { DEFAULT_ICON_KEYS, filterOptionKeys, homeLabel, iconKeys, isUser, needs
 import { engineLitres, powertrainRows, powertrainShort } from "@/lib/vocab";
 
 const profile = uiProfile({
-  owner: { name: "Sam", tz: "Europe/Berlin", home: { city: "Porto", country: "pt", lat: 41.1, lon: -8.6 } },
+  owner: { name: "Sam", tz: "Europe/Berlin", home: { city: "Lisbon", country: "pt", lat: 38.7, lon: -9.1 } },
   users: [{ name: "Sam", role: "owner" }, { name: "Kim", role: "viewer" }],
   tiers: [{ tier: 2, label: "Good", rules: ["x"] }, { tier: 1, label: "Best", rules: [] }, { tier: 3 }],
   queue_default_tiers: [1, 2],
@@ -16,7 +16,7 @@ const profile = uiProfile({
 
 describe("profile", () => {
   it("normalizes the API profile", () => {
-    expect(profile).toMatchObject({ ownerName: "Sam", tz: "Europe/Berlin", homeCity: "Porto", homeCountry: "PT", defaultTiers: [1, 2], countries: ["PT", "ES"], loaded: true });
+    expect(profile).toMatchObject({ ownerName: "Sam", tz: "Europe/Berlin", homeCity: "Lisbon", homeCountry: "PT", defaultTiers: [1, 2], countries: ["PT", "ES"], loaded: true });
     expect(profile.tiers.map((t) => t.tier)).toEqual([1, 2, 3]);
     expect(profile.tiers[2].label).toBe("Tier 3");
   });
@@ -40,7 +40,7 @@ describe("profile", () => {
   });
   it("labels from the owner and home", () => {
     expect(needsLabel(profile)).toBe("Needs Sam");
-    expect(homeLabel(profile)).toBe("Porto");
+    expect(homeLabel(profile)).toBe("Lisbon");
   });
 });
 

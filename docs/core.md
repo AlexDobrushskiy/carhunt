@@ -57,7 +57,7 @@ Shared runtime for every module: config, secrets, owner-local clock, locks, run-
 | `notify.*` | backend `none` | [notify.md](notify.md) |
 | `cardb.url`, `cardb.token` | `http://127.0.0.1:8484`, `secret:cardb_token` | |
 
-Top-level sections are fixed (a typo like `notfy:` fails validation). Inside a module's section unknown keys are allowed, so each module extends its own section without touching core's schema.
+The schema is strict: an unknown key at any level fails validation (a typo like `notfy:` or `quiet_hour:` is an error, not a silent default). A module that adds a config key adds it to `carhunt/core/config.schema.json` and `config.example.yaml` in the same change.
 
 ## Rules (why)
 - Run data only in `$CARHUNT_HOME`, never in the repo: the repo is shared; ledgers, chats and DB rows are private (docs/privacy.md).

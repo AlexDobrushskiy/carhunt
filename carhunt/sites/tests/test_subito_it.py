@@ -69,7 +69,7 @@ def test_phone_reveal():
     s.net.gate = lambda kind="load", **kw: (gates.append(kind), gate(kind, **kw))[1]
     ad = s.ad(AD)
     assert s.phone(ad) == [] and gates == ["load"]   # no reveal without reveal=True
-    assert s.phone(ad, reveal=True) == ["+390555501234"]   # national number → +39
+    assert s.phone(ad, reveal=True) == ["+390555000101"]   # national number → +39
     assert gates == ["load", "phone"] and s.net.calls[-1][2].endswith(URN)
     hidden = site({r"/contacts/ads/": Response(404, "x"), ID: fixture(__file__, "subito_it/ad.html")})
     assert hidden.phone(hidden.ad(AD), reveal=True) == []

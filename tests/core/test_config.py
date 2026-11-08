@@ -39,7 +39,7 @@ def test_free_form_maps_take_any_key(write_config):
     ({"owner": {"tz": "UTC"}, "notify": {"extra": True}}, "notify"),
     ({"owner": {"tz": "UTC"}, "browsers": {"captcha": {"enable": True}}}, "browsers.captcha"),
     ({"owner": {"tz": "UTC"}, "sites": {"overrides": {"mobile.de": {"pace": {"per_hour": 5}}}}}, "sites.overrides.mobile.de.pace"),
-    ({"owner": {"tz": "UTC"}, "search": {"hard_filters": [{"fact": "damaged", "exclude": True}]}}, "search.hard_filters.0"),
+    ({"owner": {"tz": "UTC"}, "search": {"hard_filters": [{"flag": "damaged", "exclude": True}]}}, "search.hard_filters.0"),
     ({"owner": {"tz": "UTC"}, "search": {"hard_filters": [{"field": "km", "fact": "x", "max": 1}]}}, "search.hard_filters.0"),
     ({"owner": {"tz": "UTC"}, "contact": {"nudge": {"exclude": [{"field": "tier", "eq": 3, "whyy": "x"}]}}}, "contact.nudge.exclude.0"),
     ({"owner": {"tz": "UTC"}, "orchestrate": {"schedule": {"sweep": "7am"}}}, "orchestrate.schedule.sweep"),

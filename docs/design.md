@@ -1,126 +1,113 @@
 # carhunt design
 
-Reference for builders and the integrator.
+Layout, module boundaries and the interfaces between them. Commands and config keys in full: each `docs/<module>.md` ([index](index.md)).
 
 ## Principles
 - **Repo = code, templates, docs, synthetic fixtures.** Everything a run produces (config, secrets, DB, ledgers, rendered briefs, state, logs, browser profiles) lives in `$CARHUNT_HOME` (default `~/.carhunt`), never in the repo.
 - **cardb is the hub.** Every stage reads/writes car facts through cardb (REST, or the `cardb` CLI). No module keeps its own car list.
-- **One config file** (`$CARHUNT_HOME/config.yaml`, schema = `config.example.yaml`). The user's buyer profile lives there, not in code.
-- **Secrets by name only.** Config holds `secret:NAME` references; values come from the secrets helper. Nothing prints a secret.
-- **Lessons ship with their why.** Each rule ported from the EV run keeps a one-line reason (incident + date) in the module doc or skill.
-- **Platform:** macOS (Apple Silicon) + agterm + Claude Code. That is what was proven. Linux is out of scope for v1. The session backend and secrets backend are interfaces, so tmux or Linux can be added later.
+- **One config file** (`$CARHUNT_HOME/config.yaml`, schema `carhunt/core/config.schema.json`, worked example `config.example.yaml`). The buyer profile lives there, not in code.
+- **Secrets by name only.** Config holds `secret:NAME`; values come from the secrets backend. No command prints a value.
+- **Rules live in code where they can.** Pace, caps, quiet hours, send guards, notify kinds are enforced by the tool, not by brief prose; each rule keeps a one-line why (incident + date).
+- **Platform:** macOS (Apple Silicon) + agterm + Claude Code, the proven setup. Session and secrets backends are interfaces, so tmux or Linux can be added.
 
-## Layout and owners
+## Layout
 
-| path | module (builder) | lang | what |
+| path | module | lang | what |
 |---|---|---|---|
-| `pyproject.toml`, `carhunt/__init__.py`, `carhunt/cli.py`, `carhunt/core/` | **core** | Py 3.12 | config, secrets, clock/quiet hours, locks, paths, notifier, cardb client, CLI dispatcher, doctor framework |
-| `scripts/bootstrap`, `scripts/doctor` | **core** | sh/Py | clone → first sweep |
-| `cardb/`, `deploy/` | **db** | Go 1.26 | listings DB server + CLI (port of ev-listings), compose file |
-| `web/` | **web** | Astro 5/TS, Node 22 | phone-first UI over cardb |
-| `browsers/`, `carhunt/access/`, `skills/carhunt-browsers/` | **browsers** | sh/Node/Py | agent Chrome, lanes, identity pool, plain-chrome, reaper, captcha, proxy, pace ledger, accounts (email codes, SMS), MCP config |
-| `carhunt/sites/` | **sites** | Py | one plugin per marketplace (`<site>/plugin.py` + `site.yaml`), liveness checker |
-| `carhunt/discover/`, `agents/roles/sweep/` | **discover** | Py | sweep runner, criteria scope, normalize, ingest to cardb |
-| `carhunt/contact/`, `skills/carhunt-outreach/`, `agents/roles/outreach/` | **contact** | Py | guarded send (`carhunt say`), channels, ledger, watcher, mail routing |
-| `carhunt/vet/`, `knowledge/`, `skills/carhunt-vet/`, `agents/roles/{vet,buy}/` | **vetbuy** | Py + md | VIN/registry/PR-code tools, evidence pack, vet/buy/import playbooks |
-| `carhunt/orchestrate/`, `agents/templates/`, `agents/roles/{overseer,learning}/`, `hooks/` | **orchestrate** | Py + md | sessions (agterm), state + handover, launch, pause, digest, learning, schedule, guard hooks |
-| `README.md`, `docs/index.md`, `tests/e2e/` | **integrator** | | merge, docs index, clean-HOME bootstrap test, privacy audit |
-| `docs/<module>.md` | each module | md | lean module doc: commands, rules + why, config keys |
+| `pyproject.toml`, `carhunt/cli.py`, `carhunt/core/`, `scripts/` | core | Py 3.12, sh | config, secrets, clock/quiet hours, locks, paths, notifier, cardb client, CLI dispatcher, doctor, bootstrap, privacy check |
+| `cardb/`, `deploy/` | db | Go | listings DB server + CLI, ranking, compose file |
+| `web/` | web | Astro/TS, Node 22 | phone-first UI over cardb |
+| `browsers/`, `carhunt/access/`, `skills/carhunt-browsers/` | browsers | sh/Node/Py | agent Chrome, lanes, identity pool, plain-chrome, reaper, captcha, proxy, pace ledger, accounts, MCP config |
+| `carhunt/sites/` | sites | Py | one plugin per marketplace (`<pkg>/plugin.py` + `site.yaml`), liveness |
+| `carhunt/discover/`, `agents/roles/sweep/` | discover | Py | sweep runner, scope, normalize, ingest |
+| `carhunt/contact/`, `skills/carhunt-outreach/`, `agents/roles/outreach/` | contact | Py | guarded send, channels, ledger, watcher, mail routing, asks |
+| `carhunt/vet/`, `knowledge/`, `skills/carhunt-vet/`, `agents/roles/{vet,buy}/` | vetbuy | Py + md | VIN/registry/PR-code tools, evidence pack, vet/buy/import playbooks |
+| `carhunt/orchestrate/`, `agents/templates/`, `agents/roles/{overseer,learning}/`, `hooks/` | orchestrate | Py + md | sessions (agterm), launch, state + handover, pause, digest, learning, schedule, guard hooks |
+| `tests/`, `conftest.py` | — | Py | cross-module + e2e tests, root test isolation |
 
-A builder edits only paths it owns. Need a change elsewhere? Note it in your report (`handover_notes.cross_module`); the integrator or owner applies it. Shared files with expected small conflicts: `pyproject.toml` deps (core pre-declares; others append under their extra), `config.example.yaml` (core owns; others send their section in `docs/<module>.md` → integrator merges), `.gitignore`.
+## CLI
 
-## Build order / dependencies
+`carhunt/cli.py` auto-discovers `carhunt/<pkg>/cli.py: register(subparsers)`; a plugin that fails to import prints a warning, the rest works. Doctor: `carhunt/<pkg>/doctor.py: checks() -> list[Check(name, status ok|warn|fail, detail, fix)]`; `carhunt doctor` runs all.
 
-| module | can start | needs from others |
-|---|---|---|
-| core | now | — (**merges to main itself** when green, so others can `git merge main`) |
-| db | now | — (commit `cardb/api/openapi.yaml` changes first) |
-| browsers | now | core (secrets, config) |
-| contact | now | core; cardb CLI/API (spec below); access session interface (spec below) |
-| vetbuy | now | core (light) |
-| orchestrate | now | core |
-| sites | after browsers pushes `carhunt/access/session.py` + `pace.py` (or now, against the spec) | browsers, core |
-| web | after db's openapi rename commit | db |
-| discover | after sites pushes `carhunt/sites/model.py` + `base.py` | sites, core, db |
+| package | groups |
+|---|---|
+| core | `config` (show, get, validate, path) · `secret` (set, ls, check, rm, exec) · `notify` (send, inbox, poll) · `doctor` |
+| access | `browser` (mcp-config, launchd, identity, plain, reap, site-table, geo) · `pace` (status, take, reset-day) · `proxy test` · `sms` (policy, rent) · `email-code SITE` · `creds` (new, status) · `captcha` (solve, detect, bench, stats, slide-js) |
+| sites | `site [SITE] search\|ad\|phone\|live\|info` (JSON lines; `carhunt site list`) · `liveness` |
+| discover | `sweep [--sites a,b] [--window morning\|afternoon] [--dry-run] [--max N]` (exit 0 ok · 1 error · 3 blocked/capped · 10 refused) |
+| contact | `say` (exit 0 sent · 10 refused · 11 failed · 12 unknown) · `watch` · `mailroute` · `ledger show\|reconcile` · `asks list\|close` |
+| vet | `vin decode\|check-digit\|rdw\|prcodes` · `evidence CAR [--write-asks]` |
+| orchestrate | `agent launch\|side\|ls\|screen\|ctx\|close` · `state get\|set\|add\|done\|takeover\|cleanup\|validate\|handover` · `msg` · `pause` · `unpause` · `digest` · `learn start\|collect` · `schedule install\|uninstall\|show` · `hooks install\|uninstall\|show\|statusline` |
 
-Until a dependency is merged, code against the interface below and use a fake in tests. Read other branches with `git show mod/<x>:<path>`.
+`cardb` (Go binary) has its own CLI: `cardb --help`, [db.md](db.md).
 
 ## Interfaces
 
-### Python CLI: `carhunt <group> …`
-`carhunt/cli.py` (core) auto-discovers `carhunt/<pkg>/cli.py` that exposes `register(subparsers)`. No module edits `carhunt/cli.py`.
-Groups: `config secret notify doctor` (core) · `browser proxy sms captcha pace` (browsers) · `site liveness` (sites) · `sweep` (discover) · `say watch mailroute ledger` (contact) · `vin evidence` (vetbuy) · `agent state msg pause unpause digest learn schedule hooks` (orchestrate).
-Doctor: each package may expose `carhunt/<pkg>/doctor.py: checks() -> list[Check]` (`Check(name, status: ok|warn|fail, detail, fix)`). `carhunt doctor` runs all.
+### core (`carhunt.core`) — [core.md](core.md)
+- `config.load() -> Config` (`$CARHUNT_CONFIG` or `$CARHUNT_HOME/config.yaml`), schema-checked; `Config.get("a.b")`, `.secret("a.b")` resolves lazily, `.as_dict()` is safe to print.
+- `secrets.get/set/exists/delete(name)`. Lookup: env `CARHUNT_SECRET_<NAME>` → backend `keychain` (service `carhunt`, default) · `op` · `file` (`$CARHUNT_HOME/secrets/NAME`, 0600).
+- `clock.now()` in `owner.tz` (`CARHUNT_FAKE_NOW` for tests), `clock.in_window("21:30-09:30")`; `lock.flock(name)`; `paths.pause_file()`, `paths.agent_dir(role)`.
+- `notify.send(text, agent=, kind=digest|ask|urgent)`: FYI is refused; quiet hours hold or silence. Replies routed into `$CARHUNT_HOME/agents/<agent>/inbox.jsonl`.
+- `db.Client.from_config()`: thin cardb REST client; `ApiError` ⊃ `NotFound`, `Conflict`, `Unreachable`.
 
-### core (`carhunt.core`)
-- `config.load() -> Config` reads `$CARHUNT_CONFIG` or `$CARHUNT_HOME/config.yaml`, validates against `carhunt/core/config.schema.json`, resolves `secret:NAME` lazily. `config.home()`, `config.path(*parts)` (creates parents).
-- `secrets.get(name)`, `secrets.set(name, value)`, `secrets.exists(name)`. Lookup: env `CARHUNT_SECRET_<NAME>` → configured backend: `keychain` (macOS `security`, service `carhunt`, account NAME; default) · `op` (1Password `op read`) · `file` (`$CARHUNT_HOME/secrets/NAME`, 0600). CLI: `carhunt secret set NAME` (no-echo prompt or stdin), `ls` (names only), `check NAME`, `exec NAME[=ENVVAR]… -- cmd`. **There is no command that prints a value.**
-- `clock.now()` (tz = `owner.tz`; `CARHUNT_FAKE_NOW` for tests), `clock.in_window("09:30-21:30")`.
-- `lock.flock(name)` (file lock under `$CARHUNT_HOME/locks/`).
-- `paths.pause_file()` = `$CARHUNT_HOME/PAUSE`; `paths.agent_dir(role)`.
-- `notify.send(text, *, agent, kind, buttons=None) -> ref|None`: `kind` ∈ `digest | ask | urgent`; FYI is refused by design (EV lesson: 14/28 pushes asked nothing). Quiet hours → silent or held. Backends: `telegram` (bot token + chat id), `stdout`, `none`. Inbound: `notify.inbox(agent).list/wait/ack` — Telegram replies routed by reply-to message id into `$CARHUNT_HOME/agents/<agent>/inbox.jsonl`.
-- `db.Client.from_config()`: thin REST client for cardb (`upsert_listing, find_listing, car, cars, queue, status, fact, opt, event, msg, msgs, photo_add, listing_patch, verdict`). Raises `NotFound`, `ApiError`.
+### cardb (`cardb/`) — [db.md](db.md)
+- Contract: `cardb/api/openapi.yaml`. Buyer profile (tiers, hard filters, weights, families, options, home) read from `config.yaml` `owner` + `search`; no buyer constants in Go.
+- **Ranking lives here only** (queue: tier, fair price per peer group, landed cost, score). Discover writes facts, never scores.
+- `powertrain` block (BEV/PHEV/HEV/ICE); price sanity on write; `If-Match` on PATCH; `users` (owner + viewers) with per-user verdicts.
+- `cardb profile check FILE`: validates a config's buyer profile offline, as the server would read it.
+- `cardb init`: data dir `$CARHUNT_HOME/cardb/`, tokens into the secrets backend, hashes in `<data>/tokens`. Author: `CARDB_AUTHOR` (set per agent by launch), else token name. Exit codes 0/1/2/3, `--json` everywhere.
 
-### cardb (Go, `cardb/`)
-Port of ev-listings; contract = `cardb/api/openapi.yaml`. Changes:
-- Renames: `needs_<owner>`→`needs_owner`, `km_to_<home>`→`distance_km`, author `<owner>`→`owner.name` from config, binary `evdb`→`cardb`.
-- Buyer profile from `config.yaml` (`owner`, `search` sections): queue tiers, hard filters, trim weights, model families, option keys, home location. No buyer constants in Go.
-- `powertrain` block (fuel BEV/PHEV/HEV/ICE, battery kWh, engine cc, gearbox); health facts per powertrain.
-- **Ranking lives here only** (queue: fair price per peer group, landed cost, score). Discover writes facts, never scores.
-- Price sanity on write (reject ×100, flag net vs gross); `If-Match` version on PATCH; add/remove ops for list fields.
-- `users` (owner + viewers) with per-user verdicts.
-- `cardb init` (data dir `$CARHUNT_HOME/cardb/`, token generated → stored via the secrets backends, client config). Token lookup mirrors core.secrets: env `CARHUNT_SECRET_CARDB_TOKEN` → Keychain `carhunt/cardb_token` → file.
-- Author: `CARDB_AUTHOR` env (set per agent session by `carhunt agent launch`), else token name.
-- Exit codes unchanged (0/1/2/3), `--json` everywhere.
-- `deploy/compose.yaml`: cardb + web on localhost, data volume = `$CARHUNT_HOME/cardb`.
+### access (`carhunt.access`, `browsers/bin/`) — [browsers.md](browsers.md)
+- `session.tab(route, *, site=None, country=None, fresh=False)`: context manager; `route` ∈ `http | lane | identity | plain-chrome | camoufox`. Browser routes yield a Playwright-compatible Page; `goto(url, paced=True) -> int` (HTTP status, 0 = no response) paces and raises `Blocked` when `site` is given; `paced=False` when the caller took the slot. `country` → residential exit, verified fail-closed; `fresh` → throwaway profile; identity + country refuses.
+- `pace.acquire(site, kind, *, via=None, wait=False)`: `kind` ∈ `load | api | phone | send | login`; `via` = proxy exit country (own rate budget, same day caps). Raises `PaceExceeded(retry_at)`. Shared across agents (SQLite ledger).
+- `jar.get(domain, name)`: newest trust cookie from plain-chrome's jar (never logged).
+- `proxy.get(country)` + `proxy.verify_exit`; `accounts.email_code(site, since, pattern)` / `wait_link`; `accounts.sms.policy(site)` / `rent` (owner OK per rental); `creds.login(site) -> (user, password)` via core secrets.
+- Errors: `Blocked(signature)`, `PaceExceeded`, `ProxyUnavailable`, `LeaseBusy`.
 
-### access (`carhunt.access`, `browsers/bin/`)
-- Shell tools on PATH after bootstrap: `agent-chrome`, `pw-identity` (lease/release/login/pool), `plain-chrome`, `browser-reaper`, `serve` (MCP servers).
-- `access.session.tab(route, *, country=None, site=None)`: context manager yielding a page handle. `route` ∈ `http | lane | identity | plain-chrome | camoufox`. `country` → residential proxy with a fail-closed exit-IP check.
-- `access.pace.acquire(site, kind)`: `kind` ∈ `load | phone | send | login`, shared across agents (ledger + day caps from `site.yaml`). Raises `PaceExceeded`.
-- `access.proxy.get(country, sticky_minutes)` → proxy URL (provider adapter; Decodo first).
-- `access.accounts.email_code(site, since, pattern)`, `access.accounts.sms.rent(country, service)` (policy: only for verify-once sites).
-- `access.creds.login(site) -> (user, password)` via core.secrets (`site_<domain>_user/_pass`).
-- Exceptions: `Blocked(signature)`, `PaceExceeded`, `ProxyUnavailable`.
+### sites (`carhunt.sites`) — [sites.md](sites.md)
+- `model.py`: `SearchQuery`, `Card`, `RawAd`, `Seller`, `Liveness`. `base.py`: `Site` protocol `search(q)`, `ad(url)`, `phone(ad, reveal=)`, `is_live(url)`; registry `get/ids/for_url`; `Gone`, `Unsupported`, `Blocked`.
+- `carhunt/sites/fake/`: synthetic site, registered only with `CARHUNT_FAKE_SITES=1` (e2e).
+- Site **senders** (marketplace chats) live in contact (`contact/channels/sites/`).
 
-### sites (`carhunt.sites`)
-- `sites/model.py`: `SearchQuery`, `Card` (url, site, site_ref, title, price, km, year, seller_type, thumb), `RawAd` (normalized spec fields + raw json + photos + phones + seller).
-- `sites/base.py`: `Site` protocol: `search(q) -> Iterator[Card]`, `ad(url) -> RawAd`, optional `phone(ad)`, `is_live(url) -> Liveness(state live|removed|unknown, evidence)`. Raises `Blocked`, `Gone`.
-- `sites/<site>/site.yaml`: `wall`, `route`, `country_ip`, `pace{min_gap_s, max_loads_per_run}`, `caps{phone_per_day, send_per_day}`, `account{needed_for[], verification}`, `messaging`, `measured: <date>`, `notes`. The browsers skill renders its site table from these.
-- `carhunt site <name> search|ad|phone|live` (JSON lines). `carhunt liveness` writes ad status only through `PATCH /listings/{id}` + `ad_check` event.
-- `carhunt/sites/fake/`: synthetic site (bundled fixtures, no network), registered only with `CARHUNT_FAKE_SITES=1`, for e2e tests.
-- Site **senders** (marketplace chat) live in contact (`contact/channels/sites/`), using `access.session`.
+`site.yaml` keys (schema `carhunt/sites/site.schema.json`, overridable per site in config `sites.overrides`):
 
-### discover (`carhunt.discover`)
-`carhunt sweep [--sites a,b] [--window morning|afternoon] [--dry-run] [--max N]`: criteria from config `search` → per-site query → normalize (VAT net→gross, cash price, lease/damage keywords, power/drive inference, option regexes per language) → scope filter → `db.upsert_listing` + photos (`photo add --listing`, resolve later writes by URL). Cursors in `$CARHUNT_HOME/discover/cursors.json`. Serial per site, reads after sends, stop at first block.
+| key | values |
+|---|---|
+| `site`, `name`, `kind`, `countries`, `hosts`, `ad_id` | identity; `kind` ∈ marketplace \| aggregator \| vin-history |
+| `wall`, `route`, `country_ip`, `tab_home`, `accept_language` | bot wall seen; lowest route that works |
+| `pace` | `min_gap_s`, `max_loads_per_run`, `max_loads_per_hour`, `max_loads_per_day`, `api_min_gap_s`, `max_api_per_hour`, `fresh_profile_every`, `read_after`, `why` |
+| `caps` | `<kind>_per_day\|_per_hour\|_per_session`, `<kind>_min_gap_s`, `why` (kind = load\|api\|phone\|send\|login) |
+| `account` | `needed_for[]`, `verification` ∈ none \| email \| email-link \| email-code \| google \| sms-once \| sms-own \| sms-every-login, `note`, `mail_from` (Gmail query for `email-code`) |
+| `phone` | page \| decode \| reveal \| reveal-login \| text-only \| none |
+| `messaging`, `notes[]`, `measured` | how to reach a seller; dated evidence |
+| `liveness` | `supported`, `mode` fetch\|goto, `gone_redirect/_text/_title`, `sold_text`, `proxy_country`, `evidence` |
+| `cursor.strategy` | newest_id \| first_seen \| full (+ `why`) |
+| `proxy.sticky_minutes` | sticky exit length |
 
-### contact (`carhunt.contact`)
-- `carhunt say --channel whatsapp|email|<site> (--car URL|ID | --to ADDR) (--text T | --text-file F) [--opener] [--nudge] [--dry-run]`. Pipeline under one `flock`: guard (PAUSE, quiet hours, opener window, per-channel caps/spacing, duplicate, no-URL, allow-list) → adapter.send → verify → append ledger (`$CARHUNT_HOME/contact/ledger.jsonl`) → `db.msg`. Exit: 0 sent · 10 refused (reason on stderr) · 11 failed · 12 unknown delivery.
-- `carhunt watch`: one watcher for WhatsApp (wacli), Gmail, site inboxes → `db.msg` (verbatim, original language) + agent inbox line.
-- `carhunt mailroute`: car mail out of the main inbox (plus-address, label).
-- Asks from vet: cardb event `type=ask` (`summary` = question, `data.topic`); outreach agents send them and close with an `ask_answered` event.
+### discover (`carhunt.discover`) — [discover.md](discover.md)
+Config `search` → per-site query → cursor → scope filter → detail read → normalize (VAT, cash price, flags, power/drive/fuel, options) → `upsert_listing` + photos. Cursors `$CARHUNT_HOME/discover/cursors.json`. Serial per site, stop at first block.
 
-### orchestrate (`carhunt.orchestrate`)
-- Session backend interface: `spawn(name, cwd, cmd, env) -> id`, `send(id, text)`, `screen(id)`, `ctx_percent(id)`, `close(id)`, `alive(id)`. Backend: agterm (`agtermctl`, mailbox). Agent CLI: `claude` (default) or `codex`, from config.
-- `carhunt agent launch ROLE [--successor-of ID]`: render `agents/templates/common.md` + `agents/roles/ROLE/brief.md` with config → `$CARHUNT_HOME/agents/ROLE/brief.md`, init `state.json`, spawn with `CARDB_AUTHOR=ROLE`.
-- `state.json` schema (`agents/state.schema.json`): `active_agent, status (running|completed|paused|failed), handover_from, handover_notes{open_threads, unanswered_inbound, pending_sends, scheduled, promises, cross_module}, pending_owner[], open_issues[], cursors{}`. `carhunt state get|set|handover`.
-- Handover at measured context ≥ `orchestrate.handover_ctx_pct` (default 50).
-- `carhunt pause|unpause` (PAUSE file), `carhunt digest`, `carhunt learn` (night lessons → proposed rule edits), `carhunt schedule install` (launchd from `orchestrate.schedule`), `carhunt hooks install` (PreToolUse guards: secret-read block, wacli/send guard, identity lease).
+### contact (`carhunt.contact`) — [contact.md](contact.md)
+- `carhunt say --channel whatsapp|email|<site> (--car|--to) (--text|--text-file) [--opener|--nudge] [--approved] [--dry-run]`: one `flock` around guard → send → verify → ledger (`$CARHUNT_HOME/contact/ledger.jsonl`) → `cardb msg`.
+- `carhunt watch`: WhatsApp (wacli), Gmail, site inboxes → cardb (verbatim) + agent inbox.
+- Asks: vet writes cardb `ask` events (`carhunt evidence --write-asks`); outreach sends them and closes with `carhunt asks close` (`ask_answered`). Vet never messages sellers.
 
-## Config (`config.example.yaml`)
-Top-level sections, each owned by the module named: `owner` (core: name, languages, tz, home {city, country, lat, lon}), `search` (db + discover: makes/models, budget, km/year limits, countries, excluded regions, wanted options, tiers, weights), `cardb` (db), `secrets` (core: backend), `notify` (core), `browsers`/`net`/`accounts` (browsers), `sites` (sites: enabled + overrides), `discover`, `contact` (channels, quiet hours, windows, caps, persona), `vet` (destination country, sources), `orchestrate` (backend, agent CLI, handover, schedule), `privacy` (denylist path). The example is the EV run, generalized.
+### orchestrate (`carhunt.orchestrate`) — [orchestrate.md](orchestrate.md)
+- Session backend: `spawn, send, screen, ctx_percent, close, alive`; agterm (`agtermctl`, mailbox). Agent CLI `claude` (default) or `codex`.
+- `carhunt agent launch ROLE [--var K=V]… [--successor-of ID]`: render `agents/templates/common.md` + role brief + learned rules → `$CARHUNT_HOME/agents/ROLE/brief.md`, init `state.json`, spawn with `CARHUNT_AGENT=ROLE`, `CARDB_AUTHOR=ROLE`. Unknown placeholder fails the launch. Role `BASE-VARIANT` without its own brief → `agents/roles/BASE/brief.md` with `{variant}` set (`outreach-home`, `outreach-abroad`: own state, inbox, caps). `$CARHUNT_HOME/roles/<role>/brief.md` overrides the repo's.
+- Hooks: `carhunt hooks install` writes guards (secret-guard, send-guard, mailbox, identity lease) into `$CARHUNT_HOME/claude/settings.json`; launch passes it with `claude --settings` and refuses an unguarded claude agent. The user's global settings stay untouched (`--user` opts in).
+- `state.json` (`agents/state.schema.json`): `active_agent, status, handover_from, handover_notes{…}, pending_owner[], open_issues[], cursors{}`. Handover at measured ctx ≥ `orchestrate.handover_ctx_pct` (50).
+- Day on launchd (`carhunt schedule install`): sweep, unpause, digests, night pause + learning, cleanup.
 
-## Clone → first sweep
-1. Prereqs (README): macOS, Homebrew, [agterm](https://github.com/umputun/agterm), Claude Code, Docker. Bootstrap installs the rest.
-2. `scripts/bootstrap`: brew deps (go, node@22, python@3.12, uv, gitleaks, jq, shfmt; wacli optional) → venv + `pip install -e .` → build `cardb` → `npm ci` in web → create `$CARHUNT_HOME` → copy `config.example.yaml` → `cardb init` → `docker compose up -d` → link skills into `~/.claude/skills/carhunt-*` (never overwrite a non-symlink) → register MCP servers (asks first) → agent Chrome setup → `scripts/install-hooks`. Idempotent; re-run is safe.
-3. Edit `config.yaml`; `carhunt secret set …` for the optional providers (telegram, proxy, sms, gmail).
-4. `carhunt doctor` → ok/warn/fail per component with the fix line.
-5. `carhunt sweep --sites autoscout24 --dry-run`, then for real → cars in the web UI → `carhunt agent launch overseer`.
+## Config sections
+`owner` (core) · `secrets` (core) · `notify` (core) · `cardb` (db) · `web` (web: `url`, checked by doctor) · `search` (db + discover) · `browsers`, `net`, `accounts` (browsers) · `sites` (sites) · `discover` · `contact` · `vet` · `orchestrate`. Unknown keys anywhere are errors (typo guard). Keys per section: the module doc's "Config" table.
 
-## Privacy model
-- Generated locally, never committed: `$CARHUNT_HOME/**` (config, secrets, cardb data, photos, ledgers, rendered briefs, state, logs, profiles, cursors). `.gitignore` is a second line of defence.
-- Committed: code, templates with `{placeholders}`, synthetic fixtures (VINs start `SYN`, phones `+<cc> 555…`, emails `@example.com`, URLs `example.invalid`).
-- `scripts/privacy-check` runs as pre-commit + commit-msg hook (`scripts/install-hooks`): gitleaks + external denylist (`$CARHUNT_DENYLIST`, default `~/.config/carhunt/privacy-denylist.txt`; it reports line numbers, never terms) + regexes (phone, email, IBAN, VIN, key shapes, home paths). `--all` scans the tree, `--history` every commit. The integrator runs `--history` before push.
+## Tests
+- Root `conftest.py` isolates every suite (`tests/`, `carhunt/<pkg>/tests`): temp `CARHUNT_HOME` per test, `CARHUNT_SECRETS_BACKEND=file`, inherited `CARHUNT_*`/`CARDB_*` env dropped, real Keychain blocked unless a test is marked `keychain` and `CARHUNT_TEST_KEYCHAIN=1`. It builds `cardb` so real-cardb tests run instead of skipping.
+- Offline by default; real Chrome only under `-m chrome`. Commands and e2e: [testing.md](testing.md).
+
+## Privacy
+Run data in `$CARHUNT_HOME`, secrets in the backend, synthetic fixtures; `scripts/privacy-check` on every commit, `--history` before any push. [privacy.md](privacy.md).
 
 ## Decisions (open to change)
 | # | decision | why | alternative |
@@ -129,6 +116,12 @@ Top-level sections, each owned by the module named: `owner` (core: name, languag
 | D2 | `evdb` renamed `cardb`; EV fields moved into `powertrain` | the repo is for any used car | keep `evdb` name |
 | D3 | Ranking only in cardb | one answer for web, CLI, agents | discover-side scoring |
 | D4 | Secrets: env → Keychain (default) / 1Password / file | no plaintext in repo or config | keyring lib |
-| D5 | One Python package with auto-discovered CLI groups | no shared-file conflicts between builders | one script per tool |
-| D6 | Telegram optional, policy (digest/ask/urgent only) enforced in code | EV run: half the pushes were noise | prose-only rule |
+| D5 | One Python package with auto-discovered CLI groups | modules never edit a shared dispatcher | one script per tool |
+| D6 | Telegram optional; digest/ask/urgent only, enforced in code | EV run: half the pushes were noise | prose-only rule |
 | D7 | Skills shipped as `carhunt-*` and symlinked | don't clash with the user's own skills | copy into `~/.claude/skills` |
+| D8 | Guard hooks in `$CARHUNT_HOME/claude/settings.json`, passed with `claude --settings` | guards bind carhunt agents only; the user's other sessions stay unchanged | global `~/.claude/settings.json` (`hooks install --user`) |
+| D9 | Root `conftest.py` forces file secrets + temp home for every test | a module test run wrote synthetic items into the real Keychain (11-08) | per-package fixtures |
+| D10 | `carhunt creds new\|status` and `carhunt email-code SITE` as CLI | agents drive the CLI; values never reach the transcript | agents call Python |
+| D11 | `captcha` extra (torch) not in `all` | heavy; most sites never need the local model | in `all` |
+| D12 | Strict config schema (unknown keys fail) per section | typo guard: a misspelled key would silently run on the default | open module sections |
+| D13 | `outreach-home` / `outreach-abroad` as variants of one brief | one rule set, separate state, inbox and caps | two briefs |

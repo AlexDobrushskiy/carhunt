@@ -11,7 +11,7 @@ def parse(argv):
 
 
 def test_vin_decode_exit_codes(capsys):
-    a = parse(["vin", "decode", "WVG" + "ZZZE2Z" + "S" + "P" + "000001", "--reg", "2024-10"])
+    a = parse(["vin", "decode", "WVWZZZ1KZLW000001", "--reg", "2020-05"])  # privacy-check: allow (synthetic VIN)
     assert a.func(a) == 0
     assert "Volkswagen" in capsys.readouterr().out
     a = parse(["vin", "decode", "SYN123"])

@@ -32,7 +32,7 @@ func TestProfileEndpoint(t *testing.T) {
 		!slices.Equal(p.QueueDefaultTiers, []int{1, 2}) {
 		t.Fatalf("tiers: %+v", p.Tiers)
 	}
-	if !slices.Contains(p.HardFilters, "km ≤ 50 000") || !slices.Contains(p.HardFilters, "declared damage: not flagged damaged") ||
+	if !slices.Contains(p.HardFilters, "km ≤ 80 000") || !slices.Contains(p.HardFilters, "declared damage: not flagged damaged") ||
 		!slices.Contains(p.OptionKeys, "pano") || !slices.Equal(p.MustHave, []string{"electric_seats", "power_tailgate"}) ||
 		!slices.Contains(p.Families, "VW ID.4") || p.Currency != "EUR" || p.Weights["risk"] != 1 {
 		t.Fatalf("profile: %+v", p)
@@ -59,7 +59,7 @@ func TestTwoProfilesReorderQueue(t *testing.T) {
 	ev6pt := c.qcar("ev6-pt", map[string]any{"make": "Kia", "model": "EV6", "power_kw": 168})
 	ev6fr := c.qcar("ev6-fr", map[string]any{"make": "Kia", "model": "EV6", "power_kw": 168, "country": "FR", "city": "Lyon", "distance_km": 20})
 	gtx := c.qcar("gtx", map[string]any{"model": "ID.4 GTX", "power_kw": 250, "drive": "awd"})
-	old := c.qcar("old", map[string]any{"make": "Kia", "model": "EV6", "power_kw": 168, "reg_date": "2021-05"})
+	old := c.qcar("old", map[string]any{"make": "Kia", "model": "EV6", "power_kw": 168, "reg_date": "2020-05"})
 
 	evOrder := queueIDs(c.queue("tier=1,2,3"))
 	if !slices.Equal(evOrder, []int64{id4, ev6pt, ev6fr, gtx}) {
@@ -108,7 +108,7 @@ search:
 
 func TestDistanceEstimateAndMarket(t *testing.T) {
 	c := newServer(t)
-	near := c.qcar("near", map[string]any{"country": "ES", "city": "Vigo", "lat": 42.24, "lon": -8.72}) // ~158 km road estimate
+	near := c.qcar("near", map[string]any{"country": "ES", "city": "Badajoz", "lat": 38.88, "lon": -6.97}) // ~246 km road estimate
 	stored := c.qcar("stored", map[string]any{"distance_km": 90, "lat": 38.72, "lon": -9.14})
 	far := c.qcar("far", map[string]any{"country": "DE", "city": "Berlin", "lat": 52.52, "lon": 13.40})
 	none := c.qcar("none", nil)
@@ -117,7 +117,7 @@ func TestDistanceEstimateAndMarket(t *testing.T) {
 	for _, s := range c.list("limit=100").Cars {
 		cs[s.ID] = s
 	}
-	if s := cs[near]; s.DistanceKm == nil || *s.DistanceKm < 150 || *s.DistanceKm > 170 || deref(s.DistanceSource) != "estimate" || deref(s.Market) != "abroad" {
+	if s := cs[near]; s.DistanceKm == nil || *s.DistanceKm < 235 || *s.DistanceKm > 255 || deref(s.DistanceSource) != "estimate" || deref(s.Market) != "abroad" {
 		t.Fatalf("near: %v %v %v", s.DistanceKm, deref(s.DistanceSource), deref(s.Market))
 	}
 	if s := cs[stored]; *s.DistanceKm != 90 || deref(s.DistanceSource) != "stored" || deref(s.Market) != "home" {
@@ -126,14 +126,14 @@ func TestDistanceEstimateAndMarket(t *testing.T) {
 	if s := cs[none]; s.DistanceKm != nil || s.DistanceSource != nil {
 		t.Fatalf("none: %v", s.DistanceKm)
 	}
-	sameIDs(t, "distance_km_max=200", ids(c.list("distance_km_max=200")), near, stored)
+	sameIDs(t, "distance_km_max=300", ids(c.list("distance_km_max=300")), near, stored)
 	if got := ids(c.list("sort=distance_km")); !slices.Equal(got[:3], []int64{stored, near, far}) || got[3] != none {
 		t.Fatalf("sort distance %v", got)
 	}
 	sameIDs(t, "market=abroad", ids(c.list("market=abroad")), near, far)
 	sameIDs(t, "market=home", ids(c.list("market=home")), stored, none)
 	d := c.car(near)
-	if *d.Lat != 42.24 || *d.Lon != -8.72 || deref(d.DistanceSource) != "estimate" {
+	if *d.Lat != 38.88 || *d.Lon != -6.97 || deref(d.DistanceSource) != "estimate" {
 		t.Fatalf("detail: %+v", d.CarSpecs)
 	}
 	// The queue's landed cost uses the estimate (no distance-unknown risk).

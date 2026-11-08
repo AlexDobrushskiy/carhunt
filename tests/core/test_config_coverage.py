@@ -159,9 +159,7 @@ def test_module_defaults_fit_the_schema():
     browsers["captcha"] = dataclasses.asdict(CaptchaConfig())
 
     orch = {k: dict(v) for k, v in ORCH.items()}
-    orch["notify"].pop("digests", None)  # dead key (nothing reads it; schedule.digest does the job)
-    contact = {k: v for k, v in CONTACT.items() if k != "variant"}  # dead: the role name sets {variant}
-    data = {**orch, "owner": {**orch["owner"], "tz": "UTC"}, "contact": {**orch["contact"], **contact},
+    data = {**orch, "owner": {**orch["owner"], "tz": "UTC"}, "contact": {**orch["contact"], **CONTACT},
             "browsers": browsers}
     assert config.validate(data) == []
 

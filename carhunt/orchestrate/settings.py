@@ -13,7 +13,7 @@ from carhunt.core import config as core_config
 DEFAULTS: dict[str, Any] = {
     "owner": {"name": "owner", "tz": "UTC", "languages": ["en"]},
     "contact": {"quiet_hours": "01:30-08:10", "opener_window": "09:30-21:30"},
-    "notify": {"quiet_hours": "21:30-09:30", "digests": ["09:30", "20:00"]},
+    "notify": {"quiet_hours": "21:30-09:30"},
     "orchestrate": {
         "session_backend": "agterm",
         "agent_cli": "claude",
