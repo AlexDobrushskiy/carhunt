@@ -84,10 +84,10 @@ type Search struct {
 	Ranking              Ranking            `yaml:"ranking" json:"ranking"`
 }
 
-// Price scope + sanity bounds (integer currency units, gross).
+// Price: max_eur = queue hard filter; min_eur / cap_eur = write-time price sanity bounds (integer units, gross).
 type Price struct {
 	MaxEUR   int    `yaml:"max_eur" json:"max_eur,omitempty"`
-	MinEUR   int    `yaml:"min_eur" json:"min_eur,omitempty"`
+	MinEUR   int    `yaml:"min_eur" json:"min_eur,omitempty"` // sanity floor only (price write check; cardb default 1500), not a queue filter
 	CapEUR   int    `yaml:"cap_eur" json:"cap_eur,omitempty"` // sanity: refuse prices above (cardb default 2 000 000)
 	Gross    *bool  `yaml:"gross" json:"gross,omitempty"`
 	Currency string `yaml:"currency" json:"currency,omitempty"`

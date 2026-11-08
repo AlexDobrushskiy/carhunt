@@ -392,8 +392,6 @@ func (r *ranker) scopeExclusion(rc *rankCar, withPriceMax bool) string {
 		return fmt.Sprintf("year < %d", s.YearMin)
 	case withPriceMax && s.Price.MaxEUR > 0 && c.Price != nil && *c.Price > s.Price.MaxEUR:
 		return fmt.Sprintf("price > %d", s.Price.MaxEUR)
-	case s.Price.MinEUR > 0 && c.Price != nil && *c.Price < s.Price.MinEUR:
-		return fmt.Sprintf("price < %d", s.Price.MinEUR)
 	case s.KmMax > 0 && c.Km != nil && *c.Km > s.KmMax:
 		return fmt.Sprintf("km > %d", s.KmMax)
 	case len(s.Countries) > 0 && optStr(c.Country) != "" && !slices.Contains(s.Countries, strings.ToUpper(*c.Country)):
