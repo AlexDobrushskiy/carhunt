@@ -204,8 +204,8 @@ every flag: `cardb help COMMAND`.
 |---|---|---|
 | record an ad | `cardb upsert --url U --price … --fuel bev --opt k=v:src` | `POST /listings/upsert` |
 | photos | `cardb photo add CAR FILE --listing ID` | `POST /cars/{car}/photos` |
-| find by URL | `cardb find-listing URL` (exit 3 = none) | `GET /listings?url=` |
-| log a message | `cardb msg --to CONTACT --channel C --dir in\|out TEXT` | `POST /messages` |
+| find by URL | `cardb find-listing URL` (exit 3 = none) | `GET /listings?url=` (any slug of the same ad) · `?site=&site_ref=` (cardb's URL-derived ref, not a site's internal data id) |
+| log a message | `cardb msg --to CONTACT --channel C --dir in\|out TEXT` | `POST /messages` (car = id/alias, string or number; `car_id` accepted as alias; else `listing_url`, else `counterpart`). Response = the Message (`car_id` top level): 201 new, 200 + `matched_by` on dedupe |
 | facts / options | `cardb fact CAR k=v:src` · `cardb opt CAR k=v:src` | `PUT /cars/{car}/facts/{key}` |
 | edit safely | `cardb show CAR --json` → `cardb set CAR … --if-version N` · `--red-flag-add T` | `PATCH /cars/{car}` + `If-Match` |
 | status / flags | `cardb status CAR S --if-version N` · `needs-owner CAR "why"` · `deal CAR on` | `POST …/status` · `PUT …/good-deal` |

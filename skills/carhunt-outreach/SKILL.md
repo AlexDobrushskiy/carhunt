@@ -43,7 +43,7 @@ Order (dealbreakers first): **availability → accidents / paint → ownership &
 | Wallapop | ≤300 characters per message (hard field limit: longer openers were cut, 11-01) | same |
 
 - Never 3+ questions in one message, no numbered lists. Why: a short message is easy to answer, a long one gets put off.
-- Extra asks (from the owner, overseer or vet) join the order, one per message; they never make the opener longer.
+- Extra asks (from the owner, overseer or vet) join the order, one per message; they never make the opener longer. A vet ask is done only after `carhunt asks close --car C --topic T --answer "…"` (answer or `refused: …`): that writes the fact vet reads; without it vet asks again.
 - **Stay on the seller's channel.** Never propose WhatsApp; if the seller offers it, accept and continue there (new opener, counts toward the cap). Why: sellers answer where they already are.
 - **Channel cut your message**: send only the rest, short (`cut`), never the whole list again (two re-sent lists, 11-01).
 

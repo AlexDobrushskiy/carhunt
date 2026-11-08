@@ -4,7 +4,7 @@
 
 Tags: **V** verified live on the official/provider source · **A** anecdotal/secondary (forum, press, user report) · **I** inferred, not from the sources — verify.
 
-Related: [vin-sources.md](vin-sources.md) (brand registry, recall tools) · [coverage-rules.md](coverage-rules.md) (what the HV-battery warranty does/doesn't cover) · [buy/pickup-day.md](buy/pickup-day.md). Record results: `cardb fact CAR soh="<value> (<method>, <date>, <km>)":<source>`; missing evidence → `ask` event via `carhunt evidence CAR` (vet agents never message sellers).
+Related: [vin-sources.md](vin-sources.md) (brand registry, recall tools) · [coverage-rules.md](coverage-rules.md) (what the HV-battery warranty does/doesn't cover) · [buy/pickup-day.md](buy/pickup-day.md). Record results: `cardb fact CAR battery_soh="<value> (<method>, <date>, <km>)":<source>`; missing evidence → `ask` event via `carhunt evidence CAR` (vet agents never message sellers).
 
 **Why it matters:** the traction battery is ~40% of a used EV's value (EV run 2026-10-31). No paid VIN history report measures it.
 

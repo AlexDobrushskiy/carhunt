@@ -48,10 +48,23 @@ def test_removed_listing_seen_again_is_a_sighting(db):
     assert ing.sighting(listing(), ing.known(listing().url)).action == "updated"
 
 
-def test_price_rejection_is_reported_not_raised():
+def test_price_x100_stores_the_car_without_price():
     db = StubDB(reject={listing().url: "price_x100"})
     r = Ingest(db).write(listing())
-    assert r.action == "rejected" and "price_x100" in r.reason and not db.photos
+    assert r.action == "created" and "price held (price_x100)" in r.reason
+    first, retry = [b for k, b in db.calls if k == "upsert"]
+    assert first["price"] and "price" not in retry and "price_vat" not in retry and "price_x100" in retry["price_note"]
+
+
+def test_price_lease_is_dropped():
+    db = StubDB(reject={listing().url: "price_lease"})
+    r = Ingest(db).write(listing())
+    assert r.action == "rejected" and "price_lease" in r.reason and not db.photos and not db.listings
+
+
+def test_bad_field_rejects_one_ad_not_the_run():
+    db = StubDB(reject={listing().url: "bad_field"})
+    assert Ingest(db).write(listing()).action == "rejected"
 
 
 def test_phone_owned_elsewhere_falls_back_to_site_chat():

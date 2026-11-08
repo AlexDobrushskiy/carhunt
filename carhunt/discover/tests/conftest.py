@@ -63,8 +63,11 @@ class StubDB:
 
     def upsert_listing(self, body: dict) -> dict:
         self.calls.append(("upsert", body))
-        if body["url"] in self.reject:
-            raise ApiError("price", 422, {"error": "price looks wrong", "reason": self.reject[body["url"]]})
+        why = self.reject.get(body["url"])
+        if why == "bad_field":
+            raise ApiError("field", 400, {"error": "unknown fuel"})
+        if why and body.get("price") is not None:   # like cardb: only a price write is sanity-checked
+            raise ApiError("price", 422, {"error": "price looks wrong", "reason": why})
         if "photo_urls" in body:
             raise AssertionError("photos must not be sent with the upsert")
         url = body["url"]

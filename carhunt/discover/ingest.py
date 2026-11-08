@@ -10,6 +10,11 @@ Rules (EV run):
 - A known listing whose site ask did not move and that is still live = no write at all (re-runs are free); a price
   change (re-read + normalized, so derived gross / cash asks stay right) or a relisting = one minimal upsert.
 - A phone cardb did not attach (owned by another seller) → fact `phone_route` = site chat (6 cases on 2026-11-03).
+- Price refused by cardb's sanity check (422 `reason`): `price_lease` = a monthly rate / deposit, not a sale → dropped.
+  Any other reason (`price_x100`, `price_range`, `price_net`) → the car is stored WITHOUT a price and the ask goes
+  in `price_note` for an agent to check the ad (`cardb listing set … --price-vat` / `--force`). Why: newest-first
+  cursors move past the ad, so a dropped car is never seen again; a stored ×100 price skews every ranking.
+- A 400 on one ad (a field cardb refuses) rejects that ad only; cardb down / 5xx stops the run.
 """
 from __future__ import annotations
 
@@ -26,6 +31,19 @@ def _is_not_found(e: Exception) -> bool:
 
 def _is_api_error(e: Exception) -> bool:
     return type(e).__name__ in ("ApiError", "NotFound", "Conflict") or hasattr(e, "status")
+
+
+def _refused(e: Exception) -> bool:
+    """cardb refused this one write (400 bad field, 422 sanity); not an outage."""
+    return _is_api_error(e) and getattr(e, "status", None) in (400, 422)
+
+
+def _price_reason(e: Exception) -> str | None:
+    body = getattr(e, "body", None)
+    return body.get("reason") if getattr(e, "status", None) == 422 and isinstance(body, dict) else None
+
+
+DROP_PRICE_REASONS = ("price_lease",)   # not a sale price: drop the ad
 
 
 @dataclass
@@ -74,7 +92,7 @@ class Ingest:
         try:
             res = self.db.upsert_listing(body)
         except Exception as e:
-            if _is_api_error(e) and getattr(e, "status", None) == 422:
+            if _refused(e):  # the stored price stays; the report + dispositions name the ad
                 return Result("rejected", lst.url, reason=_reason(e))
             raise
         return Result("updated", lst.url, car_id=res.get("car_id"), listing_id=res.get("listing_id"))
@@ -83,12 +101,23 @@ class Ingest:
         body = lst.to_upsert()
         if self.dry_run:
             return Result("would_create", lst.url, payload=body)
+        held = None
         try:
             res = self.db.upsert_listing(body)
         except Exception as e:
-            if _is_api_error(e) and getattr(e, "status", None) == 422:
+            if not _refused(e):
+                raise
+            why = _price_reason(e)
+            if not why or why in DROP_PRICE_REASONS or body.get("price") is None:
                 return Result("rejected", lst.url, reason=_reason(e))
-            raise
+            held = f"price held ({why}): stored without price"
+            body = _without_price(body, why)
+            try:
+                res = self.db.upsert_listing(body)
+            except Exception as e2:
+                if _refused(e2):
+                    return Result("rejected", lst.url, reason=_reason(e2))
+                raise
         action = "created" if res.get("car_created") else "linked" if res.get("listing_created") else "updated"
         out = Result(action, lst.url, linked_by=res.get("linked_by"), duplicates=res.get("duplicate_candidates") or [])
         hit = self.db.find_listing(lst.url)                 # resolve by URL, never by the id we just got
@@ -103,6 +132,8 @@ class Ingest:
                 out.photo_errors.append(f"#{i}: {e}")
         if lst.phones:
             self._check_phones(lst, out)
+        if held:
+            out.reason = "; ".join(r for r in (held, out.reason) if r)
         return out
 
     def _check_phones(self, lst: Listing, out: Result) -> None:
@@ -115,6 +146,13 @@ class Ingest:
             self.db.fact(car_id, "phone_route", "site chat: phone not attached (owned by another seller in cardb)",
                          source="agent_inference")
             out.reason = "phone not attached"
+
+
+def _without_price(body: dict, why: str) -> dict:
+    out = {k: v for k, v in body.items() if k not in ("price", "price_vat")}
+    note = f"site ask {body['price']} € refused by cardb ({why}): check the ad, then set the price"
+    out["price_note"] = f"{note}; {body['price_note']}" if body.get("price_note") else note
+    return out
 
 
 def _reason(e: Exception) -> str:
