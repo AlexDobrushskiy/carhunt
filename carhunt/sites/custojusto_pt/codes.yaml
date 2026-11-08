@@ -1,0 +1,28 @@
+# CustoJusto list URL: https://www.custojusto.pt/portugal/veiculos/carros-usados/<make>/<model>?o=N
+# 40 rows/page, newest first by default (sortBy SORT_DESC_PUBLISH_DATE). Slugs are the site's own (make "vw").
+# The site's filter params (pe/ps price buckets, rs/re year codes, fu fuel ids) are not mapped for every value:
+# price/year/fuel/seller are filtered on the rows instead (the EV sweep did the same, 11-04…11-07).
+region: portugal          # whole country; districts (e.g. "porto") narrow the path
+makes:
+  Volkswagen: vw
+  VW: vw
+  Mercedes-Benz: mercedes-benz
+  Mercedes: mercedes-benz
+models:
+  Volkswagen: {ID.3: id-3, ID.4: id-4, ID.5: id-5}
+  VW: {ID.3: id-3, ID.4: id-4, ID.5: id-5}
+  Audi: {Q4 e-tron: q4-e-tron}
+  Skoda: {Enyaq: enyaq}
+  BMW: {iX1: ix1}
+  Hyundai: {Ioniq 5: ioniq-5}
+  Toyota: {bZ4X: bz4x}
+  Mercedes-Benz: {EQA: eqa, EQB: eqb}
+  Kia: {EV6: ev6}
+  Cupra: {Tavascan: tavascan}
+  MINI: {Countryman: countryman}
+  XPeng: {G6: g6}
+  BYD: {Seal U: seal-u, Sealion 7: sealion-7}
+fuel:                     # cardb powertrain → list row params.fuel label (regex, case-insensitive)
+  bev: "^el[eé]c?tric"
+  petrol: "^gasolina"
+  diesel: "^diesel"

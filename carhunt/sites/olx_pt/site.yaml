@@ -1,0 +1,29 @@
+site: olx.pt
+name: OLX Portugal
+kind: marketplace
+countries: [PT]
+hosts: ['(^|\.)olx\.pt$']
+ad_id: ['-(ID\w{5,})\.html']    # URL token; site_ref = the numeric offer id (API key + cursor)
+wall: CloudFront WAF (403 to every plain HTTP client, even with full browser headers)
+route: plain-chrome
+tab_home: https://www.olx.pt/
+country_ip: null
+accept_language: "pt-PT,pt;q=0.9"
+pace:
+  min_gap_s: 7
+  why: "helper default 6 s; sweep searches at 7 s and phone calls ≥12 s never blocked reads 11-01→11-07"
+caps:
+  why: "phone reveal needs a login (see account); one at a time, ≥12 s apart (11-04)"
+account:
+  needed_for: [phone, message]
+  verification: "OLX Group email login (shared with standvirtual.com)"
+phone: reveal-login
+messaging: "site chat, logged in; ads with contact.phone=false are chat-only"
+liveness: {mode: fetch, evidence: "410 = gone; 200 + ad id = live (in-tab fetch, measured 11-04)"}
+measured: 2026-11-07
+notes:
+  - "Any plain HTTP client gets CloudFront 403 (TLS/HTTP2 fingerprint): reads are the site's JSON API fetched inside one real tab (11-01)"
+  - "/limited-phones/ logged out: 200 on 11-01, 400 'Disallowed for this user' since 11-04; logged in (Bearer = access_token cookie) → 200"
+  - "A 401 on limited-phones in a cloned logged-in profile = stale token, not a site block: reseed the profile copies (11-05)"
+  - "The API ignores sort_by (11-04): page the filtered set and keep a numeric id cursor"
+  - "Offers with partner.code=standvirtual are cross-posts (external_url): their phone is decoded on standvirtual.com"

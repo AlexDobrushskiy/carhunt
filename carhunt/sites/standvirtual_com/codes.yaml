@@ -1,0 +1,41 @@
+# Standvirtual list URL: https://www.standvirtual.com/carros/<make>/<model>?search[...]=…&page=N (32 rows/page).
+# Slugs are the site's own (make "vw", not "volkswagen"); missing entries fall back to slugify(name).
+# Measured filters (EV sweep 11-03…11-07): fuel_type, first_registration_year:from, price:to, mileage:to, order,
+# private_business. The other bound of each range follows the site's own `:from`/`:to` scheme.
+filters:          # SearchQuery field → site param
+  year_min: "search[filter_float_first_registration_year:from]"
+  year_max: "search[filter_float_first_registration_year:to]"
+  price_min: "search[filter_float_price:from]"
+  price_max: "search[filter_float_price:to]"
+  km_max: "search[filter_float_mileage:to]"
+params:
+  fuel: "search[filter_enum_fuel_type]"
+  seller: "search[private_business]"
+  sort: "search[order]"
+fuel:             # cardb powertrain → fuel_type value (others: leave unfiltered)
+  bev: electric
+seller:
+  private: private
+  dealer: business
+sort:             # newest = id order; createdAt is bumped by refreshes (never a cursor)
+  newest: "created_at:desc"
+  relevance: ""   # site default order
+makes:
+  Volkswagen: vw
+  VW: vw
+  Mercedes-Benz: mercedes-benz
+  Mercedes: mercedes-benz
+models:
+  Volkswagen: {ID.3: id-3, ID.4: id-4, ID.5: id-5}
+  VW: {ID.3: id-3, ID.4: id-4, ID.5: id-5}
+  Audi: {Q4 e-tron: q4-e-tron}
+  Skoda: {Enyaq: enyaq}
+  BMW: {iX1: ix1}
+  Hyundai: {Ioniq 5: ioniq-5}
+  Toyota: {bZ4X: bz4x}
+  Mercedes-Benz: {EQA: eqa, EQB: eqb}
+  Kia: {EV6: ev6}
+  Cupra: {Tavascan: tavascan}
+  MINI: {Countryman: countryman}
+  XPeng: {G6: g6}
+  BYD: {Seal U: seal-u, Sealion 7: sealion-7}

@@ -51,7 +51,8 @@ class Card:
     """One search-result row. Enough to dedupe, scope and decide whether to read the full ad."""
     url: str
     site: str
-    site_ref: str                       # the site's ad id (cursor + dedupe key)
+    site_ref: str                       # the site's data id (cursor + dedupe key); may differ from the URL token
+                                        # that BaseSite.ad_id(url) returns (standvirtual, olx.pt: numeric id vs ID…)
     title: str | None = None
     price: int | None = None
     price_is_net: bool | None = None    # dealer price shown without VAT (AS24 isNetPrice)

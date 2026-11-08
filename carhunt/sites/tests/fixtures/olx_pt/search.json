@@ -1,0 +1,644 @@
+{
+ "data": [
+  {
+   "id": 900000001,
+   "url": "https://www.olx.pt/d/anuncio/bmw-x1-gasolina-IDsyn001.html",
+   "title": "BMW X1 sDrive18i",
+   "last_refresh_time": "2026-11-02T09:00:00+00:00",
+   "created_time": "2026-11-01T09:00:00+00:00",
+   "valid_to_time": "2026-12-02T09:00:00+00:00",
+   "description": "Carro <br />sintético.",
+   "promotion": {
+    "highlighted": false,
+    "urgent": false,
+    "top_ad": false,
+    "options": [],
+    "b2c_ad_page": false,
+    "premium_ad_page": false
+   },
+   "params": [
+    {
+     "key": "price",
+     "name": "Preço",
+     "type": "price",
+     "value": {
+      "value": 29990,
+      "type": "price",
+      "arranged": false,
+      "budget": false,
+      "currency": "EUR",
+      "negotiable": true,
+      "converted_value": null,
+      "previous_value": null,
+      "converted_previous_value": null,
+      "converted_currency": null,
+      "label": "29.990 €",
+      "previous_label": null
+     }
+    },
+    {
+     "key": "modelo",
+     "name": "Modelo",
+     "type": "select",
+     "value": {
+      "key": "x1",
+      "label": "X1"
+     }
+    },
+    {
+     "key": "year",
+     "name": "Ano",
+     "type": "input",
+     "value": {
+      "key": "2023",
+      "label": "2023 "
+     }
+    },
+    {
+     "key": "first_registration_month",
+     "name": "Mês de Registo",
+     "type": "select",
+     "value": {
+      "key": "03",
+      "label": "Março"
+     }
+    },
+    {
+     "key": "quilometros",
+     "name": "Quilómetros",
+     "type": "input",
+     "value": {
+      "key": "30000",
+      "label": "30000 km"
+     }
+    },
+    {
+     "key": "combustivel",
+     "name": "Combustível",
+     "type": "select",
+     "value": {
+      "key": "gasolina",
+      "label": "Gasolina"
+     }
+    },
+    {
+     "key": "engine_power",
+     "name": "Potência",
+     "type": "input",
+     "value": {
+      "key": "136",
+      "label": "136 "
+     }
+    },
+    {
+     "key": "gearbox",
+     "name": "Tipo de Caixa",
+     "type": "select",
+     "value": {
+      "key": "automatic",
+      "label": "Automática"
+     }
+    },
+    {
+     "key": "body_type",
+     "name": "Segmento",
+     "type": "select",
+     "value": {
+      "key": "suv",
+      "label": "SUV/TT"
+     }
+    },
+    {
+     "key": "nr_seats",
+     "name": "Lugares",
+     "type": "select",
+     "value": {
+      "key": "5",
+      "label": "5"
+     }
+    },
+    {
+     "key": "portas",
+     "name": "Portas",
+     "type": "select",
+     "value": {
+      "key": "4-5",
+      "label": "4-5"
+     }
+    },
+    {
+     "key": "condicao",
+     "name": "Condição",
+     "type": "select",
+     "value": {
+      "key": "usado",
+      "label": "Usado"
+     }
+    },
+    {
+     "key": "origin",
+     "name": "Origem",
+     "type": "select",
+     "value": {
+      "key": "national",
+      "label": "Nacional"
+     }
+    }
+   ],
+   "key_params": [],
+   "business": true,
+   "user": {
+    "id": 5001,
+    "created": "2020-01-01T00:00:00+00:00",
+    "other_ads_enabled": true,
+    "name": "Synthetic Dealer",
+    "company_name": "Synthetic Dealer",
+    "uuid": "00000000-0000-4000-8000-000000000001"
+   },
+   "status": "active",
+   "contact": {
+    "name": "Synthetic",
+    "phone": true,
+    "chat": true,
+    "negotiation": true,
+    "courier": false
+   },
+   "location": {
+    "city": {
+     "id": 1,
+     "name": "Aveiro",
+     "normalized_name": "aveiro"
+    },
+    "region": {
+     "id": 2,
+     "name": "Aveiro",
+     "normalized_name": "aveiro"
+    }
+   },
+   "photos": [
+    {
+     "id": 1,
+     "filename": "a",
+     "rotation": 0,
+     "width": 1600,
+     "height": 1200,
+     "link": "https://img.example.invalid/olx/1a/image;s={width}x{height}"
+    },
+    {
+     "id": 2,
+     "filename": "b",
+     "rotation": 0,
+     "width": 1600,
+     "height": 1200,
+     "link": "https://img.example.invalid/olx/1b/image;s={width}x{height}"
+    }
+   ],
+   "partner": null,
+   "category": {
+    "id": 777,
+    "type": "automotive"
+   },
+   "offer_type": "offer",
+   "protect_phone": false
+  },
+  {
+   "id": 900000002,
+   "url": "https://www.olx.pt/d/anuncio/vw-id-4-pro-IDsyn002.html",
+   "title": "VW ID.4 Pro Performance 77 kWh",
+   "last_refresh_time": "2026-11-02T09:00:00+00:00",
+   "created_time": "2026-11-02T09:00:00+00:00",
+   "valid_to_time": "2026-12-02T09:00:00+00:00",
+   "description": "Carro <br />sintético.",
+   "promotion": {
+    "highlighted": false,
+    "urgent": false,
+    "top_ad": false,
+    "options": [],
+    "b2c_ad_page": false,
+    "premium_ad_page": false
+   },
+   "params": [
+    {
+     "key": "price",
+     "name": "Preço",
+     "type": "price",
+     "value": {
+      "value": 31500,
+      "type": "price",
+      "arranged": false,
+      "budget": false,
+      "currency": "EUR",
+      "negotiable": true,
+      "converted_value": null,
+      "previous_value": null,
+      "converted_previous_value": null,
+      "converted_currency": null,
+      "label": "31.500 €",
+      "previous_label": null
+     }
+    },
+    {
+     "key": "modelo",
+     "name": "Modelo",
+     "type": "select",
+     "value": {
+      "key": "id-4",
+      "label": "ID.4"
+     }
+    },
+    {
+     "key": "year",
+     "name": "Ano",
+     "type": "input",
+     "value": {
+      "key": "2023",
+      "label": "2023 "
+     }
+    },
+    {
+     "key": "first_registration_month",
+     "name": "Mês de Registo",
+     "type": "select",
+     "value": {
+      "key": "03",
+      "label": "Março"
+     }
+    },
+    {
+     "key": "quilometros",
+     "name": "Quilómetros",
+     "type": "input",
+     "value": {
+      "key": "42000",
+      "label": "42000 km"
+     }
+    },
+    {
+     "key": "combustivel",
+     "name": "Combustível",
+     "type": "select",
+     "value": {
+      "key": "electrico",
+      "label": "Eléctrico"
+     }
+    },
+    {
+     "key": "engine_power",
+     "name": "Potência",
+     "type": "input",
+     "value": {
+      "key": "204",
+      "label": "204 "
+     }
+    },
+    {
+     "key": "gearbox",
+     "name": "Tipo de Caixa",
+     "type": "select",
+     "value": {
+      "key": "automatic",
+      "label": "Automática"
+     }
+    },
+    {
+     "key": "body_type",
+     "name": "Segmento",
+     "type": "select",
+     "value": {
+      "key": "suv",
+      "label": "SUV/TT"
+     }
+    },
+    {
+     "key": "nr_seats",
+     "name": "Lugares",
+     "type": "select",
+     "value": {
+      "key": "5",
+      "label": "5"
+     }
+    },
+    {
+     "key": "portas",
+     "name": "Portas",
+     "type": "select",
+     "value": {
+      "key": "4-5",
+      "label": "4-5"
+     }
+    },
+    {
+     "key": "condicao",
+     "name": "Condição",
+     "type": "select",
+     "value": {
+      "key": "usado",
+      "label": "Usado"
+     }
+    },
+    {
+     "key": "origin",
+     "name": "Origem",
+     "type": "select",
+     "value": {
+      "key": "national",
+      "label": "Nacional"
+     }
+    },
+    {
+     "key": "vin",
+     "name": "VIN",
+     "type": "input",
+     "value": {
+      "key": "SYNOLXVIN00000001",
+      "label": "SYNOLXVIN00000001"
+     }
+    }
+   ],
+   "key_params": [],
+   "business": false,
+   "user": {
+    "id": 5002,
+    "created": "2020-01-01T00:00:00+00:00",
+    "other_ads_enabled": true,
+    "name": "Synthetic Seller",
+    "company_name": "",
+    "uuid": "00000000-0000-4000-8000-000000000002"
+   },
+   "status": "active",
+   "contact": {
+    "name": "Synthetic",
+    "phone": true,
+    "chat": true,
+    "negotiation": true,
+    "courier": false
+   },
+   "location": {
+    "city": {
+     "id": 1,
+     "name": "Aveiro",
+     "normalized_name": "aveiro"
+    },
+    "region": {
+     "id": 2,
+     "name": "Aveiro",
+     "normalized_name": "aveiro"
+    }
+   },
+   "photos": [
+    {
+     "id": 1,
+     "filename": "a",
+     "rotation": 0,
+     "width": 1600,
+     "height": 1200,
+     "link": "https://img.example.invalid/olx/2a/image;s={width}x{height}"
+    },
+    {
+     "id": 2,
+     "filename": "b",
+     "rotation": 0,
+     "width": 1600,
+     "height": 1200,
+     "link": "https://img.example.invalid/olx/2b/image;s={width}x{height}"
+    }
+   ],
+   "partner": null,
+   "category": {
+    "id": 777,
+    "type": "automotive"
+   },
+   "offer_type": "offer",
+   "protect_phone": false
+  },
+  {
+   "id": 900000003,
+   "url": "https://www.olx.pt/d/anuncio/vw-id-4-pro-dealer-IDsyn003.html",
+   "title": "VW ID.4 Pro",
+   "last_refresh_time": "2026-11-02T09:00:00+00:00",
+   "created_time": "2026-11-03T09:00:00+00:00",
+   "valid_to_time": "2026-12-02T09:00:00+00:00",
+   "description": "Carro <br />sintético.",
+   "promotion": {
+    "highlighted": false,
+    "urgent": false,
+    "top_ad": false,
+    "options": [],
+    "b2c_ad_page": false,
+    "premium_ad_page": false
+   },
+   "params": [
+    {
+     "key": "price",
+     "name": "Preço",
+     "type": "price",
+     "value": {
+      "value": 33900,
+      "type": "price",
+      "arranged": false,
+      "budget": false,
+      "currency": "EUR",
+      "negotiable": true,
+      "converted_value": null,
+      "previous_value": null,
+      "converted_previous_value": null,
+      "converted_currency": null,
+      "label": "33.900 €",
+      "previous_label": null
+     }
+    },
+    {
+     "key": "modelo",
+     "name": "Modelo",
+     "type": "select",
+     "value": {
+      "key": "id-4",
+      "label": "ID.4"
+     }
+    },
+    {
+     "key": "year",
+     "name": "Ano",
+     "type": "input",
+     "value": {
+      "key": "2024",
+      "label": "2024 "
+     }
+    },
+    {
+     "key": "first_registration_month",
+     "name": "Mês de Registo",
+     "type": "select",
+     "value": {
+      "key": "05",
+      "label": "Março"
+     }
+    },
+    {
+     "key": "quilometros",
+     "name": "Quilómetros",
+     "type": "input",
+     "value": {
+      "key": "18000",
+      "label": "18000 km"
+     }
+    },
+    {
+     "key": "combustivel",
+     "name": "Combustível",
+     "type": "select",
+     "value": {
+      "key": "electrico",
+      "label": "Eléctrico"
+     }
+    },
+    {
+     "key": "engine_power",
+     "name": "Potência",
+     "type": "input",
+     "value": {
+      "key": "204",
+      "label": "204 "
+     }
+    },
+    {
+     "key": "gearbox",
+     "name": "Tipo de Caixa",
+     "type": "select",
+     "value": {
+      "key": "automatic",
+      "label": "Automática"
+     }
+    },
+    {
+     "key": "body_type",
+     "name": "Segmento",
+     "type": "select",
+     "value": {
+      "key": "suv",
+      "label": "SUV/TT"
+     }
+    },
+    {
+     "key": "nr_seats",
+     "name": "Lugares",
+     "type": "select",
+     "value": {
+      "key": "5",
+      "label": "5"
+     }
+    },
+    {
+     "key": "portas",
+     "name": "Portas",
+     "type": "select",
+     "value": {
+      "key": "4-5",
+      "label": "4-5"
+     }
+    },
+    {
+     "key": "condicao",
+     "name": "Condição",
+     "type": "select",
+     "value": {
+      "key": "usado",
+      "label": "Usado"
+     }
+    },
+    {
+     "key": "origin",
+     "name": "Origem",
+     "type": "select",
+     "value": {
+      "key": "national",
+      "label": "Nacional"
+     }
+    }
+   ],
+   "key_params": [],
+   "business": true,
+   "user": {
+    "id": 5003,
+    "created": "2020-01-01T00:00:00+00:00",
+    "other_ads_enabled": true,
+    "name": "Synthetic Dealer",
+    "company_name": "Synthetic Dealer",
+    "uuid": "00000000-0000-4000-8000-000000000003"
+   },
+   "status": "active",
+   "contact": {
+    "name": "Synthetic",
+    "phone": false,
+    "chat": true,
+    "negotiation": true,
+    "courier": false
+   },
+   "location": {
+    "city": {
+     "id": 1,
+     "name": "Aveiro",
+     "normalized_name": "aveiro"
+    },
+    "region": {
+     "id": 2,
+     "name": "Aveiro",
+     "normalized_name": "aveiro"
+    }
+   },
+   "photos": [
+    {
+     "id": 1,
+     "filename": "a",
+     "rotation": 0,
+     "width": 1600,
+     "height": 1200,
+     "link": "https://img.example.invalid/olx/3a/image;s={width}x{height}"
+    },
+    {
+     "id": 2,
+     "filename": "b",
+     "rotation": 0,
+     "width": 1600,
+     "height": 1200,
+     "link": "https://img.example.invalid/olx/3b/image;s={width}x{height}"
+    }
+   ],
+   "partner": {
+    "code": "standvirtual"
+   },
+   "external_url": "https://www.standvirtual.com/carros/anuncio/synthetic-IDsynSV1.html",
+   "category": {
+    "id": 777,
+    "type": "automotive"
+   },
+   "offer_type": "offer",
+   "protect_phone": false
+  }
+ ],
+ "metadata": {
+  "total_elements": 3,
+  "visible_total_count": 3,
+  "promoted": [
+   0
+  ],
+  "search_id": "synthetic",
+  "source": {
+   "promoted": [
+    0
+   ],
+   "organic": [
+    1,
+    2
+   ]
+  }
+ },
+ "links": {
+  "self": {
+   "href": "https://www.olx.pt/api/v1/offers/?offset=0&limit=40&category_id=378"
+  },
+  "next": {
+   "href": "https://www.olx.pt/api/v1/offers/?offset=40&limit=40&category_id=378"
+  }
+ }
+}
