@@ -96,7 +96,9 @@ node_ok() {  # node_ok [NODE]: NODE (default: node on PATH) is >= 22.19
 }
 # Candidates are checked by version, not by name (a brew keg link can point at another Node).
 node_dirs() {  # bin dirs that may hold a Node: brew's node@22 keg (keg-only, not on PATH), nvm installs newest first
-  have brew && echo "$(brew --prefix node@22 2>/dev/null)/bin"
+  local keg
+  # the keg counts only if it really is Node 22 (an old opt/node@22 link can point at another major)
+  have brew && keg="$(brew --prefix node@22 2>/dev/null)/bin" && "$keg/node" -v 2>/dev/null | grep -q '^v22\.' && echo "$keg"
   ls -d "${NVM_DIR:-$HOME/.nvm}"/versions/node/v*/bin 2>/dev/null | sort -rV
 }
 find_node() { local d; while IFS= read -r d; do node_ok "$d/node" && { echo "$d"; return 0; }; done < <(node_dirs); return 1; }
