@@ -18,12 +18,19 @@ if [ -z "${_E2E_INNER:-}" ]; then
   W=$(cd "$W" && pwd -P)
   mkdir -p "$W/home" "$W/stubs" "$W/logs" "$W/state"
 
-  node_ok() { [ -x "$1/node" ] && [ "$("$1/node" -p 'process.versions.node.split(".")[0]')" -ge 22 ]; }
-  NODE_BIN=${E2E_NODE_BIN:-$REAL_HOME/.nvm/versions/node/v22.16.0/bin}
-  if ! node_ok "$NODE_BIN"; then
-    NODE_BIN=$(dirname "$(command -v node 2>/dev/null || echo /nonexistent/node)")
-    node_ok "$NODE_BIN" || { echo "e2e: needs Node 22+ (set E2E_NODE_BIN to its bin dir)" >&2; exit 2; }
-  fi
+  node_ok() {  # node_ok BINDIR: its node is >= 22.19 (web deps: undici 8)
+    local v; v=$("$1/node" -v 2>/dev/null | sed 's/^v//')
+    [ -n "$v" ] && [ "$(printf '%s\n' 22.19.0 "$v" | sort -V | head -1)" = 22.19.0 ]
+  }
+  # Node: E2E_NODE_BIN, else Homebrew's keg-only node@22, else the newest nvm Node, else node on PATH (each >= 22.19)
+  NODE_BIN=
+  cands=("${E2E_NODE_BIN:-}")
+  command -v brew >/dev/null && brew list --versions node@22 >/dev/null 2>&1 && cands+=("$(brew --prefix node@22)/bin")
+  for d in $(ls -d "$REAL_HOME"/.nvm/versions/node/v*/bin 2>/dev/null | sort -rV); do cands+=("$d"); done
+  command -v node >/dev/null && cands+=("$(dirname "$(command -v node)")")
+  for d in "${cands[@]}"; do [ -n "$d" ] && node_ok "$d" && { NODE_BIN=$d; break; }; done
+  [ -n "$NODE_BIN" ] || { echo "e2e: needs Node >= 22.19 (brew install node@22, or set E2E_NODE_BIN)" >&2; exit 2; }
+  [ -n "${E2E_NODE_BIN:-}" ] && [ "$NODE_BIN" != "$E2E_NODE_BIN" ] && { echo "e2e: E2E_NODE_BIN node is older than 22.19" >&2; exit 2; }
 
   # Guard stubs, first on PATH: the real Keychain and launchd writes are refused and logged (step "isolation" fails on any).
   cat >"$W/stubs/security" <<'SH'
@@ -188,7 +195,7 @@ step_home() {
   [ -z "${CLAUDE_CONFIG_DIR:-}" ] || die "CLAUDE_CONFIG_DIR leaked into the e2e env"
   case "$CH" in "$W"/*) ;; *) die "CARHUNT_HOME $CH is outside the work dir" ;; esac
   [ "$(command -v security)" = "$W/stubs/security" ] || die "security stub not first on PATH"
-  node -v | grep -q '^v2[2-9]\|^v[3-9][0-9]' || die "node $(node -v) on PATH; need 22+"
+  [ "$(printf '%s\n' 22.19.0 "$(node -v | sed 's/^v//')" | sort -V | head -1)" = 22.19.0 ] || die "node $(node -v) on PATH; need >= 22.19"
   # Baselines for the isolation step: real launchd labels and the real Claude settings.
   "$_E2E_REAL_LAUNCHCTL" list | awk '{print $3}' | grep '^carhunt\.' | sort >"$W/state/launchd.before" || true
   setstate REAL_SETTINGS_SUM "$(cksum_of "$REAL_HOME/.claude/settings.json")$(cksum_of "$_E2E_REAL_CLAUDE_DIR/settings.json")"

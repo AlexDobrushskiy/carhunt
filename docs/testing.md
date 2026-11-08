@@ -6,7 +6,7 @@
 |---|---|---|
 | Python (all modules) | `.venv/bin/pytest -p no:cacheprovider` (repo root; ~3 min) | `.venv` from `scripts/bootstrap`; Playwright Chromium (`.venv/bin/python -m playwright install chromium`, bootstrap does it) or the page-driving tests (contact `test_sites`, access) skip; Go for the real-cardb tests (conftest builds it) |
 | cardb (Go) | `cd cardb && go test ./...` (or `make -C cardb test`) | Go 1.26+ |
-| web (vitest) | `cd web && npm ci && npm test` | Node 22.12+ |
+| web (vitest) | `cd web && npm ci && npm test` | Node >= 22.19 (`brew install node@22`: keg-only, put `$(brew --prefix node@22)/bin` on `PATH`) |
 | web (Playwright) | `cd web && npm run e2e` | Go or `CARDB_BIN`; Chromium for Playwright (`npx playwright install chromium`) |
 | privacy | `scripts/privacy-check --all` | `CARHUNT_DENYLIST`, gitleaks |
 
@@ -37,7 +37,7 @@ E2E_KEEP_GOING=1 E2E_PATCH=/tmp/fix.diff tests/e2e/run.sh   # try an uncommitted
 | `E2E_KEEP_GOING` | `0` | `1` = run every step after a failure (later steps may fail as a consequence) |
 | `E2E_COMPOSE` | `0` | `1` = also build and run cardb with docker compose (own project, port and image names; removed after) |
 | `E2E_CACHES` | `warm` | share the Go/uv/npm/Playwright caches (a missing Chromium revision is downloaded into the real `~/Library/Caches/ms-playwright` once); `cold` = a true first-time machine (slow) |
-| `E2E_NODE_BIN` | `~/.nvm/versions/node/v22.16.0/bin` | Node 22+ bin dir (else the `node` on `PATH` if it is 22+) |
+| `E2E_NODE_BIN` | Homebrew `node@22` (keg-only), else the newest nvm Node, else `node` on `PATH` | bin dir of a Node >= 22.19 (web deps: undici 8) |
 | `E2E_TMP` | `/tmp` | base of the work dir: keep it short, since the agterm socket path must stay under 104 bytes |
 | `KEEP` | `0` | `1` = keep the work dir (clone, `HOME`, logs in `logs/`) |
 
