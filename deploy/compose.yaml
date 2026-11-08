@@ -22,7 +22,7 @@ services:
       context: ../cardb
       args:
         VERSION: ${CARDB_VERSION:-dev}
-    image: carhunt/cardb:local
+    image: ${CARHUNT_CARDB_IMAGE:-carhunt/cardb:local}   # overridable so a test stack never retags or removes yours
     mem_limit: 768m
     environment:
       CARDB_DATA_DIR: /data
@@ -30,7 +30,7 @@ services:
       CARDB_TOKENS_FILE: /data/tokens          # written by `cardb init` (name:sha256:<hex> lines; legacy name:token works)
       CARHUNT_CONFIG: /config/config.yaml      # owner/search/cardb sections → profile + users
     ports:
-      - "127.0.0.1:8484:8484"
+      - "127.0.0.1:${CARHUNT_CARDB_PORT:-8484}:8484"   # host port: CARHUNT_CARDB_PORT (a second stack, the e2e)
     volumes:
       - type: bind                             # SQLite (WAL) + photos/ + tokens: one dir = one backup path
         source: ${CARHUNT_HOME:?set CARHUNT_HOME}/cardb
@@ -50,7 +50,7 @@ services:
     <<: *hardened
     build:
       context: ../web                          # Dockerfile owned by the web module
-    image: carhunt/web:local
+    image: ${CARHUNT_WEB_IMAGE:-carhunt/web:local}
     mem_limit: 384m
     depends_on:
       cardb:
@@ -64,7 +64,7 @@ services:
     secrets:
       - cardb_web_tokens
     ports:
-      - "127.0.0.1:4321:4321"
+      - "127.0.0.1:${CARHUNT_WEB_PORT:-4321}:4321"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:4321/health >/dev/null || exit 1"]
       interval: 30s

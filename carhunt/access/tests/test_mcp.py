@@ -97,6 +97,20 @@ def test_hooks_matcher_and_server_mapping():
     assert mcp.browser_for_server("ch-lane-a") is None
 
 
+def test_hooks_command_runs_from_a_repo_path_with_spaces(tmp_path):
+    """The hook command goes through a shell: a repo under a path with spaces must still run pw-identity."""
+    import subprocess
+    repo = tmp_path / "My Projects" / "car hunt"
+    exe = repo / "browsers" / "bin" / "pw-identity"
+    exe.parent.mkdir(parents=True)
+    out = tmp_path / "args.txt"
+    exe.write_text(f'#!/bin/sh\necho "$@" > "{out}"\n')
+    exe.chmod(0o755)
+    cmd = mcp.render_hooks(repo=repo)["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
+    subprocess.run(cmd, shell=True, check=True)
+    assert out.read_text().strip() == "hook pre"
+
+
 def test_bad_name_prefix_refused(tmp_path, monkeypatch):
     _config(tmp_path, monkeypatch, "browsers:\n  mcp_name_prefix: 'x y'\n")
     with pytest.raises(ValueError):

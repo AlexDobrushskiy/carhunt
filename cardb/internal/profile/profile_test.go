@@ -26,11 +26,11 @@ func TestLoadEV(t *testing.T) {
 		t.Fatalf("defaults: %v %v", s.Powertrain, *s.Ranking.VATReserve.Pct)
 	}
 	// Untouched ranking keys keep the defaults; km_ref follows km_max.
-	if s.Ranking.Peers.YearEUR != 2000 || s.Ranking.Risk.NoVIN != 0.8 || s.Ranking.Fit.KmRef != 50000 || p.Owner.Home.Lat == nil {
+	if s.Ranking.Peers.YearEUR != 2000 || s.Ranking.Risk.NoVIN != 0.8 || s.Ranking.Fit.KmRef != 80000 || p.Owner.Home.Lat == nil {
 		t.Fatalf("ranking defaults: %+v", s.Ranking)
 	}
 	lines := p.HardFilterLines()
-	for _, want := range []string{"year ≥ 2023", "price ≤ 42 000 EUR", "not in PT-20 (Azores), PT-30 (Madeira), ES-CN (Canary Islands)",
+	for _, want := range []string{"year ≥ 2021", "price ≤ 40 000 EUR", "not in PT-20 (Azores), PT-30 (Madeira), ES-CN (Canary Islands)",
 		"PL/Baltic history: fact origin/import/history_report/other names none of PL LT LV EE", "lease transfer: not flagged lease_transfer"} {
 		if !slices.Contains(lines, want) {
 			t.Errorf("hard filter lines lack %q: %q", want, lines)

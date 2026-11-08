@@ -1,3 +1,4 @@
 # tests/e2e
 
-cross-module end-to-end tests on a clean HOME. Owner: integrator.
+`run.sh`: clean-clone + temp-HOME end-to-end (bootstrap → cardb → doctor → sweep → web → say/evidence/agent). Knobs,
+steps, expected warns: [`docs/testing.md`](../../docs/testing.md). Owner: integrator.

@@ -40,23 +40,23 @@ search:                       # buyer profile: cardb (queue, ranking) + discover
   exclude_places: []          # extra city words to exclude
   price:
     max_eur: 40000            # example; the only queue price filter (0 = none)
-    min_eur: 1500             # write-time floor: below = monthly rate / deposit, refused
+    min_eur: 1500             # the one price floor: discover drops below it, cardb refuses it (monthly rate / deposit)
     cap_eur: 2000000          # write-time ceiling: catches ×100 prices
     gross: true               # always compare gross (incl. VAT); net asks are converted
     currency: EUR
   year_min: 2021              # example (0 = off)
   km_max: 80000               # example (0 = off); also the fit km reference
   powertrain: [bev]           # example; bev phev hev mhev petrol diesel lpg cng hydrogen (empty = any)
-  # max_distance_km: 2500     # discover only: drop cars farther (road km); cardb warns on it until it knows the key
+  max_distance_km: 2500       # example; discover drops cars farther (road km; 0 = off)
   road_factor: 1.3            # great-circle → road km
   models:                     # example; first match wins; tier 1 = first to contact
     - {make: Volkswagen, model: ID.4, tier: 1}
     - {make: Skoda, model: Enyaq, tier: 1}
     - {make: Audi, model: Q4 e-tron, tier: 2}
     - {make: BMW, model: iX1, tier: 2}
-    - {make: Toyota, model: bZ4X, tier: 3, label: backup}
-    # fields: label, base_fit (0…2), risk (points), when: {power_hp: [min, max], drive: [rwd], variant_any: [pro],
-    #   variant_none: [gtx], year_min, year_max, battery_net_kwh: [min, max], fuel: [bev]}; discover also takes match: <regex>
+    - {make: Toyota, model: bZ4X, tier: 3, label: backup, match: 'bz ?4 ?x'}   # match: discover's regex on folded make/model/title (cardb ignores it)
+    # fields: label, base_fit (0…2), risk (points), match (regex), when: {power_hp: [min, max], drive: [rwd],
+    #   variant_any: [pro], variant_none: [gtx], year_min, year_max, battery_net_kwh: [min, max], fuel: [bev]}
   default_tier: 4             # tier for unmatched cars (0 = highest model tier + 1)
   queue_default_tiers: [1, 2, 3]   # tiers `cardb queue` shows by default
   tier_labels: {1: first to contact, 2: alternative, 3: backup}
@@ -81,6 +81,9 @@ search:                       # buyer profile: cardb (queue, ranking) + discover
   ranking:                    # peer pricing, landed cost, VAT reserve, fit and risk points: all keys + defaults in docs/db.md
     landed_cost:
       default_distance_km: {PT: 250, ES: 800, FR: 1500, other: 2000}   # example; country → km when a car has no distance
+
+web:
+  url: http://127.0.0.1:4321  # web UI (deploy/compose.yaml); `carhunt doctor` checks /health
 
 browsers:
   chrome_app: /Applications/Google Chrome.app
@@ -120,8 +123,10 @@ accounts:
 sites:
   enabled: [autoscout24, mobile.de, standvirtual.com, olx.pt, kleinanzeigen.de, leboncoin.fr, coches.net, wallapop.com, subito.it, marktplaats.nl]   # `carhunt site list`
   overrides: {}               # per-site tweaks on top of carhunt/sites/<pkg>/site.yaml:
-  #   mobile.de: {pace: {min_gap_s: 30}, country_ip: DE}
-  # keys: country_ip, route, tab_home, accept_language, proxy.sticky_minutes, pace.*, caps.*, liveness.*, account.*, geo
+  #   mobile.de: {pace: {min_gap_s: 30, max_loads_per_hour: 40}, caps: {phone_per_day: 3}, country_ip: DE}
+  # keys (names as in carhunt/sites/site.schema.json): country_ip, route, tab_home, accept_language, proxy.sticky_minutes,
+  #   pace.{min_gap_s, max_loads_per_run|hour|day, fresh_profile_every, api_min_gap_s, max_api_per_hour},
+  #   caps.<load|api|phone|send|login>_<per_day|per_hour|min_gap_s>, liveness.*, account.{verification, mail_from}, geo
 
 discover:
   windows: {morning: "07:00-09:00", afternoon: "14:00-16:00"}   # may not cross midnight; morning = sites without pace.read_after
@@ -130,13 +135,12 @@ discover:
   detail_tiers: [1, 2]        # tiers that get detail reads + gallery (null = all)
   max_photos: 40
   cursor: {coches.net: full}  # per-site strategy override: newest_id | first_seen | full
-  price_sanity: {min_eur: 1000, max_eur: 250000}
+  price_sanity: {max_eur: 250000}   # parse-error ceiling (×100 prices); the floor is search.price.min_eur
   thin: {min_photos: 8, min_info: 3}
   heuristics: [vag_meb]       # example; plug-ins in carhunt/discover/heuristics/ (null = all)
   distance: {geocoder: nominatim, router: null, user_agent: "carhunt/1.0 (you@example.com)"}   # geocoder none = offline
 
 contact:
-  variant: home               # home (private sellers, home market) | abroad (dealers abroad): picks the brief section
   quiet_hours: "01:30-08:10"  # owner tz: no sends at all
   opener_window: "09:30-21:30"   # seller-local: first messages only
   seller_hours:               # seller-local; nudges + channels with seller_hours: true

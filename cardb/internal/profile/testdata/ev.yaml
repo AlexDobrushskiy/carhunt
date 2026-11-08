@@ -1,5 +1,5 @@
 # EV worked example (tests): a buyer in Portugal after a used electric SUV, 286 hp RWD VAG first.
-# Mirrors config.example.yaml's owner/search sections plus the EV run's tier rules.
+# Owner, home and caps match config.example.yaml; the tier rules exercise the full profile schema (when, merge keys, must_have, penalties).
 owner:
   name: owner
   languages: [en, pt]
@@ -10,9 +10,9 @@ search:
   countries: [PT, ES, DE, FR, BE, NL, LU, IT]
   private_sellers_abroad: false
   exclude_regions: [PT-20, PT-30, ES-CN]
-  price: {max_eur: 42000, gross: true}
-  year_min: 2023
-  km_max: 50000
+  price: {max_eur: 40000, gross: true}
+  year_min: 2021
+  km_max: 80000
   powertrain: [bev]
   default_tier: 3
   queue_default_tiers: [1, 2]

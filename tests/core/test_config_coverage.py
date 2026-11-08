@@ -39,19 +39,22 @@ accounts.email accounts.sms.provider accounts.sms.api_key accounts.gmail.oauth_c
 accounts.gmail.plus_address
 sites.enabled sites.overrides.*.country_ip sites.overrides.*.route sites.overrides.*.tab_home
 sites.overrides.*.accept_language sites.overrides.*.proxy.sticky_minutes
-sites.overrides.*.pace.min_gap_s sites.overrides.*.pace.per_hour sites.overrides.*.pace.max_loads_per_run
-sites.overrides.*.pace.max_loads_per_hour sites.overrides.*.pace.fresh_profile_every
-sites.overrides.*.caps.load_per_day sites.overrides.*.caps.phone_per_day sites.overrides.*.caps.send_per_day
-sites.overrides.*.caps.login_per_day sites.overrides.*.caps.phone_per_hour sites.overrides.*.caps.send_min_gap_s
+sites.overrides.*.pace.min_gap_s sites.overrides.*.pace.max_loads_per_run sites.overrides.*.pace.max_loads_per_hour
+sites.overrides.*.pace.max_loads_per_day sites.overrides.*.pace.fresh_profile_every
+sites.overrides.*.pace.api_min_gap_s sites.overrides.*.pace.max_api_per_hour
 sites.overrides.*.liveness.supported sites.overrides.*.liveness.mode sites.overrides.*.liveness.gone_redirect
 sites.overrides.*.liveness.gone_text sites.overrides.*.liveness.gone_title sites.overrides.*.liveness.sold_text
 sites.overrides.*.liveness.proxy_country sites.overrides.*.account.verification sites.overrides.*.account.mail_from
+sites.overrides.*.account.note
+sites.overrides.*.caps.load_per_day sites.overrides.*.caps.api_per_day sites.overrides.*.caps.phone_per_day
+sites.overrides.*.caps.phone_per_session sites.overrides.*.caps.send_per_day sites.overrides.*.caps.login_per_day
+sites.overrides.*.caps.phone_per_hour sites.overrides.*.caps.send_min_gap_s
 sites.overrides.*.geo
 discover.windows.* discover.max_loads_per_site discover.max_pages discover.detail_tiers discover.max_photos
-discover.cursor.* discover.price_sanity.min_eur discover.price_sanity.max_eur discover.thin.min_photos
+discover.cursor.* discover.price_sanity.max_eur discover.thin.min_photos
 discover.thin.min_info discover.heuristics discover.distance.geocoder discover.distance.router
 discover.distance.user_agent
-contact.variant contact.quiet_hours contact.opener_window contact.seller_hours.*.* contact.blocked_statuses
+contact.quiet_hours contact.opener_window contact.seller_hours.*.* contact.blocked_statuses
 contact.duplicate_prefix contact.allow_unlisted contact.require_active_agent
 contact.limits.[].name contact.limits.[].channels contact.limits.[].kind contact.limits.[].per_channel
 contact.limits.[].min_gap_s contact.limits.[].per contact.limits.[].max contact.limits.[].reserve.role
@@ -69,6 +72,7 @@ contact.mailroute.domains contact.mailroute.never_touch contact.mailroute.freema
 contact.mailroute.deep_at contact.watch.channels contact.persona.aliases contact.persona.*
 contact.sites.*.selectors.box contact.sites.*.selectors.persona_fields
 vet.destination_country vet.max_open_asks
+web.url
 orchestrate.session_backend orchestrate.mailbox orchestrate.workspace orchestrate.agent_cli
 orchestrate.agent_args.claude orchestrate.agent_args.codex orchestrate.handover_ctx_pct orchestrate.cycle_minutes
 orchestrate.digest_strong_cars orchestrate.schedule.* orchestrate.schedule_commands.*
@@ -100,6 +104,8 @@ def _find(root: dict, node: dict, segs: list[str]) -> bool:
     if seg == "*":
         return isinstance(node.get("additionalProperties"), dict) and _find(root, node["additionalProperties"], rest)
     child = node.get("properties", {}).get(seg)
+    if child is None:
+        child = next((v for rx, v in node.get("patternProperties", {}).items() if re.search(rx, seg)), None)
     if child is None and isinstance(node.get("additionalProperties"), dict):
         child = node["additionalProperties"]  # a concrete key of a free-form map (discover.windows.morning)
     return child is not None and _find(root, child, rest)
@@ -154,7 +160,8 @@ def test_module_defaults_fit_the_schema():
 
     orch = {k: dict(v) for k, v in ORCH.items()}
     orch["notify"].pop("digests", None)  # dead key (nothing reads it; schedule.digest does the job)
-    data = {**orch, "owner": {**orch["owner"], "tz": "UTC"}, "contact": {**orch["contact"], **CONTACT},
+    contact = {k: v for k, v in CONTACT.items() if k != "variant"}  # dead: the role name sets {variant}
+    data = {**orch, "owner": {**orch["owner"], "tz": "UTC"}, "contact": {**orch["contact"], **contact},
             "browsers": browsers}
     assert config.validate(data) == []
 

@@ -67,7 +67,7 @@ func init() {
 		{"show", "CAR [--user U]", "full card: specs, seller, listings + price history, options, facts, verdict, notes, timeline, chat", cmdShow},
 		{"ls", "[filters] [--user U]", "list/filter cars (table; --json raw); --user = whose verdict to show/filter", cmdLs},
 		{"queue", "[--tier 1,2] [--tier 3] [--spec confirmed|unknown] [--user NAME] [--limit N] [--offset N]", "\"To rate\" queue: cars the user has not rated passing the profile's hard filters, by tier / deal / score", cmdQueue},
-		{"profile", "", "the server's buyer profile: tiers, hard filters, options wanted, weights", cmdProfile},
+		{"profile", "[check FILE]", "the server's buyer profile (check FILE: validate a config offline): tiers, hard filters, options wanted, weights", cmdProfile},
 		{"set", "CAR [--km N --fuel F …] [--red-flag-add T] [--clear FIELD] [--if-version N]", "update car fields (only given fields change)", cmdSet},
 		{"status", "CAR STATUS [--reason R] [--if-version N]", "set status: " + strings.Join(statusList(), " "), cmdStatus},
 		{"needs-owner", "CAR REASON | CAR --clear", "flag/unflag a car for the owner's attention", cmdNeedsOwner},
