@@ -2,12 +2,11 @@
 
 A site sender opens the ad (or conversation) in a browser tab from `carhunt.access.session.tab`,
 fills the message, submits, and confirms with the site's own success text per locale.
-Rules every sender keeps (EV run):
+Rules every sender keeps:
 - No URL in the text (base.check_text) — the site attaches the ad.
-- Duplicate guard: refuse if the text's first 60 chars are already in the thread (an opener
-  went out twice, 2026-11-01).
-- Success = the site's own confirmation marker, per locale; a guessed marker logged real sends
-  as FAILED (2026-11-04). No marker seen → `unknown`, never `delivered`.
+- Duplicate guard: refuse if the text's first 60 chars are already in the thread.
+- Success = the site's own confirmation marker, per locale (never a guessed one). No marker seen →
+  `unknown`, never `delivered`.
 - Already-contacted ad (no form, e.g. mobile.de) → reply inside the existing conversation.
 """
 from __future__ import annotations

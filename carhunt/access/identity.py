@@ -9,7 +9,7 @@ work at once, one per browser.
   identity-a …    $CARHUNT_HOME/browsers/profiles/identity-<x>  copies of the master (`seed`), one holder each
 
 Logins move between them by cookie sync. Google cookies never sync: Google logs out a session it sees in
-several profiles (10-21); a copy keeps its own Google login, if any.
+several profiles; a copy keeps its own Google login, if any.
   - a copy's Chrome closes → its cookies newer than the master's go into the master (or, while the master's
     Chrome runs, into a pending store applied right before the master's next launch);
   - a copy's Chrome launches → it first pulls the master's (+ pending) newer cookies.
@@ -21,7 +21,7 @@ was up), `script:<name>` (`acquire`: a script launching its own Chrome on the pr
 sign-in window), `seed:<x>`. A detached reaper closes an agent-held Chrome after `browsers.idle_release_s`
 (180 s) idle with no call in flight; the next call relaunches it on the same profile, cookies intact.
 Hold an identity browser for ONE step, then browser_close; never across a wait on the user (a parked
-master blocked two agents for >90 min, 11-01).
+browser blocks every other agent).
 
   pw-identity [-b <browser>] status            free | held by …; exit 1 if another session holds it
   pw-identity pool                             every identity browser + seed age
@@ -74,7 +74,7 @@ RESEED_HOURS = 24.0
 REPO = Path(__file__).resolve().parents[2]
 
 # Not copied by `seed`: locks of the source's Chrome, caches, the open-tab session, on-device models
-# (~4.4 GB on a master, 11-01: Chrome re-downloads them if it wants them).
+# (several GB; Chrome re-downloads them if it wants them).
 SEED_SKIP_TOP = {"SingletonLock", "SingletonCookie", "SingletonSocket", "GPUCache", "GrShaderCache",
                  "ShaderCache", "GPUPersistentCache", "GraphiteDawnCache", "component_crx_cache",
                  "extensions_crx_cache", "BrowserMetrics", "BrowserMetrics-spare.pma", "Crashpad",
@@ -554,7 +554,7 @@ class Pool:
         if os.environ.get("CARHUNT_IDENTITY_REAPER") == "0":    # tests drive reap_idle() instead
             return
         # Under the lease: a reaper decides to exit under the same lock, so a live pidfile here means that
-        # reaper will still see this new holder (no gap where neither watches; seen 11-01).
+        # reaper will still see this new holder (no gap where neither watches).
         with self.state(b) as st:
             pidfile = st.dir / "reaper"
             try:

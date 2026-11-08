@@ -4,7 +4,7 @@
     user, pw = creds.login("coches.net")       # use inside the script that types it; never print, log or snapshot
     creds.new("coches.net", "<YOUR_EMAIL>")     # generate + store a strong password (refuses to overwrite)
 
-Never print a credential, not even masked: a `grep` on a creds folder leaked ~12 passwords into a transcript (11-06).
+Never print a credential, not even masked (no `grep` on a creds folder: output lands in the transcript).
 Never snapshot/screenshot a sign-in page with the password typed.
 """
 from __future__ import annotations

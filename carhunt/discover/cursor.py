@@ -8,10 +8,10 @@ Strategies (config `discover.cursor.<site>`, else site.yaml `cursor`, else `firs
 - `full`: relevance-sorted lists (coches.net): no stop point — every page up to the query's page cap, every run.
 
 Rules:
-- Sponsored / out-of-filter cards never set or match a cursor — promoted rows violate filters (2026-11-04).
+- Sponsored / out-of-filter cards never set or match a cursor — promoted rows violate filters.
 - The cursor stop check runs before the "already in cardb" check, so an ingested cursor card still stops paging.
 - Commit only after a query finished without a block: a blocked run repeats from the old cursor next time.
-- Commit merges per query: a query that saw no eligible card keeps its old cursor (the old code replaced the dict).
+- Commit merges per query: a query that saw no eligible card keeps its old cursor.
 """
 from __future__ import annotations
 

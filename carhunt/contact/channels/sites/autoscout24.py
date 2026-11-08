@@ -1,11 +1,10 @@
 """AutoScout24 guest contact form (no login), every country domain.
 
-Status: working on .it (and other domains where the form still sends); refused on .de/.nl:
-there the form opened a second dialog and sent nothing (no copy mail, 0/5 replies, 2026-11-05)
-while dealer email from the dealer's own site got 7/10 replies in 2 h → use the email channel.
-`force=True` (opts) sends anyway. Route: lane (headless browser, no login; no wall triggered).
+Status: working on .it (and other domains where the form still sends); refused on .de/.nl, where
+the form sends nothing → email the dealer (email channel). `force=True` (opts) sends anyway.
+Route: lane (headless browser, no login).
 Success text differs per domain; only .it/.de are known. "afterlead" in the URL also means sent,
-but its absence does not mean failed (#115/#179 were logged FAILED though delivered, 2026-11-04).
+but its absence does not mean failed.
 Replies come by email (persona.email, the plus-address), so no thread reader.
 """
 from __future__ import annotations
@@ -33,7 +32,7 @@ class AutoScout24(ChatSite):
     open_form: ClassVar[tuple[Any, ...]] = (_OPEN,)
     form_css: ClassVar[str] = "[role=dialog]"
     box: ClassVar[str] = "[role=dialog] textarea"
-    # 2026-11-05: the dialog's last button became an empty close (×): click the named send button.
+    # The dialog's last button is an empty close (×): click the named send button.
     submit_names: ClassVar[tuple[Any, ...]] = (_SEND,)
     submit_css: ClassVar[str] = "button:not(:empty)"
     persona_fields: ClassVar[dict[str, str]] = {"input[type=text]": "name", "input[type=email]": "email"}
@@ -44,7 +43,7 @@ class AutoScout24(ChatSite):
     def send(self, to: str, text: str) -> SendResult:
         host = urlparse(self.normalize_to(to)).hostname or ""
         if not self.opts.get("force") and any(host.endswith(h) for h in self.broken_hosts):
-            return SendResult(False, error=f"{host} contact form sends nothing (2026-11-05): email the dealer instead",
+            return SendResult(False, error=f"{host} contact form sends nothing: email the dealer instead",
                               raw={"refused": "broken_form", "submitted": False})
         return super().send(to, text)
 

@@ -1,14 +1,14 @@
 """solve(page): detect the wall, run the matching handler, verify, log. Never notifies anyone.
 
-Rules (each one cost a block or a manual solve once):
-- Solve DataDome in plain-chrome, never in a Playwright-launched browser (MCP lane / identity MCP): the
-  correct slide there got "Access is temporarily restricted" (10-26). solve() refuses with `wrong-route`.
+Rules:
+- Solve DataDome in plain-chrome, never in a Playwright-launched browser (MCP lane / identity MCP): a
+  correct slide there still gets "Access is temporarily restricted". solve() refuses with `wrong-route`.
 - Never open a second browser on a site whose captcha is showing or was just solved: solve in the tab
-  that shows it and keep using that browser (the owner had to solve one twice, 10-26). After a solve,
+  that shows it and keep using that browser (a second browser = a second captcha). After a solve,
   close the tab with `plain-chrome close` so the new datadome/_abck cookie reaches the trust-cookie jar.
 - A datadome cookie in a profile does not prove a solve: only the page loading without the wall does.
 - At most `max_attempts` (2) tries per run and `site_budget` (6) per site per 6 h: every failed try
-  raises the site's bot score (~10 test hits/h got an IP flagged, 10-25).
+  raises the site's bot score.
 """
 from __future__ import annotations
 
@@ -189,7 +189,7 @@ def _challenge(ctx: Ctx, kind: str, f, shots: Path | None) -> dict:
     if kind == "hcaptcha":
         if not (ctx.cfg.hcaptcha_vlm and ctx.vlm):
             return {"method": "hcaptcha", "outcome": "unsupported",
-                    "notes": ["hCaptcha image task: VLM path is opt-in (browsers.captcha.hcaptcha_vlm, 0/3 measured)"]}
+                    "notes": ["hCaptcha image task: VLM path is opt-in (browsers.captcha.hcaptcha_vlm, unreliable)"]}
         from . import hcaptcha
         rep = hcaptcha.solve_challenge(ctx.page, ctx.mouse, f, shots, ok, vlm=ctx.vlm)
         rep["method"] = "hcaptcha-vlm"
@@ -361,7 +361,7 @@ def solve(page, *, route: str = "plain", input: str = "cdp", port: int | None = 
                       **{k: v for k, v in info.detail.items() if k != "box"})
     if info.kind == "hcaptcha" and info.detail.get("stage") == "image-challenge" and not cfg.hcaptcha_vlm:
         log.record(site, url, info.kind, input, "-", "unsupported", time.time() - t0, 0)
-        return finish("unsupported", "hCaptcha image task: not solved locally (opt-in browsers.captcha.hcaptcha_vlm; 0/3 measured)")
+        return finish("unsupported", "hCaptcha image task: not solved locally (opt-in browsers.captcha.hcaptcha_vlm)")
     handler = HANDLERS.get(info.kind)
     if handler is None:
         return finish("unknown-type", f"no handler for {info.kind}")

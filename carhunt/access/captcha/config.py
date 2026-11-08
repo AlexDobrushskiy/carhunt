@@ -11,9 +11,9 @@ from carhunt.access import _core
 class CaptchaConfig:
     enabled: bool = False                 # opt-in: solving raises a site's bot score if misused
     ollama_url: str = "http://127.0.0.1:11434"
-    model: str = "qwen3.5:4b"             # 23/25 hand-labelled reCAPTCHA grids, ~0.5 s/tile, 3.3 GB (10-27)
+    model: str = "qwen3.5:4b"             # ~0.5 s/tile, 3.3 GB
     owlv2: bool = False                   # 4x4 grids via OWLv2 boxes (torch + transformers, ~0.6 GB weights)
-    hcaptcha_vlm: bool = False            # hCaptcha canvas tasks via VLM points: 0/3 measured, off by default
+    hcaptcha_vlm: bool = False            # hCaptcha canvas tasks via VLM points (unreliable)
     max_attempts: int = 2                 # per run: every failed try raises the site's bot score
     site_budget: int = 6                  # attempts per site per window …
     site_window_h: float = 6.0            # … refuses beyond this (`--force` overrides)

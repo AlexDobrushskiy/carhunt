@@ -1,10 +1,8 @@
 """reCAPTCHA v2 image challenge (bframe): 3x3 static/dynamic grids and 4x4 "squares".
 
 One call = one challenge attempt, which may span several rounds (Google often asks 2-4 grids).
-10-27: 19/19 runs got a token (lane 14/14, plain-chrome 4/4); 33 grids shown, 19 accepted, 10 "please
-try again", 4 extra rounds. ~25 s per round, ~2 min worst case.
-The audio path is gone on purpose: whisper transcribed fine, but Google answered "automated queries" in
-lanes and closed the popup after every answer in plain-chrome (0/5, 10-27).
+~25 s per round, ~2 min worst case.
+No audio path: Google answers audio solves with "automated queries" or closes the popup.
 """
 from __future__ import annotations
 

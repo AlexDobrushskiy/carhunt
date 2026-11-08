@@ -1,6 +1,6 @@
 """Agent state.json: read/write under a lock, schema-checked, plus the handover protocol.
 
-Handover (EV-run rules, each learned the hard way):
+Handover:
 1. The old agent writes handover_notes — unanswered inbound replies listed explicitly — and
    spawns its successor with the same brief (`carhunt state handover`).
 2. The successor rebuilds state from files, then `carhunt state takeover`: it becomes
@@ -175,8 +175,8 @@ def handover(role: str, notes: Mapping, *, me: str | None, backend: Backend,
     """Write notes, spawn the successor with the same brief. Returns the successor's session id."""
     missing = [k for k in ("unanswered_inbound",) if k not in notes]
     if missing:
-        raise StateError("handover notes must list unanswered_inbound explicitly ([] if none): a seller "
-                         "reply sat 31 h after a handover that forgot it (EV run 11-06)")
+        raise StateError("handover notes must list unanswered_inbound explicitly ([] if none): an unlisted "
+                         "seller reply goes unanswered after the handover")
     unknown = [k for k in notes if k not in HANDOVER_KEYS and k != "other"]
     if unknown:
         raise StateError(f"unknown handover_notes keys {unknown}; use {list(HANDOVER_KEYS)} or 'other'")

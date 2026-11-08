@@ -1,8 +1,7 @@
-"""Push policy, enforced in code (design D6).
+"""Push policy, enforced in code.
 
-Why: in the EV run 28 messages reached the owner's phone in one day and 14 asked nothing (FYI, "sent",
-heartbeats). Only three kinds exist: `digest` (scheduled summary), `ask` (a decision that blocks progress
-today; buttons or a free answer), `urgent` (a breach or a dead session the agent could not fix itself).
+Only three kinds exist: `digest` (scheduled summary), `ask` (a decision that blocks progress today; buttons
+or a free answer), `urgent` (a breach or a dead session the agent could not fix itself). No FYI pushes.
 """
 from __future__ import annotations
 
@@ -13,7 +12,7 @@ KINDS = ("digest", "ask", "urgent")
 QUIET_DEFAULT = {"digest": "hold", "ask": "hold", "urgent": "silent"}
 MAX_BUTTONS = 8
 
-# Why: a hub DB once stored a site password sent in a ping (EV run, 11-06). Never put secrets in pings.
+# Pings are stored by the push hub: never put secrets in them.
 _SECRET_SHAPES = re.compile(
     r"\b\d{8,10}:[A-Za-z0-9_-]{35}\b|sk-ant-[A-Za-z0-9_-]{20,}|\bsk-(?:proj-)?[A-Za-z0-9_-]{32,}"
     r"|\b(?:ghp|gho|ghs|ghu|ghr)_[A-Za-z0-9]{30,}|\bAKIA[0-9A-Z]{16}\b|-----BEGIN [A-Z ]*PRIVATE KEY-----"

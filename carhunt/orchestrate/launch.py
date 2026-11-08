@@ -135,10 +135,7 @@ def compose(role: str, config: Mapping, name: str, *, body_path: Path | None = N
 
 
 def guard_settings() -> list[str]:
-    """`--settings <agent settings>` carrying the guard hooks; refuse to start an unguarded claude agent.
-
-    Why: the secret guard exists because prose rules failed (a masked dump leaked passwords, 11-06).
-    """
+    """`--settings <agent settings>` carrying the guard hooks; refuse to start an unguarded claude agent."""
     from . import hooks
     agent = hooks.settings_path()
     for f, flag in ((agent, ["--settings", str(agent)]), (hooks.user_settings_path(), [])):

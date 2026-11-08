@@ -68,7 +68,7 @@ class CDPMouse(Mouse):
 
 class MacMouse(Mouse):
     """Native AppKit mouse events posted to the browser process (CGEventPostToPid). The global cursor never
-    moves. Measured 2026-10-26: Chrome accepts press / drag / release this way (isTrusted, same event
+    moves. Chrome accepts press / drag / release this way (isTrusted, same event
     fields as a real mouse), but drops plain hover moves to a window that isn't key; those go via CDP.
     The window must be on a screen (macOS clamps plain-chrome's -3000 position to x=0 anyway)."""
     name = "macos"

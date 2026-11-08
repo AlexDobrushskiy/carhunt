@@ -12,7 +12,7 @@ import (
 
 // Price sanity on write. A price that looks ×100 (cents), like a monthly/lease rate, or net of VAT is refused
 // (422 with a reason) unless the writer sends force; a forced price is stored with price_flags on the listing and a
-// price_sanity_override event. WHY: 10 prices were stored ×100 in one run, and lease / net prices skewed rankings.
+// price_sanity_override event.
 // Bounds come from the profile (search.price.min_eur / cap_eur / max_eur); nothing buyer-specific lives here.
 
 const (

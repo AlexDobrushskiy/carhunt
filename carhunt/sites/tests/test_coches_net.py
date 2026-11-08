@@ -114,7 +114,7 @@ def test_search_falls_back_to_page_route_without_es_proxy():
 
 def test_page_budget_two_per_hour_shared_ledger(monkeypatch):
     """Real Net + pace ledger, no ES proxy (page route): the 3rd page load in an hour is refused, also when another
-    agent's plugin instance asks — the budget belongs to the IP, not to one run (11-03)."""
+    agent's plugin instance asks — the budget belongs to the IP, not to one run."""
     html = fixture(__file__, "coches_net/search.html")
     monkeypatch.setattr(_net, "http", lambda url, **kw: Response(200, url, html))
     home = Path(os.environ["CARHUNT_HOME"])

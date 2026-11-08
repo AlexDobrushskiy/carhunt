@@ -55,7 +55,7 @@ def tokens(advert: dict) -> tuple[list[str], str | None]:
 
 def phone_keys(advert: dict) -> list[str]:
     s = advert.get("seller") or {}
-    return [str(k) for k in (s.get("uuid"), s.get("standId")) if k]   # dealer stands key on standId (11-03)
+    return [str(k) for k in (s.get("uuid"), s.get("standId")) if k]   # dealer stands key on standId
 
 
 def decode_fields(advert: dict, salt: str | None) -> tuple[list[str], str | None, dict[str, Any]]:

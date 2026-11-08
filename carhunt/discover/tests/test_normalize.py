@@ -1,4 +1,4 @@
-"""normalize: synthetic ads in 6 languages + the EV-run regression cases (values synthetic)."""
+"""normalize: synthetic ads in 6 languages + regression cases (values synthetic)."""
 import pytest
 
 from carhunt.discover import normalize as n

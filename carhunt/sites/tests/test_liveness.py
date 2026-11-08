@@ -1,4 +1,4 @@
-"""Liveness: classifier (cases measured on real ads 11-04, synthetic URLs) and the cardb-writing runner."""
+"""Liveness: classifier (cases from real ads, synthetic URLs) and the cardb-writing runner."""
 import pytest
 
 from carhunt.sites import base, liveness

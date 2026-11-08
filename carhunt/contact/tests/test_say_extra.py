@@ -14,7 +14,7 @@ OPEN = ["--channel", "whatsapp", "--car", "A9", "--to", PT_NUM, "--text", "Olá,
 
 
 def test_lock_prevents_two_concurrent_openers(tree):
-    """EV bug: two openers 4 s apart (2026-11-04). Two processes race; exactly one may send."""
+    """Two processes race; exactly one may send."""
     tree.stub.cars["B1"] = car(PT2)
     tree.write()
     a = tree.popen(*OPEN, FAKE_WACLI_SEND_DELAY="1.5")
@@ -126,7 +126,7 @@ def test_failed_send_exit_11_and_not_counted(tree):
     tree.stub.cars["B1"] = car(PT2)
     code, out = tree.run("--channel", "whatsapp", "--car", "B1", "--to", PT2, "--text", "Olá, ainda está disponível?",
                          "--opener")
-    assert code == 0, out  # a failed attempt doesn't stamp spacing (EV 2026-11-03)
+    assert code == 0, out  # a failed attempt doesn't stamp spacing
 
 
 def test_cardb_down_never_blocks_then_reconcile(tree):

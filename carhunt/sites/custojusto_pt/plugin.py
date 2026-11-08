@@ -137,5 +137,5 @@ class Plugin(BaseSite):
     def phone(self, ad: RawAd, *, reveal: bool = False) -> list[str]:
         if ad.phones or not reveal:
             return list(ad.phones)
-        raise Unsupported(f"{self.id}: phone POST /api/ad/phone 403s even from the ad page (11-04…11-06); "
+        raise Unsupported(f"{self.id}: phone POST /api/ad/phone 403s even from the ad page; "
                           "contact the seller through the site's form (contact module)")

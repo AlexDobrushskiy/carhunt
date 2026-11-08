@@ -1,8 +1,7 @@
 """subito.it: "Contatta" on the ad, or a reply inside an existing chat thread.
 
-Status: working (2026-11-02..04). Route: identity (Google + password login on the identity
-profile; SMS-verified 2026-11-02). A removed ad keeps its thread: reply inside it with the
-conversation URL from areariservata.subito.it/messaggi (#158 delivered 2026-11-04 with the ad gone).
+Route: identity (Google + password login on the identity profile). A removed ad keeps its
+thread: reply inside it with the conversation URL from areariservata.subito.it/messaggi.
 Success: the text shows in the chat with the box cleared (the sender's only reliable signal).
 Poll: the inbox list at areariservata (www.subito.it/messaggi is an error page).
 """

@@ -1,10 +1,8 @@
 """Image-grid captchas ("select all images / squares with X"): which tiles show the target?
 
-Measured 10-27 on 25 hand-labelled Google grids (a grid counts only if every chosen tile is right):
-  3x3 (9 separate photos): local VLM yes/no per tile -> 16/17
-  4x4 (one photo cut in squares): OWLv2 open-vocabulary boxes, tiles = box overlap -> 7/8
-  dropped: SigLIP per tile 11/25, whole grid to a VLM <=12/25
-Without OWLv2 (config owlv2: false) 4x4 falls back to the VLM per square (not benchmarked).
+  3x3 (9 separate photos): local VLM yes/no per tile
+  4x4 (one photo cut in squares): OWLv2 open-vocabulary boxes, tiles = box overlap
+Without OWLv2 (config owlv2: false) 4x4 falls back to the VLM per square.
 Tile indices are row-major, 0-based.
 """
 from __future__ import annotations

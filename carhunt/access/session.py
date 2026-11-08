@@ -15,14 +15,14 @@ The http route has goto/content/html/fetch/url/wait_for_timeout only.
 
 Routes (pick the lowest that works; move up after ONE blocked hit — every blocked hit raises the bot score):
   http          urllib (curl_cffi Chrome impersonation when installed). Most sites ship full data in
-                __NEXT_DATA__/RSC/JSON APIs: one request instead of ~50 (11-01).
+                __NEXT_DATA__/RSC/JSON APIs: one request instead of ~50.
   lane          Agent Chrome headless on a temp profile, Playwright over CDP, real-Chrome UA (no "HeadlessChrome").
   plain-chrome  Chrome launched like a person, attach after the first load (Akamai/DataDome catch
-                Playwright-launched browsers, 10-25). `country` → the geo lease for that country.
+                Playwright-launched browsers). `country` → the geo lease for that country.
   identity      plain-chrome on a free identity-pool copy (logged in); released on exit. Hold it for ONE step.
   camoufox      optional anti-detect Firefox.
 When `site` is given: pace.acquire(site, "load") before every request; 403/429/challenge pages raise Blocked;
-404/410 are NOT blocks, they mean "ad gone" (11-05).
+404/410 are NOT blocks, they mean "ad gone".
 """
 from __future__ import annotations
 
@@ -79,7 +79,7 @@ _VENDOR = [
 
 
 def detect_block(status: int, text: str = "", headers: dict | None = None) -> str | None:
-    """Bot-wall signature for a response, or None. 404/410 = ad gone, never a block (11-05)."""
+    """Bot-wall signature for a response, or None. 404/410 = ad gone, never a block."""
     if status in (404, 410):
         return None
     h = {str(k).lower(): str(v) for k, v in (headers or {}).items()}
@@ -308,7 +308,7 @@ class BrowserTab(Tab):
 
     def fetch(self, url: str, *, method: str = "GET", headers: dict | None = None, body: str | bytes | None = None,
               paced: bool = True) -> FetchResult:
-        """In-page fetch (the site's own JSON API from inside a real tab: olx.pt 403s any plain HTTP, 11-01)."""
+        """In-page fetch (the site's own JSON API from inside a real tab: olx.pt 403s any plain HTTP)."""
         if self.page is None:
             raise RuntimeError("goto() first: in-page fetch needs a loaded page of the site")
         if paced:
@@ -351,7 +351,7 @@ def _wait_debug(port: int, proc: subprocess.Popen, timeout: float = 30) -> None:
 
 def real_chrome_identity(page: Any) -> None:
     """Send what headed Chrome sends: UA without "HeadlessChrome" plus matching client hints, via CDP.
-    Playwright's user_agent derives wrong hints and Chrome's --user-agent blanks them (10-14)."""
+    Playwright's user_agent derives wrong hints and Chrome's --user-agent blanks them."""
     cdp = page.context.new_cdp_session(page)
     ua = cdp.send("Browser.getVersion")["userAgent"].replace("HeadlessChrome/", "Chrome/")
     url = "https://ua-probe.invalid/"  # userAgentData needs a secure context: a fulfilled https page, no network
@@ -430,8 +430,8 @@ def _open_camoufox(t: BrowserTab, stack: contextlib.ExitStack, proxy_url: str | 
         raise RuntimeError("camoufox not installed: uv pip install --python .venv/bin/python 'camoufox[geoip]' "
                            "&& .venv/bin/python -m camoufox fetch") from None
     import urllib.parse
-    # os=macos: a random Windows identity turns on canvas noise (11-03). main_world_eval: an "mw:"-prefixed
-    # evaluate runs in the page's own JS world (coches.net's XHR timeout patch must reach the site's code, 11-03).
+    # os=macos: a random Windows identity turns on canvas noise. main_world_eval: an "mw:"-prefixed
+    # evaluate runs in the page's own JS world (coches.net's XHR timeout patch must reach the site's code).
     kw: dict[str, Any] = {"headless": True, "os": "macos", "main_world_eval": True}
     if proxy_url:
         u = urllib.parse.urlsplit(proxy_url)
@@ -440,7 +440,7 @@ def _open_camoufox(t: BrowserTab, stack: contextlib.ExitStack, proxy_url: str | 
                        "password": urllib.parse.unquote(u.password or "")}
     if country:
         from carhunt.access import geo
-        kw["locale"] = geo.locale_for(country)[1]  # set explicitly: geoip alone produced "es-PT" (11-03)
+        kw["locale"] = geo.locale_for(country)[1]  # set explicitly: geoip alone produces "es-PT"
     browser = stack.enter_context(Camoufox(**kw))
     t.page = browser.new_page()
 
@@ -452,13 +452,13 @@ def tab(route: str, *, country: str | None = None, site: str | None = None,
 
     country → residential exit in that country, verified (fail closed) before the first site request:
     http/lane/camoufox use the proxy directly; plain-chrome uses the country's geo lease; identity refuses.
-    fresh → throwaway browser profile (Akamai counts bursts per profile, mobile.de 11-04). Lane, camoufox and http
+    fresh → throwaway browser profile (Akamai counts bursts per profile, e.g. mobile.de). Lane, camoufox and http
     are fresh anyway; identity and geo profiles are persistent by design, so fresh refuses there.
     """
     if route not in ROUTES:
         raise ValueError(f"route must be one of {ROUTES}, got {route!r}")
     if country and route == "identity":
-        # identity profiles live on the home IP; a foreign-IP login there would mix IPs on one account (11-02)
+        # identity profiles live on the home IP; a foreign-IP login there would mix IPs on one account
         raise ValueError("identity + country is not allowed: use route plain-chrome with country (geo lease)")
     if fresh and (route == "identity" or (route == "plain-chrome" and (country or profile))):
         raise ValueError("fresh=True needs a route whose profile is throwaway (plain-chrome without country/profile, "

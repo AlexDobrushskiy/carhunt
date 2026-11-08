@@ -1,14 +1,12 @@
 """The sweep: enabled sites, one at a time → search → cursor → scope → detail read → normalize → cardb.
 
-Rules (EV run):
-- Serial: one site at a time, one sweep per machine (lock `sweep`) — parallel workers on one IP got sites banned and
-  killed each other's searches (2026-11-03).
-- Sends before reads: a site with `pace.read_after` (sellers are messaged there) is read only after that local time;
-  morning discovery reads 403'd the IP used for messaging (leboncoin 2026-11-05, mobile.de 2026-11-06).
-- Per-site load budget = min(site.yaml `pace.max_loads_per_run`, `discover.max_loads_per_site`, default 60): the home
-  IP got a 403 on mobile.de after 41 sweep loads (2026-11-06).
+Rules:
+- Serial: one site at a time, one sweep per machine (lock `sweep`) — parallel workers on one IP get sites banned.
+- Sends before reads: a site with `pace.read_after` (sellers are messaged there) is read only after that local time,
+  so discovery reads don't get the messaging IP blocked.
+- Per-site load budget = min(site.yaml `pace.max_loads_per_run`, `discover.max_loads_per_site`, default 60).
 - Stop a site at its first block (`Blocked`), record the signature, go on with the next site; an ad that is gone
-  (`Gone`, 404/410) is skipped, never a block — two runs stopped on a 410 and left 200 ads undone (2026-11-04/05).
+  (`Gone`, 404/410) is skipped, never a block.
 - Focus families (tiers in `discover.detail_tiers`) get a detail read + full gallery; the rest are card-only:
   market picture without spending the load budget.
 - Scope prefilter on the search card before any detail load; every drop is logged with its reason.

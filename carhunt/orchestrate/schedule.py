@@ -1,7 +1,7 @@
 """`carhunt schedule install|uninstall|show`: launchd jobs from `orchestrate.schedule`.
 
-The day runs on launchd, not on the overseer's loop: one blocking permission prompt in the
-overseer stalled sweep, unpause and digest for a whole morning (EV run 11-04).
+The day runs on launchd, not on the overseer's loop: a blocking prompt in the overseer must not
+stall sweep, unpause and digest.
 """
 from __future__ import annotations
 

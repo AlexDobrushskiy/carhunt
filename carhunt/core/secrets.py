@@ -1,7 +1,6 @@
 """Secrets by name. Lookup: env CARHUNT_SECRET_<NAME> -> configured backend (keychain | op | file).
 
 Nothing here prints a value: callers get it as a return value and pass it on (an HTTP header, a child env).
-Why: in the EV run a masked `grep` on a creds folder put ~12 passwords into a transcript (2026-11-06).
 """
 from __future__ import annotations
 

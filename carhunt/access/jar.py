@@ -1,6 +1,6 @@
 """Trust-cookie jar: bot-check cookies (DataDome, Akamai, Cloudflare, Imperva, PerimeterX…) shared between profiles.
 
-A captcha solved in one browser carries to the others (the owner had to solve the same site twice, 10-26).
+A captcha solved in one browser carries to the others, so a site is never solved twice.
 Only bot-check cookies move, never logins. The jar is a Chrome `Cookies` SQLite DB at `settings.jar_path`
 holding Chrome's encrypted values; every profile we launch uses `--use-mock-keychain --password-store=basic`,
 so all share one fixed key and the encrypted values are portable.
@@ -8,8 +8,8 @@ so all share one fixed key and the encrypted values are portable.
     export_from(profile)   profile → jar (after its Chrome closed cleanly)
     import_into(profile)   jar → profile (before its Chrome starts)
     get(domain, name)      decrypted value for plain-HTTP helpers; never log it
-    delete(domain, name)   drop a poisoned cookie (a banned datadome cookie in the jar kept every browser
-                           blocked on leboncoin until deleted, 11-01; test with --fresh first)
+    delete(domain, name)   drop a poisoned cookie (a banned datadome cookie keeps every browser blocked
+                           on that site; test with --fresh first)
 """
 from __future__ import annotations
 
@@ -39,7 +39,7 @@ def jar_path() -> Path:
 
 
 def cookie_db(profile: Path | str) -> Path:
-    """The profile's Cookies DB: Default/Cookies on macOS/Linux (Chrome 156 measured), Default/Network/ on Windows."""
+    """The profile's Cookies DB: Default/Cookies on macOS/Linux, Default/Network/ on Windows."""
     d = Path(profile) / "Default"
     for p in (d / "Cookies", d / "Network" / "Cookies"):
         if p.exists():

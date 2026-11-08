@@ -1,6 +1,5 @@
 """`carhunt say`: the only way a message leaves. One flock around guard → send → verify → ledger,
-then cardb (never blocks the send). EV bug this fixes: two openers went out 4 s apart because
-the old guard read the log, sent, then appended without a lock (2026-11-04).
+then cardb (never blocks the send). The lock keeps two concurrent sends from both passing the guard.
 """
 from __future__ import annotations
 
@@ -38,7 +37,7 @@ class Outcome:
 
 def caller_problem(s: dict[str, Any]) -> str | None:
     """A launched agent (role set) must still be its role's active agent: background chains from a
-    session that was handed over get refused (EV: chains kept sending after a handover, 2026-11-06)."""
+    session that was handed over get refused."""
     role = os.environ.get("CARHUNT_AGENT") or os.environ.get("CARDB_AUTHOR")
     if not s["require_active_agent"] or not role:
         return None

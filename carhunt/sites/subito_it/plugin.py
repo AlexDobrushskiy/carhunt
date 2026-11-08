@@ -19,7 +19,7 @@ IMG_RULE = "?rule=gallery-desktop-1x-auto"
 
 
 def it_phone(raw: str) -> str:
-    """Subito returns national numbers ("0399…", "347…"): E.164 needs +39 (stored without it 11-04)."""
+    """Subito returns national numbers ("0399…", "347…"): E.164 needs +39."""
     d = re.sub(r"\D", "", raw)
     if raw.strip().startswith("+"):
         return "+" + d
@@ -135,7 +135,7 @@ class Plugin(BaseSite):
         ad = json.JSONDecoder().raw_decode(stream, i)[0]["ad"]
         body = ad.get("body")
         if isinstance(body, str) and re.fullmatch(r"\$[0-9a-fA-F]+", body):
-            ad["body"] = flight_ref_text(stream, body)   # long texts: an RSC text record, not the "$4a" pointer (11-06)
+            ad["body"] = flight_ref_text(stream, body)   # long texts: an RSC text record, not the "$4a" pointer
         c = self.card(ad)
         f, adv, geo = feats(ad), ad.get("advertiser") or {}, ad.get("geo") or {}
         hp = re.search(r"(\d+)\s*(?:CV|PS|hp)", str((f.get("/power") or {}).get("value") or ""), re.I)

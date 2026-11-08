@@ -1,12 +1,10 @@
 """coches.net: "Contactar" form on the ad.
 
-Status: working only on this route: Camoufox (stealth Firefox) on a Spanish residential IP
-(country ES); 5/5 sends on 2026-11-03. Imperva blocks the contact API from non-ES IPs for every
-client (Playwright, raw CDP, curl_cffi, anti-detect browsers, 2026-11-02), and a Playwright-attached
-Chromium flags the IP for hours: never open coches.net in a lane/identity Playwright tab.
+Route: Camoufox (stealth Firefox) on a Spanish residential IP (country ES) only. Imperva blocks
+the contact API from non-ES IPs for any client, and a Playwright-attached Chromium flags the IP for
+hours: never open coches.net in a lane/identity Playwright tab.
 Success = the site's own answer to POST …/contact-mail: 2xx sent, 403 Imperva (nothing delivered),
-no answer → unknown (a "not sent" arrived anyway, #109 2026-11-03: check the relay mail before any
-re-send). Seller replies arrive as Gmail relay mail (times CET, match by ad id): no thread reader.
+no answer → unknown (it may have arrived: check the relay mail before any re-send). Seller replies arrive as Gmail relay mail (times CET, match by ad id): no thread reader.
 """
 from __future__ import annotations
 
@@ -18,7 +16,7 @@ from ..base import SendResult
 from ._chat import Abort, ChatSite
 
 FORM = 'form[aria-label="contact form"]'
-# The app aborts XHRs after 10 s; the contact POST takes longer through the proxy (2026-11-03).
+# The app aborts XHRs after 10 s; the contact POST takes longer through the proxy.
 # "mw:" runs it in the page's main world under Camoufox; elsewhere it is a harmless JS label.
 NO_XHR_TIMEOUT = ("mw:(()=>{const P=XMLHttpRequest.prototype; if(P.__noTO) return; Object.defineProperty(P,'timeout',"
                   "{configurable:true,get(){return 0},set(v){}}); P.__noTO=1;})()")
@@ -46,7 +44,7 @@ class Coches(ChatSite):
         return page
 
     def fill(self, page: Any, box: Any, text: str) -> None:
-        # Never press Enter: a typed line break resets the form and the click sends nothing (2026-11-03).
+        # Never press Enter: a typed line break resets the form and the click sends nothing.
         box.scroll_into_view_if_needed()
         box.click()
         lines = text.split("\n")

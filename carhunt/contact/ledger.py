@@ -2,7 +2,6 @@
 
 Every row is a send attempt (status sent|failed|unknown). Guards read it for spacing, caps and
 duplicates; `carhunt ledger reconcile` re-posts rows to cardb (idempotent on the row id).
-Why one ledger: the EV run had two (sends.log + prose log.md) and the guards disagreed.
 """
 from __future__ import annotations
 
@@ -39,8 +38,7 @@ class Entry:
 
     @property
     def counts(self) -> bool:
-        """Sent or possibly sent: counts for spacing, caps and duplicates. A failed attempt doesn't
-        (EV: a failed send stamped a false 20-min block, 2026-11-03)."""
+        """Sent or possibly sent: counts for spacing, caps and duplicates. A failed attempt doesn't."""
         return self.status in (SENT, UNKNOWN)
 
     @property

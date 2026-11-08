@@ -1,6 +1,5 @@
 """The thin-ad rule + the ask list, one rule for every site and agent.
 
-Why one rule: each country agent had its own cut-off and almost every dealer ad came out "thin" (2026-11-03).
 Thin = fewer than `min_photos` photos, or fewer than `min_info` of {owners, accident-free, service history, battery
 SoH, a wanted option stated}. Discover cannot look at photos, so interior / odometer-photo coverage is never claimed:
 it is always in the ask list until a photo review (vet) clears it.

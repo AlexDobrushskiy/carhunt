@@ -107,7 +107,7 @@ def ports(mode: str, s: _settings.Settings | None = None) -> dict[str, str]:
     out.mkdir(parents=True, exist_ok=True)
     if profile:
         Path(profile).mkdir(parents=True, exist_ok=True)
-    # The debug port lets the captcha solver attach to the tab an agent opened through MCP (10-27).
+    # The debug port lets the captcha solver attach to the tab an agent opened through MCP.
     cfg = {"browser": {"launchOptions": {"args": [f"--remote-debugging-port={debug_port}"]}}}
     cfg_path = s.dir("mcp-config") / f"{mode}.json"
     cfg_path.write_text(json.dumps(cfg, indent=2) + "\n")

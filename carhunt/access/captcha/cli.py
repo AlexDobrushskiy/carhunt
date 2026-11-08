@@ -11,7 +11,7 @@
 
 Routes attach to an already-open tab over its debug port (ports from config `browsers.ports`).
 DataDome: solve in plain-chrome (`plain-chrome open URL`, then `solve --plain --url …`), never in a lane
-(correct slide there → "Access temporarily restricted", 10-26). Never open a second browser on a site
+(a correct slide there still gets "Access temporarily restricted"). Never open a second browser on a site
 whose captcha is showing or was just solved: reuse that tab. Prints one JSON line; exit 0 only for
 solved / no-captcha (detect: always 0 unless an error). Never notifies anyone.
 """

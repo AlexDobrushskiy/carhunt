@@ -2,7 +2,7 @@
 
 Drops are logged to `$CARHUNT_HOME/discover/dispositions.jsonl`, never silent. Unknown values pass (an ad that does
 not state km is not out of scope); `partial=True` is the search-card prefilter before a detail load.
-Model matching uses make/model/variant/title only, never the description: dealer prose lists other models (2026-11-03).
+Model matching uses make/model/variant/title only, never the description: dealer prose lists other models.
 """
 from __future__ import annotations
 
@@ -151,7 +151,7 @@ def check(lst: Listing, cfg: dict, *, partial: bool = False) -> str | None:
     if lst.km is not None and lst.km < 0:
         return "km: negative (parse error)"
     # Floor = search.price.min_eur (else cardb's default), the same number cardb's write check uses: a price under
-    # it is a monthly rate / deposit / parse error. Ceiling: ×100 parse errors (10 mobile.de prices, 2026-11-03).
+    # it is a monthly rate / deposit / parse error. Ceiling: ×100 parse errors.
     price = search.get("price") or {}
     floor = int(price.get("min_eur") or CARDB_MIN_EUR)
     ceil = int((disc.get("price_sanity") or {}).get("max_eur") or DEFAULT_MAX_EUR)

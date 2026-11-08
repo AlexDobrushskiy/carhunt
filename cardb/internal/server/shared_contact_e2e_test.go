@@ -8,7 +8,7 @@ import (
 )
 
 // A portal call-centre number printed on many dealers' ads (AutoScout24 Spain's WhatsApp) must not merge those
-// dealers into one seller (prod 2026-11-03: ~100 ES cars of different dealers on one seller with 65 phones).
+// dealers into one seller.
 func TestSharedContactDoesNotMergeSellers(t *testing.T) {
 	c := newServer(t)
 	const callCentre = "+34 555 37 52 15"

@@ -10,8 +10,6 @@
 Guard config: <home>/hooks/guards.json (written by `carhunt hooks install`). Identity browser
 leases are the browsers module's own hooks (`browsers/bin/pw-identity hook pre|post`), merged by
 the same install.
-Why the secret guard exists: EV run 11-06, a "masked" credential dump missed a pattern and
-~12 passwords landed in a transcript. Prose rules were not enough.
 """
 from __future__ import annotations
 
@@ -122,9 +120,8 @@ def deny(reason: str) -> int:
 
 # -- guards
 
-SECRET_MSG = ("carhunt secret-guard: secrets are never read or printed, not even masked (EV run 11-06: a "
-              "masked dump leaked passwords into a transcript). Use `carhunt secret ls|check|set` or "
-              "`carhunt secret exec NAME -- <tool>`.")
+SECRET_MSG = ("carhunt secret-guard: secrets are never read or printed, not even masked (masking misses "
+              "patterns). Use `carhunt secret ls|check|set` or `carhunt secret exec NAME -- <tool>`.")
 
 
 def check_secret(event: dict, home: Path, guards: dict) -> str | None:
@@ -188,7 +185,7 @@ def check_send(event: dict, home: Path, guards: dict) -> str | None:
     cmd = (event.get("tool_input") or {}).get("command") or ""
     if re.search(r"api\.telegram\.org/bot[^\s'\"]*/send", cmd):
         return ("carhunt send-guard: pushes go through `carhunt notify send --kind ask|urgent` so replies route "
-                "back to you; raw Bot API sends can't be answered (EV run 11-04).")
+                "back to you; raw Bot API sends can't be answered.")
     if re.search(r"carhunt[./]contact[./]channels", cmd):
         return SEND_MSG + " Don't call channel adapters directly."
     for seg in segments(cmd):

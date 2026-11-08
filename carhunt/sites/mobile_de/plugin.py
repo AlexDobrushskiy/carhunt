@@ -40,7 +40,7 @@ def kw_hp(v: str | None) -> tuple[int | None, int | None]:
 
 
 def gross(price: dict | None) -> int | None:
-    """`price.grs.amount` is gross EUR, never cents (10 ads were once stored ×100, 11-03); never fall back to net."""
+    """`price.grs.amount` is gross EUR, never cents; never fall back to net."""
     return num(((price or {}).get("grs") or {}).get("amount"))
 
 

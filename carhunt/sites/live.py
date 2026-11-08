@@ -1,4 +1,4 @@
-"""Ad liveness classifier (measured on real ads 11-04) and the default `is_live` for plugins.
+"""Ad liveness classifier and the default `is_live` for plugins.
 
 Verdicts: live · gone (404/410 or the site's own marker → removed at once) · gone_soft (redirect from the ad to a
 list page → removed only on a 2nd soft signal ≥1 h later) · blocked (403/429/5xx/bot page: stop the site, write

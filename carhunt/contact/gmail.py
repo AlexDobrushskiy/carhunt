@@ -11,7 +11,7 @@ modify token doesn't have, so mailroute writes filter XML for import in the Gmai
 Retry policy: GETs retry on any network error (idempotent). POSTs retry only on errors raised
 before the request left the machine (DNS, connection refused): nothing was sent yet. Any other
 POST failure is `GmailNetworkError(maybe_sent=True)` and the caller must check Sent before a
-re-send. Why: blind re-sends after network errors sent 4 duplicate emails (2026-11-05).
+re-send (a blind re-send can duplicate the mail).
 """
 from __future__ import annotations
 

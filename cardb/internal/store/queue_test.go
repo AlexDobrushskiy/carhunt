@@ -121,7 +121,7 @@ func TestTextHorsepower(t *testing.T) {
 	}
 }
 
-// The EV run's tier rules, now expressed as search.models data in the EV profile.
+// Tier rules from search.models in the EV worked-example profile.
 func TestEVTiers(t *testing.T) {
 	r := evRanker(t)
 	type tc struct {

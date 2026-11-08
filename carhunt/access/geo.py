@@ -1,5 +1,5 @@
 """One leased browser per country exit: plain-chrome on its own profile `profiles/geo-<cc>`, all traffic through a
-verified residential exit in that country (generalized from the leboncoin FR route).
+verified residential exit in that country.
 
     from carhunt.access import geo
     with geo.lease("fr", holder="outreach") as g:      # waits for the lease, verifies the exit, launches
@@ -7,11 +7,11 @@ verified residential exit in that country (generalized from the leboncoin FR rou
             ...
 
 Rules:
-- Exclusive lease (flock + lease file): a second caller once killed the holder's step (11-04).
+- Exclusive lease (flock + lease file): one holder at a time.
 - The geo profile never joins the cookie-synced identity pool or the trust jar: an account created on a foreign IP
-  must live on that IP forever, and the home IP must never log into it (11-02).
-- Exit verified before the first site load (fail closed); one sticky session per lease (rotating per load got the
-  DataDome slider on the 3rd load, 11-06). Chrome gets TZ + locale of the country and WebRTC forced through the proxy.
+  must live on that IP forever, and the home IP must never log into it.
+- Exit verified before the first site load (fail closed); one sticky session per lease (rotating per load triggers
+  DataDome sliders). Chrome gets TZ + locale of the country and WebRTC forced through the proxy.
 - Images off by default (residential = paid per GB); pass media=True where clicks need media (milanuncios modal).
 """
 from __future__ import annotations

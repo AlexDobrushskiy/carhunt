@@ -2,10 +2,10 @@
 
 Each new seller message → cardb (verbatim, original language, idempotent on external id) + one
 item in the agent's inbox (core notify inbox) + one line on stdout. The stdout line is the agent's wake-up signal:
-- refuses to run with stdout on /dev/null (EV: lost wake-ups 3 times, 2026-11-0x);
+- refuses to run with stdout on /dev/null (wake-ups would be lost);
 - run as a tracked background task, never `&`; re-arm on any non-zero exit.
 One cursor store ($CARHUNT_HOME/contact/cursors.json) for all channels, advanced only after the
-message is logged (EV: a reply was skipped as "our own send" when the cursor moved first, 11-06).
+message is logged (moving it first can skip a reply).
 """
 from __future__ import annotations
 

@@ -1,7 +1,7 @@
 """Per-car evidence pack: which pre-visit items are in, visit-ready yes/no, asks for contact.
 
 "Visit-ready" = every dealbreaker settled remotely, because a viewing costs a day or a
-flight and should end in a purchase (EV run 2026-10-31). Vet never messages sellers:
+flight and should end in a purchase. Vet never messages sellers:
 missing items become cardb `ask` events (one per message, fixed order) that the outreach
 agent sends and closes with `ask_answered` (same `data.topic`).
 
@@ -32,8 +32,7 @@ class Item:
     when: str = "always"     # always | electric | inlet
 
 
-# Order = ask order (EV run pre-visit pack, 2026-10-31). Short asks get answers;
-# a 4-question dealer opener got nothing (2026-11-03).
+# Order = ask order, one short ask per message.
 ITEMS: tuple[Item, ...] = (
     Item("registration_doc", "Registration document (front page)", ("registration_doc",),
          "Could you send a photo of the registration document (front page)?",

@@ -19,7 +19,7 @@ const defaultSmokeURL = "http://127.0.0.1:8484"
 
 // smokeTarget picks the server the live smoke test talks to: CARDB_SMOKE_URL, else CARDB_URL, else localhost.
 // A non-loopback host is refused unless CARDB_E2E_ALLOW_REMOTE=1, so a stray env or config can't point a test run
-// at a production server (the EV run's e2e defaulted to the live URL and touched prod).
+// at a production server.
 func smokeTarget(getenv func(string) string) (string, error) {
 	raw := getenv("CARDB_SMOKE_URL")
 	if raw == "" {

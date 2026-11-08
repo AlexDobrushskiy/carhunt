@@ -8,13 +8,12 @@ Known addresses: cardb seller contacts, the ledger's email rows, `contact.mailro
 Known domains: `contact.mailroute.domains` (marketplaces, dealers) + domains of known addresses.
 Freemail hosts match by exact address only (one gmail seller must not pull in all gmail).
 
-Matching is by address and thread only, never by words. Why: a signature-phrase filter also hit
-a non-car mail (2026-11-02). Never marks read, never deletes, touches nothing unmatched.
+Matching is by address and thread only, never by words (phrase filters hit non-car mail).
+Never marks read, never deletes, touches nothing unmatched.
 `contact.mailroute.never_touch` (addresses or domains, e.g. family, work) vetoes a whole thread.
 Every move is logged to $CARHUNT_HOME/contact/mailroute.log with its reason.
 
-Run it every 3 min (`launchd_plist`) plus a daily 60-day deep pass. Why: the 11-02 sweep never
-ran on a schedule and 15 known-sender mails leaked into the inbox (2026-11-04).
+Run it every 3 min (`launchd_plist`) plus a daily 60-day deep pass.
 """
 from __future__ import annotations
 

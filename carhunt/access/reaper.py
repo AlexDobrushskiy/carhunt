@@ -5,7 +5,7 @@ Kills a process only if ALL hold:
   2. its current command line still carries the recorded profile dir (pid reuse: the number may now
      belong to someone else's process);
   3. it is orphaned (parent is launchd/init) with no live holder, or older than `reaper_max_age_h`.
-Never by name pattern (a sweep subagent's pkill once killed another agent's search, 11-03); unrecorded
+Never by name pattern (that would kill other agents' browsers); unrecorded
 Chromes (the owner's own browser, other tools') are listed as "not ours" and left alone. Records whose pid
 is gone are dropped.
 

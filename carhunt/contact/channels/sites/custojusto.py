@@ -1,11 +1,10 @@
 """custojusto.pt: one-way contact form on the ad, then a Sendbird chat in the site inbox.
 
-Status: working. "Enviar mensagem" on an ad is a form, not a chat: "contactado com sucesso", and
-the seller's answer opens a thread in the CJ inbox later (#21: form 10:12, reply 02:14 next day,
-2026-11-05); poll the inbox for form-contacted cars. Replies inside a conversation
-(`/user/messages?id=…`) go through the Sendbird box. Route: identity, but the login lives on the
-master; pool copies can lack it (2026-11-04). The form's own fields are unverified: name/email come
-from `contact.persona` when the form asks for them.
+"Enviar mensagem" on an ad is a form, not a chat: "contactado com sucesso", and the seller's
+answer opens a thread in the CJ inbox later (often the next day); poll the inbox for form-contacted
+cars. Replies inside a conversation (`/user/messages?id=…`) go through the Sendbird box. Route:
+identity, but the login lives on the master; pool copies can lack it. Name/email come from
+`contact.persona` when the form asks for them.
 """
 from __future__ import annotations
 

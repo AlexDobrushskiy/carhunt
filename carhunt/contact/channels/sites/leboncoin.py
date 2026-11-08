@@ -1,11 +1,10 @@
 """leboncoin.fr: "Envoyer un message" (/reply/<id>) or a reply in a /messages conversation.
 
-Status: working (2026-11-02..04). Route: plain-chrome on the site's own profile through a French
-exit (country FR): the account must only ever see one French IP (owner's rule, 2026-11-02) and
-has no SMS recovery, so never the identity pool or the home IP. Decodo FR residential beat the
-VPN exit, which got a messaging soft block (blank /reply, 2026-11-05).
-Stop the site at the first block (403 / DataDome slider): fast bursts got the home IP hard-banned
-for hours (2026-10-30). Never "Faire une offre": a price is the owner's call.
+Route: plain-chrome on the site's own profile through a French residential exit (country FR):
+the account must only ever see one French IP and has no SMS recovery, so never the identity pool
+or the home IP. A VPN exit gets a messaging soft block (blank /reply).
+Stop the site at the first block (403 / DataDome slider): fast bursts get the IP hard-banned for
+hours. Never "Faire une offre": a price is the owner's call.
 """
 from __future__ import annotations
 

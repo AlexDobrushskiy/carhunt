@@ -8,8 +8,7 @@ import (
 	"carhunt/cardb/internal/api"
 )
 
-// Dealer banner / stock images are shared across different cars. They must never link or merge
-// different cars (prod 2026-11-03: BMW iX1s and MINIs merged into a dropped VW ID.5).
+// Dealer banner / stock images are shared across different cars. They must never link or merge different cars.
 func TestPhotoDedupeSharedBanners(t *testing.T) {
 	c := newServer(t)
 	img := func(seed int64) []byte { return jpegOf(t, pattern(seed, 1000, 667), 85) }

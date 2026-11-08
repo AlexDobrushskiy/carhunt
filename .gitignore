@@ -25,7 +25,6 @@ storage_state*.json
 *.sqlite
 *.sqlite3
 *.db-journal
-evdb-data/
 photos/
 !web/src/pages/photos/
 screenshots/

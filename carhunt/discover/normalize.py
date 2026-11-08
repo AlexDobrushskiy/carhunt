@@ -1,6 +1,6 @@
 """RawAd/Card → one normalized listing (cardb ListingUpsert shape + flags/facts/options/asks). No scoring.
 
-Rules (each from the EV run; data-driven parts live in data/*.yaml):
+Rules (data-driven parts live in data/*.yaml):
 - Prices stored gross: net asks (+ country VAT) and the ES "precio al contado" over a finance-conditional headline.
 - Text is data, not truth: structured site fields first, then title/variant, then description — dealer prose lists
   other models and options of other cars.
@@ -198,7 +198,7 @@ def canonical_phone(value: Any, country: str | None) -> str:
     cc = rule["cc"]
     if rule.get("keep0"):           # IT: 39 + national number incl. a landline's 0
         if digits.startswith(cc + "0") or (digits.startswith(cc) and len(digits) > 10):
-            return digits           # 39 + landline 0… is already international (EV-run regression case)
+            return digits           # 39 + landline 0… is already international
         return cc + digits
     if rule.get("national_len") and len(digits) == rule["national_len"]:
         return cc + digits
@@ -480,7 +480,7 @@ def _drive(lst: Listing, site_label: Any) -> None:
         lst.fact("drive_source", f"site field: {site_label}", "ad_spec")
     title_awd = drive_from_text(lst.text(description=False)) == "awd"
     if title_awd:
-        lst.drive = "awd"      # 4MOTION/quattro/AWD in the title beats everything (a "Pro" was 4MOTION, 2026-11-04)
+        lst.drive = "awd"      # 4MOTION/quattro/AWD in the title beats everything
     if not lst.drive:
         lst.drive = drive_from_text(lst.description) if lst.detail else None
 

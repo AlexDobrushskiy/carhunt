@@ -97,7 +97,7 @@ describe("good deal and model family filters", () => {
   });
 });
 
-describe("v2 renames and new filters", () => {
+describe("distance, market, fuel and needs-owner filters", () => {
   it("maps distance, market, fuel and needs_owner", () => {
     const f = parseFilters(new URLSearchParams("view=needs&distance_km_max=300&market=home&fuel=bev&fuel=diesel&sort=distance_km"));
     const q = toApiQuery(f);

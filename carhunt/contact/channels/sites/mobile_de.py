@@ -1,10 +1,10 @@
 """mobile.de: the ad's contact form, or a reply inside the message-center conversation.
 
-Status: working (form 2026-11-01..05, confirmed by "Anfrage erfolgreich gesendet"; conversation
-reply via the "Senden" box). Route: identity (plain-chrome on a logged-in identity profile):
-Akamai answers every Playwright-launched Chrome with "Zugriff verweigert" (2026-10-25).
+Form confirmed by "Anfrage erfolgreich gesendet"; conversation reply via the "Senden" box.
+Route: identity (plain-chrome on a logged-in identity profile): Akamai answers every
+Playwright-launched Chrome with "Zugriff verweigert".
 Already-contacted ads have no "E-Mail schreiben": reply in the conversation (`to` = its URL), or
-answer the seller's relay mail on the email channel (that is how most mobile.de replies went).
+answer the seller's relay mail on the email channel.
 Seller replies arrive as relay mail, so no site poll.
 """
 from __future__ import annotations
@@ -25,7 +25,7 @@ class MobileDe(ChatSite):
     login_url_parts: ClassVar[tuple[str, ...]] = ("id.mobile.de",)
     submit_names: ClassVar[tuple[Any, ...]] = (re.compile(r"^\s*E-Mail senden\s*$", re.I), re.compile(r"^\s*Senden\s*$", re.I))
     submit_css: ClassVar[str] = "button[type=submit]"
-    # Contact data in a conversation reply raises a warning dialog (mde_reply, 2026-11-04).
+    # Contact data in a conversation reply raises a warning dialog.
     confirm_names: ClassVar[tuple[str, ...]] = ("Trotzdem senden",)
 
     AD = re.compile(r"details\.html\?(?:.*&)?id=(\d+)|/fahrzeuge/details|/checkout/core/")

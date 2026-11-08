@@ -1,7 +1,7 @@
 """Minimal page driver over raw CDP, for bot walls that catch Playwright once it is attached.
 
 Playwright enables Runtime/Page/Network on every page it touches; bot scripts see side effects of that
-(Imperva on coches.net flagged every agent browser on the IP, 11-02). This driver talks to ONE page target
+(Imperva on coches.net flags every such browser on the IP). This driver talks to ONE page target
 and never enables a domain: Runtime.evaluate, Page.navigate, Input.* and Target.* work without *.enable.
 
     from carhunt.access.rawcdp import Page
@@ -94,7 +94,7 @@ class Page(_Conn):
             time.sleep(0.06)
 
     def type_into(self, selector: str, text: str) -> None:
-        """Insert text as typed. Newlines go in as text: Enter resets some forms (coches.net, 11-03)."""
+        """Insert text as typed. Newlines go in as text: Enter resets some forms (coches.net)."""
         self.click(selector)
         sel = json.dumps(selector)
         self.eval(f"(()=>{{const e=document.querySelector({sel}); e.focus(); e.select&&e.select();}})()")

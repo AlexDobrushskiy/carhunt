@@ -1,6 +1,6 @@
 // Playwright MCP --init-page for browsers/bin/serve: every tab of the headless browser sends what the same
 // Chrome sends headed, i.e. its User-Agent without "HeadlessChrome" and its own client hints.
-// Playwright's --user-agent derives wrong hints (arch "x86") and Chrome's switch blanks them (measured 10-14),
+// Playwright's --user-agent derives wrong hints (arch "x86") and Chrome's switch blanks them,
 // so this sets them through CDP.
 let identity;
 const sessions = new WeakMap(); // the override lives as long as its CDP session

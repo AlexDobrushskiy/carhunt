@@ -1,7 +1,4 @@
-"""Contact config: defaults (the EV run's proven values) deep-merged with config.yaml `contact:`.
-
-Every number here is a rule from the EV run; the why lives next to it and in docs/contact.md.
-"""
+"""Contact config: defaults deep-merged with config.yaml `contact:`. Rules: docs/contact.md."""
 from __future__ import annotations
 
 import copy
@@ -23,13 +20,13 @@ DEFAULTS: dict[str, Any] = {
         # WhatsApp bans spam-shaped bursts from new contacts on the owner's main number.
         {"name": "chat-spacing", "channels": ["whatsapp", "sites"], "min_gap_s": 180},
         {"name": "chat-hourly", "channels": ["whatsapp", "sites"], "per": "hour", "max": 12},
-        # One shared opener budget (EV: 6 → 8 → 10 → 20/day over 4 days; abroad sends used to bypass it).
+        # One shared opener budget across all agents and channels.
         {"name": "openers-daily", "channels": "*", "kind": "opener", "per": "day", "max": 20,
          "reserve": {"role": "outreach-home", "slots": 4, "until": "15:00"}},
         {"name": "opener-spacing", "channels": "*", "kind": "opener", "min_gap_s": 600},
         {"name": "email-spacing", "channels": ["email"], "min_gap_s": 300},
         {"name": "site-spacing", "channels": ["sites"], "per_channel": True, "min_gap_s": 600},
-        # Short follow-ups to silent threads: 4/10 answered same day (EV 2026-11-03), but cap them.
+        # Short follow-ups to silent threads, capped.
         {"name": "followups-daily", "channels": "*", "kind": "nudge", "per": "day", "max": 15},
     ],
     "reply": {
@@ -37,14 +34,14 @@ DEFAULTS: dict[str, Any] = {
         "owner_backoff_min": 15,  # owner typed in the chat himself → it's his chat
     },
     "opener": {
-        "max_chars": 280,  # 5–10-question openers got 4/18 replies vs ~13/13 for short ones (EV 11-01..04)
+        "max_chars": 280,  # short openers get answers; long multi-question ones get ignored
         "max_questions": 2,  # one question per message, two at most
         # specs in an opener made sellers wary; the ad already says it
         "spec_pattern": r"\b\d[\d.,]*\s?(km|kwh|kw|hp|cv|ps|ch|€|eur)\b",
     },
     "nudge": {
         "after_h": 48,
-        "auto_reply_s": 15,  # a "reply" this soon after ours is an auto-greeting (fastest human: 28 s)
+        "auto_reply_s": 15,  # a "reply" this soon after ours is an auto-greeting
         "statuses": ["new", "to_contact", "contacted", "talking"],
         # Car must match one `qualify` predicate and no `exclude` predicate (cardb car fields).
         "qualify": [{"field": "tier", "eq": 1}, {"field": "verdict.value", "eq": "up"},

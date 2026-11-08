@@ -11,7 +11,7 @@
 # env CARHUNT_MCP_PORT / CARHUNT_MCP_DEBUG_PORT / CARHUNT_MCP_PROFILE / CARHUNT_MCP_OUT override).
 # Each Chrome also listens on a localhost debug port so the captcha solver can attach to an agent's tab.
 # Headless Agent Chrome presenting headed Chrome's UA + client hints (real-chrome-ua.cjs); CARHUNT_PW_VISIBLE=1
-# gives a normal window. Never /Applications/Google Chrome.app: macOS takes the agent for the user's Chrome (10-16).
+# gives a normal window. Never /Applications/Google Chrome.app: macOS takes the agent for the user's Chrome.
 #
 # Env: CARHUNT_NODE (else `node` on PATH), CARHUNT_CHROME (skip agent-chrome, e.g. Linux or tests).
 set -u

@@ -169,7 +169,7 @@ def pkg_of(site_id: str) -> str:
 def load_meta(pkg: str) -> dict:
     data = yaml.safe_load((ROOT / pkg / "site.yaml").read_text(encoding="utf-8")) or {}
     data.setdefault("site", pkg)
-    if hasattr(data.get("measured"), "isoformat"):   # YAML reads 2026-11-06 as a date
+    if hasattr(data.get("measured"), "isoformat"):   # YAML reads an ISO date as a date
         data["measured"] = data["measured"].isoformat()
     return data
 

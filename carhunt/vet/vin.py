@@ -198,7 +198,7 @@ def _flags(info: VinInfo, row: dict | None, first_reg: str | None) -> None:
     if market == "china_jv":
         add(Flag("china_market", "red",
                  "China-market JV car: likely GB/T charging, no EU warranty, weak resale. "
-                 "Treat as a different product (EV run 2026-10-31: a 'imported' SUV was a China JV car)."))
+                 "Treat as a different product."))
     elif v[0] == "L":
         add(Flag("china_built", "info",
                  "Built in China. Fine if it is an EU-export model; confirm with a photo of the "

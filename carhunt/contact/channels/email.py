@@ -10,7 +10,7 @@ reuse the latest thread, e.g. a second car at the same dealer), `cc=[...]`, `att
 
 Outgoing mail sets Reply-To to the plus-address (`local+<plus_tag>@domain`) so seller replies
 match a Gmail filter and skip the inbox; the sent message gets `sent_label` so later replies in the
-thread follow it (mailroute). Why: car mail flooded the owner's inbox (2026-11-02/04).
+thread follow it (mailroute).
 Searches never use `in:inbox`: car mail is moved out of it.
 """
 from __future__ import annotations
@@ -219,7 +219,7 @@ class Email(Channel):
             raw["maybe_sent"] = maybe
             if not maybe:  # never left the machine (after retries) or a clean 4xx refusal
                 return SendResult(False, error=str(e), raw=raw)
-            # Check Sent before any re-send. Why: 4 duplicate emails after network errors (2026-11-05).
+            # Check Sent before any re-send: a network error may still have sent it.
             found = self._find_sent(m["Message-ID"])
             if not found:
                 return SendResult(False, error=f"outcome unknown: {e}", raw=raw)

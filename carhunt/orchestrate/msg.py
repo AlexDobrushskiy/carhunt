@@ -1,7 +1,7 @@
 """Agent-to-agent messages: `carhunt msg --to ROLE|SESSION "text"`.
 
 A role resolves to its state.json active_agent at send time — never a hard-coded id
-(EV run 11-02: 12 briefs pointed at a closed overseer after one handover).
+(a handover changes the session).
 """
 from __future__ import annotations
 

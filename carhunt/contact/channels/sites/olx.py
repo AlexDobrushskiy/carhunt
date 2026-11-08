@@ -1,10 +1,9 @@
 """olx.pt: the ad's chat (`<ad>?chat=1`).
 
-Status: thread reader verified (olx-read, 2026-11-04: bubbles carry aria-label
-"Mensagem enviada por <name>"); the send selectors are unverified: EV-run OLX sends went through
-the identity browser by hand. Delivery counts only when our text shows in the thread with the
-box cleared. Route: identity (OLX Group login on the identity master; a pool-copy 401 = stale token,
-re-seed, not a block, 2026-11-05). Who is "us" in a bubble: `contact.persona.aliases` (the
+Thread reader: bubbles carry aria-label "Mensagem enviada por <name>". The send selectors are
+unverified. Delivery counts only when our text shows in the thread with the box cleared.
+Route: identity (OLX Group login on the identity master; a pool-copy 401 = stale token, re-seed,
+not a block). Who is "us" in a bubble: `contact.persona.aliases` (the
 names the site shows for the buyer's account) plus the site's own "you" words.
 """
 from __future__ import annotations

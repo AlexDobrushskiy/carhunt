@@ -1,11 +1,11 @@
 """plain-chrome — Agent Chrome launched like a person launches it; automation attaches only after the first load.
 
-Why: Akamai (mobile.de) and DataDome (lacentrale.fr) block every Playwright-*launched* Chrome, headed or
+Akamai (mobile.de) and DataDome (lacentrale.fr) block every Playwright-*launched* Chrome, headed or
 headless, fresh or logged in, but pass the same Chrome started normally: they catch Playwright's launch
-switches and its CDP session being live during the first load (10-25). Chrome starts here with only a debug
+switches and its CDP session being live during the first load. Chrome starts here with only a debug
 port; we attach after the first load committed and passed the check, then keep driving it over CDP.
 
-Solves persist and are shared (the owner had to solve one site twice, 10-26):
+Solves persist and are shared:
   - The default profile is persistent (`profiles/plain`), not a throwaway.
   - A second caller on a running profile gets a new TAB, not a second browser (two browsers = two captchas).
     The browser closes cleanly when its last holder releases.
@@ -288,7 +288,7 @@ def start(url: str, profile: Path | str, *, headless: bool = False, onscreen: bo
     """
     profile = Path(profile).expanduser()
     if profile.name.startswith("geo-") and not extra_args:
-        # a geo profile must never reach the site from the home IP (account lives on one exit IP, 11-02)
+        # a geo profile must never reach the site from the home IP (account lives on one exit IP)
         raise RuntimeError(f"{profile.name}: geo profiles launch only through carhunt.access.geo (proxy flags)")
     profile.mkdir(parents=True, exist_ok=True)
     cleanup_dead()
@@ -345,7 +345,7 @@ def ensure_running(profile: Path | str | None = None, port: int | None = None, *
 def _quit(port: int, pid: int) -> None:
     """Clean quit so the cookie DB is flushed (a killed Chrome loses its last ~30 s of cookies).
 
-    Browser.close on the browser endpoint attaches to no page (enabling page domains is what Imperva sees, 11-01).
+    Browser.close on the browser endpoint attaches to no page (enabling page domains is what Imperva sees).
     """
     try:
         rawcdp.browser_send(port, "Browser.close")

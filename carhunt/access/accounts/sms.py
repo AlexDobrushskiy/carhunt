@@ -8,13 +8,13 @@
 Policy (site.yaml `account.verification`): rent only for **verify-once** sites (`sms-once`).
 - `sms-own` (the site needs a phone that stays reachable): refused, use the owner's own mobile.
 - Never for SMS-2FA-at-every-login sites (`sms-every-login`, e.g. marktplaats/2dehands): the rented number dies
-  and the next login locks the account (11-02).
+  and the next login locks the account.
 - A rented number dies right after its one SMS: the site can't change the phone later without a code to the dead
-  number, so any future SMS challenge = lockout (leboncoin, 11-02). Try the owner's own mobile first
-  (subito accepted a foreign EU mobile, 11-02); prefer a long-lived real number if the account matters.
-- Some sites only receive domestic numbers (leboncoin: foreign SMS never arrived) → rent in the site's country.
-Provider choice: compare per-service success rate, not price (5sim FR leboncoin 0.4–3.7 % vs SMSPool ~30 %, 11-02);
-the cheapest pool returned a recycled number "already linked to an account" → cancel, take the next pool.
+  number, so any future SMS challenge = lockout. Try the owner's own mobile first; prefer a long-lived real
+  number if the account matters.
+- Some sites only receive domestic numbers (e.g. leboncoin) → rent in the site's country.
+Provider choice: compare per-service success rate, not price. A recycled number "already linked to an account"
+→ cancel, take the next pool.
 Pay only on a received code: cancel refunds when no SMS came.
 """
 from __future__ import annotations
@@ -65,7 +65,7 @@ def policy(site: str) -> Policy:
                                   "first.", v)
     if v in SMS_EVERY_LOGIN:
         return Policy(site, False, "SMS 2FA at every new-device login: a rented number dies and the next login "
-                                   "locks the account (11-02). Use the owner's own mobile or skip the site.", v)
+                                   "locks the account. Use the owner's own mobile or skip the site.", v)
     if v in SMS_OWN:
         return Policy(site, False, "the site needs a phone that stays reachable (login/recovery SMS): use the owner's "
                                    "own mobile, never a rented one-time number.", v)

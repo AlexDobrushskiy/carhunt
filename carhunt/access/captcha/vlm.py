@@ -1,9 +1,7 @@
 """Optional local vision model (Ollama): reCAPTCHA tiles, locate an element, name an unknown wall,
 last-resort slider gap. Never sends anything off this machine (ollama_url should be localhost / own box).
 
-Default model qwen3.5:4b (10-27 bench, 25 hand-labelled grids): 23/25 grids, locate error 3 px,
-~0.5 s/tile. Bigger/older models were worse here: qwen3.5:9b 21/25, qwen2.5vl:7b 17/25 and 4.5x slower,
-gemma4:12b 11/25; a whole-grid "which tiles?" prompt got <=12/25 with every model, so tiles go one by one.
+Default model qwen3.5:4b, ~0.5 s/tile. Tiles go one by one: a whole-grid "which tiles?" prompt is unreliable.
 """
 from __future__ import annotations
 
@@ -29,7 +27,7 @@ def urllib_transport(url: str, body: dict | None, timeout: float) -> Any:
 
 
 def _grid(w, h):
-    """The pixel grid a "grid"-coordinate model answers in. Measured 10-26 (qwen2.5vl:7b via Ollama): images
+    """The pixel grid a "grid"-coordinate model answers in (e.g. qwen2.5vl via Ollama): images
     under ~0.83 MP are upscaled to that size (28-px patches) and boxes come back in the upscaled grid."""
     sc = max(1.0, (PIXELS / (w * h)) ** 0.5)
     if sc == 1.0:

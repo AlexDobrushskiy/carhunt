@@ -1,4 +1,4 @@
-"""Offline transport for tests (sites, discover, integrator): serves canned answers, records every request."""
+"""Offline transport for tests (sites, discover, e2e): serves canned answers, records every request."""
 from __future__ import annotations
 
 import re

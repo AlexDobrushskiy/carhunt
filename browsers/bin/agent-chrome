@@ -2,9 +2,9 @@
 # "Agent Chrome": the installed Google Chrome under its own macOS app identity, for agent browsers.
 #
 # Why: a Chrome started from /Applications/Google Chrome.app (even headless, on another profile) registers with
-# macOS as the user's Chrome: a Dock click activates the windowless agent process and Quit targets it (10-16).
+# macOS as the user's Chrome: a Dock click activates the windowless agent process and Quit targets it.
 # Fix: an APFS clone of Google Chrome.app (same binary, version, UA and client hints, so sites see plain Chrome)
-# with its own bundle id, ad-hoc re-signed. Not Chrome for Testing: some sites treat it differently (10-25).
+# with its own bundle id, ad-hoc re-signed. Not Chrome for Testing: some sites treat it differently.
 #
 #   agent-chrome               rebuild the clone if Google Chrome's version changed, print the executable
 #   agent-chrome --no-update   print the installed executable only (exit 1 if none)
@@ -37,7 +37,7 @@ installed() {  # print the installed executable and stop
 [ "$(uname -s)" = Darwin ] || { echo "agent-chrome: macOS only; on Linux set CARHUNT_CHROME to a Chrome binary" >&2; exit 1; }
 [ -d "$SRC" ] || { echo "agent-chrome: no $SRC (install Google Chrome or set CARHUNT_CHROME_APP)" >&2; exit 1; }
 mkdir -p "$ROOT"
-# All servers start together under launchd: one builder at a time.
+# All servers start together under launchd: one rebuild at a time.
 [ -z "${AGENT_CHROME_LOCKED:-}" ] && AGENT_CHROME_LOCKED=1 exec /usr/bin/lockf -t 900 "$ROOT/.lock" "$0" "$@"
 
 warm_up() {  # $1 = app; first launch of a freshly signed bundle can deadlock in assessment: take it here, not in a server

@@ -9,8 +9,8 @@ Camoufox is optional: `uv pip install 'camoufox[geoip]' && python -m camoufox fe
   python -m carhunt.access.cfrepl status
 
 In snippets: `mw(js)` evaluates in the page's main world (reach React state); `net` lists finished/failed
-requests (method, url, status) — read an API's real status there, not from a page hook (the driver saw 403
-where Chrome only showed net::ERR_FAILED, 11-02).
+requests (method, url, status) — read an API's real status there, not from a page hook (a 403 can surface
+as net::ERR_FAILED in the page).
 """
 from __future__ import annotations
 
@@ -28,11 +28,11 @@ from urllib.parse import unquote, urlsplit
 from carhunt.access import settings as _settings
 
 INSTALL_HINT = "camoufox not installed: uv pip install 'camoufox[geoip]' && python -m camoufox fetch"
-# A fresh Firefox profile downloads Widevine + OpenH264: 17 MB of a 66 MB paid-proxy campaign (11-03).
+# A fresh Firefox profile downloads Widevine + OpenH264 (~17 MB of paid proxy traffic).
 NO_PLUGIN_DOWNLOADS = {"media.gmp-manager.updateEnabled": False, "media.gmp-widevinecdm.enabled": False,
                        "media.gmp-widevinecdm.visible": False, "media.gmp-gmpopenh264.enabled": False,
                        "media.eme.enabled": False, "app.update.enabled": False}
-# Explicit locale per exit country: geoip alone produced odd values (es-PT, 11-02).
+# Explicit locale per exit country: geoip alone produces odd values (es-PT).
 LOCALES = {"es": "es-ES", "fr": "fr-FR", "de": "de-DE", "it": "it-IT", "pt": "pt-PT", "nl": "nl-NL",
            "be": "nl-BE", "at": "de-AT", "pl": "pl-PL", "gb": "en-GB", "uk": "en-GB", "us": "en-US"}
 
@@ -73,10 +73,10 @@ def serve(name: str, profile: Path, *, country: str | None = None, locale: str |
     proxy = None
     if country:
         from carhunt.access import proxy as _proxy
-        url = _proxy.get(country, sticky_minutes=30)   # one sticky exit per run (rotating → slider on load 3, 11-06)
+        url = _proxy.get(country, sticky_minutes=30)   # one sticky exit per run (rotating IPs trigger sliders)
         _proxy.verify_exit(url, country)               # fail closed before the first site request
         proxy = playwright_proxy(url)
-    # os="macos": a random Windows identity on a Mac turns on canvas noise (11-02)
+    # os="macos": a random Windows identity on a Mac turns on canvas noise
     with Camoufox(headless=False, os="macos", locale=locale_for(country, locale), humanize=True,
                   geoip=bool(proxy), persistent_context=True, user_data_dir=str(profile), main_world_eval=True,
                   window=(1366, 900), proxy=proxy, firefox_user_prefs=NO_PLUGIN_DOWNLOADS) as ctx:
@@ -84,7 +84,7 @@ def serve(name: str, profile: Path, *, country: str | None = None, locale: str |
         net: list[tuple] = []
         page.on("response", lambda r: net.append((r.request.method, r.url[:200], r.status)))
         page.on("requestfailed", lambda r: net.append((r.method, r.url[:200], "FAILED " + str(r.failure)[:60])))
-        if no_media:  # paid proxy bytes; not where a click needs media (milanuncios modal, 11-03)
+        if no_media:  # paid proxy bytes; not where a click needs media (milanuncios modal)
             page.route("**/*", lambda rt: rt.abort() if rt.request.resource_type in ("image", "media", "font")
                        else rt.continue_())
         g = {"page": page, "ctx": ctx, "net": net, "time": time, "json": json,

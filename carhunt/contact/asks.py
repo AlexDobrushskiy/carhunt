@@ -8,9 +8,9 @@ it has more `ask` than `ask_answered` events. So every close writes `data.topic`
 `data.ask_event` (which ask). An ask_answered without `ask_event` (written by hand or by vet) closes
 the oldest open ask of its topic, the same count rule vet uses.
 
-Vet decides "have" from facts, not from closes: a closed ask with the fact still empty gets re-asked,
-and a re-ask is what made sellers call us scammers (11-01). So close also writes the answer into the
-ask's `data.fact` key (source seller_said) when the car has no value there yet.
+Vet decides "have" from facts, not from closes: a closed ask with the fact still empty gets re-asked.
+So close also writes the answer into the ask's `data.fact` key (source seller_said) when the car has
+no value there yet.
 """
 from __future__ import annotations
 

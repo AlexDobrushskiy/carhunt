@@ -5,13 +5,12 @@
     ip = proxy.verify_exit(url, "es")        # raises ProxyUnavailable unless the exit really is in ES
     with proxy.Forwarder(url) as fwd: ...    # Chrome: --proxy-server=fwd.url (Chrome can't take proxy creds by flag)
 
-Lessons:
-- Fail closed: verify the exit before the first site request, abort on any doubt. A dead OpenVPN left a SOCKS
-  server serving the home IP (11-02).
-- One sticky session per run: a new IP on every load got a DataDome slider on the 3rd load (11-06).
-- Free/public VPNs are useless on serious walls: VPN Gate IPs got the Imperva bot page on the first load,
-  a datacenter VPN IP later got a messaging soft block (11-02, 11-05). Use residential.
-- Residential is paid per GB: turn images/media off where the site allows (whole coches/milanuncios campaign: 66 MB).
+Rules:
+- Fail closed: verify the exit before the first site request, abort on any doubt (a dead tunnel can leave a
+  proxy serving the home IP).
+- One sticky session per run: a new IP on every load triggers DataDome sliders.
+- Free/public and datacenter VPN IPs get bot pages and messaging soft blocks on serious walls. Use residential.
+- Residential is paid per GB: turn images/media off where the site allows.
 Credentials are read from core secrets by name and never logged; `redact()` anything you print.
 """
 from __future__ import annotations
@@ -153,7 +152,7 @@ def verify_exit(proxy_url: str, country: str, *, fetch: Fetch | None = None, ech
                 home_check: bool = True) -> str:
     """Exit IP of `proxy_url` if it is in `country`; else raise ProxyUnavailable. Send no site request before this.
 
-    home_check: also refuse when the exit equals the direct (home) IP — a dead tunnel can quietly go direct (11-02).
+    home_check: also refuse when the exit equals the direct (home) IP — a dead tunnel can quietly go direct.
     """
     fetch = fetch or _fetch_json
     if echo_url is None:

@@ -1,9 +1,8 @@
 """kleinanzeigen.de: "Nachricht schreiben" on the ad, logged in.
 
-Status: working (2026-11-02..04). Route: identity (logged in on the identity profiles; account
-actions such as activation hit an IP-range ban on the home IP, 2026-11-01: do those over mobile
-data). Success wording from the sender script, not seen verbatim in a log: the thread check
-(text in the page + box cleared) is the main signal. Replies come by alert mail; the thread reader
+Route: identity (logged in on the identity profiles; do account actions such as activation over
+mobile data: the home IP range can be banned). The thread check (text in the page + box cleared)
+is the main success signal. Replies come by alert mail; the thread reader
 works on a conversation URL from the inbox (m-nachrichten.html) with the generic bubble heuristic.
 """
 from __future__ import annotations

@@ -92,7 +92,7 @@ def num(v: Any) -> int | None:
     if isinstance(v, (int, float)):
         return int(round(v))
     s = str(v).strip()
-    if re.fullmatch(r"-?\d+\.\d{1,2}", s):        # "299.0" / "12.5": a decimal (Wallapop hp bug, fixed 11-04)
+    if re.fullmatch(r"-?\d+\.\d{1,2}", s):        # "299.0" / "12.5": a decimal (e.g. Wallapop hp)
         return int(round(float(s)))
     digits = re.sub(r"[^\d]", "", s.split(",")[0] if re.search(r",\d{1,2}$", s) else s)
     return int(digits) if digits else None

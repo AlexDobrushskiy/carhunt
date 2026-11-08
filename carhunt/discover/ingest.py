@@ -1,15 +1,15 @@
 """Normalized listing → cardb. Facts only: identity, specs, evidence. No scoring, no merging (both live in cardb).
 
-Rules (EV run):
+Rules:
 - Upsert the car WITHOUT photos, then add photos to the listing's car — photo-based auto-merge on dealer stock
-  galleries merged 4 different cars into one (2026-11-03).
+  galleries can merge different cars into one.
 - Every later write resolves the car by listing URL (`find_listing`), never a car id kept from earlier: after a
-  merge the old id pointed at the wrong car and a `set` hit it (2026-11-03).
+  merge the old id may point at another car.
 - Identity keys (VIN, plate, phone, dealer stock ref) go in as fields/facts; cardb decides links and duplicates.
 - cardb fills empty car fields only (no `overwrite`): a re-read never replaces photo / seller / PR-code evidence.
 - A known listing whose site ask did not move and that is still live = no write at all (re-runs are free); a price
   change (re-read + normalized, so derived gross / cash asks stay right) or a relisting = one minimal upsert.
-- A phone cardb did not attach (owned by another seller) → fact `phone_route` = site chat (6 cases on 2026-11-03).
+- A phone cardb did not attach (owned by another seller) → fact `phone_route` = site chat.
 - Price refused by cardb's sanity check (422 `reason`): `price_lease` = a monthly rate / deposit, not a sale → dropped.
   Any other reason (`price_x100`, `price_range`, `price_net`) → the car is stored WITHOUT a price and the ask goes
   in `price_note` for an agent to check the ad (`cardb listing set … --price-vat` / `--force`). Why: newest-first

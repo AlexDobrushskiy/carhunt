@@ -3,17 +3,17 @@
 Writes only through cardb: `PATCH /listings/{id}` (status) + an `ad_check` event with the evidence; a live check
 on a live listing is a sighting (upsert by URL bumps last_seen). Never touches car status, never deletes.
 
-Rules (why):
+Rules:
 - removed at once on 404/410 or the site's own gone marker; a redirect to a list page is a *soft* signal → removed
-  only on the 2nd soft signal ≥1 h after the first (milanuncios redirects live ads now and then, 11-04).
-- never on a block/timeout/unknown: a block says nothing about the ad (an ad-hoc check once removed 2 live cars).
+  only on the 2nd soft signal ≥1 h after the first (some sites, e.g. milanuncios, redirect live ads now and then).
+- never on a block/timeout/unknown: a block says nothing about the ad.
 - a live page also yields the current asking price (same page, no extra load): a change is written as a minimal
   upsert {url, price} → cardb's price history + price_change event. Newest-first sweeps never revisit known ads,
-  so price drops are caught here (EV run: weekly price re-check of liked cars). Net prices are skipped (cardb = gross).
+  so price drops are caught here. Net prices are skipped (cardb = gross).
 - the first block stops that site for the run (more loads only deepen the ban).
 - relists only what this tool removed: removals by agents/owner are deliberate and left alone.
 - a site out of pace budget stops for this run; with `--proxy-priority`, priority listings go through the site's
-  `liveness.proxy_country` exit instead (coches.net: ≤2 home-IP loads/h, 11-04).
+  `liveness.proxy_country` exit instead (e.g. coches.net: ≤2 home-IP loads/h).
 State (last check, soft counts, what we removed): $CARHUNT_HOME/sites/liveness.db. Logs: $CARHUNT_HOME/sites/liveness/.
 """
 from __future__ import annotations

@@ -1,8 +1,8 @@
 """hCaptcha challenge frame (opt-in: config browsers.captcha.hcaptcha_vlm).
 
 Current hCaptcha tasks are drawn on one canvas ("click the letter of group STU" under dot noise, "match
-the example and count"), not tile grids; the only general local approach is VLM click points. 0/3 measured
-(10-27): adversarial canvas tasks beat a 4B VLM, hence off by default (status `unsupported`).
+the example and count"), not tile grids; the only general local approach is VLM click points. A small VLM
+rarely solves them, hence off by default (status `unsupported`).
 """
 from __future__ import annotations
 

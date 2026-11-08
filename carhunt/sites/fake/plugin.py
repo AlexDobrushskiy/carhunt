@@ -1,4 +1,4 @@
-"""Synthetic site: bundled fixture ads, no network. For discover/integrator e2e tests.
+"""Synthetic site: bundled fixture ads, no network. For discover and end-to-end tests.
 
 Env knobs: CARHUNT_FAKE_SITES_FIXTURES = path to an ads.json of the same shape (default: bundled);
 CARHUNT_FAKE_SITES_BLOCK = comma list of actions (search, ad, live) that raise Blocked, to test stop-at-first-block;

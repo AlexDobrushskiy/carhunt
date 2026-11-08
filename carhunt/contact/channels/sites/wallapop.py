@@ -1,11 +1,10 @@
 """wallapop.com (es): the item chat.
 
-Status: working (2026-11-01..05). Route: identity (logged in; new-device logins get an email
-code). Chat URL `es.wallapop.com/app/chat?itemId=<hash id>`: the ad's "Chat" button did not
-navigate over CDP; the URL works (2026-11-01). An /item/<slug> URL is resolved to the hash id from
-the item page. The textarea cuts at 300 chars without a warning (2026-11-01): longer text is
-refused here; if a cut ever happens, send only the cut part with an apology, never the list again.
-Wallapop sends no alert mail, so replies need this poll (seen 3.7–7 h late without it, 2026-11-02..05).
+Route: identity (logged in; new-device logins get an email code). Chat URL
+`es.wallapop.com/app/chat?itemId=<hash id>` (the ad's "Chat" button does not navigate over CDP).
+An /item/<slug> URL is resolved to the hash id from the item page. The textarea cuts at 300 chars
+without a warning: longer text is refused here; if a cut ever happens, send only the cut part with
+an apology, never the list again. Wallapop sends no alert mail, so replies need this poll.
 """
 from __future__ import annotations
 
@@ -44,7 +43,7 @@ class Wallapop(ChatSite):
         raise Abort(f"no wallapop item id for {to!r} (pass the chat URL or the item hash id)")
 
     def reveal_form(self, page: Any) -> Any:
-        # First chat on a new account: an onboarding modal asks the account type (2026-11-02).
+        # First chat on a new account: an onboarding modal asks the account type.
         if page.get_by_text("Cuenta personal").count():
             page.get_by_text("Cuenta personal").first.evaluate("e => e.click()")
             page.wait_for_timeout(1500)

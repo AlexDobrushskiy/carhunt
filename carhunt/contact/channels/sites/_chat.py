@@ -3,14 +3,14 @@ skipped by the registry).
 
 A site module subclasses `ChatSite`, sets selectors/markers as class attrs, and overrides a hook
 only where the site's flow differs. Selectors can be overridden per site without a code change:
-`contact.sites.<site>.selectors.<attr>` in config (sites change their DOM; EV run, Nov 2026).
+`contact.sites.<site>.selectors.<attr>` in config (sites change their DOM).
 
 send():  open → walls/login/gone checks → open the form → duplicate guard → fill → submit →
          post-submit dialogs → read the page. Outcome in `SendResult.raw`:
          confirmed (site's own success text/URL), in_thread (our text now in the thread and the box
          cleared), submitted (the click happened), refused/blocked/gone/login.
 verify(): delivered on confirmed|in_thread; failed when nothing was submitted; else unknown
-         (a timeout after the click may still have delivered: network errors ≠ failed, 2026-11-05).
+         (a timeout after the click may still have delivered: network errors ≠ failed).
 """
 from __future__ import annotations
 
@@ -129,7 +129,7 @@ class ChatSite(SiteChannel):
     load_ms: ClassVar[int] = 5000
     settle_ms: ClassVar[int] = 5000
     box_timeout_ms: ClassVar[int] = 15000
-    # Off-screen plain-chrome windows ignore Playwright's mouse clicks: click in the DOM (Subito/KA, 2026-11-02).
+    # Off-screen plain-chrome windows ignore Playwright's mouse clicks: click in the DOM.
     js_click: ClassVar[bool] = True
     can_poll: ClassVar[bool] = False
 
@@ -157,7 +157,7 @@ class ChatSite(SiteChannel):
                 box = self.find_box(page)
                 before = self.thread_text(page)
                 if self.already_in_thread(self.messages(page), text) or head(text) in norm(before):
-                    # An opener went out twice (2026-11-01): never send what the thread already shows.
+                    # Never send what the thread already shows.
                     return SendResult(False, error="duplicate: this text is already in the thread",
                                       raw={"refused": "duplicate", "submitted": False})
                 self.fill(page, box, text)
@@ -344,7 +344,7 @@ class ChatSite(SiteChannel):
                 self.goto(page, self.s("inbox_url"))
                 convs = page.evaluate(_CONVS_JS, [self.s("conv_sel"), self.s("unread_sel")])
                 todo = [c for c in convs if c["unread"]]
-                if not todo:  # Wallapop: no per-row flag, the tab title says "(N) …" (site_poll, 2026-11-02)
+                if not todo:  # Wallapop: no per-row flag, the tab title says "(N) …"
                     m = re.match(r"\s*\((\d+)\)", page.title())
                     todo = convs[: int(m.group(1))] if m else []
                 for c in todo[: self.max_poll_threads]:

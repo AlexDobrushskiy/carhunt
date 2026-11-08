@@ -1,7 +1,7 @@
 """Root test isolation for every suite (tests/ and carhunt/<pkg>/tests).
 
 Each test gets a temp $CARHUNT_HOME and the file secrets backend; the real macOS Keychain is blocked
-unless the test is marked `keychain` and CARHUNT_TEST_KEYCHAIN=1 (a builder's run once wrote to it).
+unless the test is marked `keychain` and CARHUNT_TEST_KEYCHAIN=1.
 """
 import os
 import shutil

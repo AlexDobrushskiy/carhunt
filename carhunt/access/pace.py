@@ -5,16 +5,15 @@
     pace.acquire("leboncoin.fr", "phone", who="sweep")  # day cap: take the slot BEFORE the action
     pace.check("mobile.de", "load")                     # Status, records nothing
 
-Why shared: one IP ⇒ one budget. Another agent's two liveness checks silently ate a sender's coches.net slot (11-02);
-coches allows ≤2 loads per rolling hour for everyone on the IP.
-Why take before the action: an attempt hits the site whether it succeeds or not (leboncoin reveals, 11-05).
+Shared: one IP ⇒ one budget across all agents (e.g. coches.net allows ≤2 loads per rolling hour per IP).
+Take the slot before the action: an attempt hits the site whether it succeeds or not.
 Day = owner's local calendar day (`owner.tz`), not a hardcoded zone.
 
 Ledger: SQLite `$CARHUNT_HOME/access/pace.sqlite` (WAL; every decision under `BEGIN IMMEDIATE`, so concurrent
 processes never both get the last slot). A broken ledger refuses (fail closed), it never silently allows.
 
-Kinds: `load` = a page load; `api` = a JSON/API read that is not a page load (own gap, no load caps: coches.net's
-gateway passed ≥12 s apart while page loads were capped at 2/h, 11-05); `phone`/`send`/`login` = account actions.
+Kinds: `load` = a page load; `api` = a JSON/API read that is not a page load (own gap, no load caps: e.g. coches.net's
+gateway at ≥12 s apart while its page loads are capped at 2/h); `phone`/`send`/`login` = account actions.
 
 Limits: `carhunt/sites/<site>/site.yaml`, then config `sites.overrides.<site>` (one level deep per section):
 - `pace{min_gap_s, max_loads_per_run, max_loads_per_hour, max_loads_per_day}` → kind load;
@@ -45,13 +44,9 @@ from carhunt.access.errors import PaceExceeded
 
 KINDS = ("load", "api", "phone", "send", "login")
 
-# Conservative defaults for a site nobody has measured yet:
-# - 12 s between loads: ≥10–12 s survived where 6 s got 403s (custojusto after ~50 ads at 6 s, 11-03; leboncoin, mobile.de).
-# - 30 loads/rolling hour: under the lowest burst ceilings seen (mobile.de ~25 fast loads/profile, home-IP 403 after ~41, 11-06).
-# - 60 loads per run: mobile.de's measured per-run ceiling (≤60/run).
-# - phone 5/day, send 10/day: per-account actions; unmeasured sites get a fraction of the measured ones
-#   (milanuncios ≤9 reveals/day, leboncoin ≤40/day).
-# - login 3/day: repeated logins trip new-device checks and SMS challenges, which can lock an account (11-02).
+# Conservative defaults for a site without its own pace section: 12 s between loads, 30 loads/rolling hour,
+# 60 loads per run; per-account phone 5/day, send 10/day; login 3/day (repeated logins trip new-device checks
+# and SMS challenges, which can lock an account).
 DEFAULTS: dict[str, Any] = {
     "pace": {"min_gap_s": 12, "max_loads_per_hour": 30, "max_loads_per_run": 60},
     "caps": {"phone_per_day": 5, "send_per_day": 10, "login_per_day": 3},

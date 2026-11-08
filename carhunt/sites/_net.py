@@ -3,12 +3,12 @@
 Plugins never open sockets or tabs themselves: they call `net.get` / `net.json` / `net.browser_get`, so tests swap
 in `carhunt.sites.testing.FakeNet` and the pacing rules live in one place.
 
-Rules (each from the EV run):
+Rules:
 - Every request goes through the shared pace ledger (`access.pace.acquire(site, kind, via=<exit country>)`) before it
-  is sent — parallel agents on one IP got sites banned (coches.net 11-03, leboncoin 10-30). Limits come from
-  site.yaml `pace`/`caps` (+ config overrides) inside the ledger; kinds: `load` page, `api` JSON read, `phone`.
-- Stop on a block signal: 401/403/429/5xx or a bot page → `Blocked`; 404/410 → `Gone` (skip that ad, keep going) —
-  two runs stopped leboncoin on a 410 and left 200 ads undone (11-04/05).
+  is sent: parallel agents on one IP share one budget. Limits come from site.yaml `pace`/`caps` (+ config overrides)
+  inside the ledger; kinds: `load` page, `api` JSON read, `phone`.
+- Stop on a block signal: 401/403/429/5xx or a bot page → `Blocked`; 404/410 → `Gone` (skip that ad, keep going,
+  never stop the site on it).
 - A country route (site.yaml `country_ip`) goes through `access.proxy`, fail-closed: no proxy → no request.
 """
 from __future__ import annotations

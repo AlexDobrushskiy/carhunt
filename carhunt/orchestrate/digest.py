@@ -1,7 +1,6 @@
 """`carhunt digest`: the owner's twice-daily summary — the only scheduled push.
 
-Agents put FYI lines in their digest-input.md instead of pinging: in the EV run 14 of 28
-pushes on one day asked nothing (11-03); after this rule FYI pings went 17 → 6 → 0.
+Agents put FYI lines in their digest-input.md instead of pinging.
 """
 from __future__ import annotations
 

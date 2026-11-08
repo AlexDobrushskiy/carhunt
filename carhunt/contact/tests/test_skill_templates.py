@@ -28,8 +28,7 @@ WHITELIST: set[str] = {
     "agent.dir",  # the agent's folder, set by `carhunt agent launch` (orchestrate's launch vars), not config
 }
 
-# Keys the templates use that config.example.yaml doesn't carry yet (integrator adds them to the
-# `contact` section). Values = the EV run, generalized.
+# Keys the templates use that config.example.yaml doesn't carry (example values for the test).
 CONFIG_ADDITIONS = {
     "contact": {
         "persona": {

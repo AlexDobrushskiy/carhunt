@@ -1,7 +1,7 @@
 """marktplaats.nl / 2dehands.be / 2ememain.be (one Adevinta platform): plain HTTP. Search = the site's JSON API
 `/lrp/api/search` (30 rows/page, attribute-id filters); ad = page data `window.__CONFIG__.listing`.
 
-Never warm up on `/`: CloudFront 403s the home page to scripts while the API and ad pages pass (11-01).
+Never warm up on `/`: CloudFront 403s the home page to scripts while the API and ad pages pass.
 Private phones are hidden logged-out and the login needs SMS 2FA per new device (never set up) → no reveal."""
 from __future__ import annotations
 

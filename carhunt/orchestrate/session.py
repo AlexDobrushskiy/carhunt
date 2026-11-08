@@ -83,8 +83,7 @@ def _run(args: list[str], stdin: str | None = None, timeout: float = 30) -> subp
 class AgtermBackend:
     """agtermctl wrapper. Every call names its target session explicitly.
 
-    Lesson (EV run, 11-01): an agtermctl call without --target hits whatever session the
-    user has selected — rename/type landed in the wrong session twice.
+    An agtermctl call without --target hits whatever session the user has selected.
     """
 
     def __init__(self, ctl: str | None = None, runner: Runner = _run, mailbox: str = "carhunt",
@@ -174,7 +173,7 @@ class AgtermBackend:
         """Mailbox when a receiver listens (arrives as a new turn when idle), else type + Return.
 
         interrupt: Esc first, then type — mail waits for the turn to end, which is too late to
-        stop an irreversible step (EV run 11-02: a signup ran from the wrong IP while mail waited).
+        stop an irreversible step.
         """
         node = self._node(sid)
         if not node:
@@ -197,7 +196,7 @@ class AgtermBackend:
 
     def _type(self, sid: str, text: str) -> None:
         # one line, then Return as its own keystroke: a TUI takes a fast burst as a paste and can
-        # swallow a Return sent with it (EV run 11-01: half a decision sat unsent in an input box)
+        # swallow a Return sent with it
         line = " ".join(text.split())
         self._ctl("session", "type", "--target", sid, "--stdin", stdin=line)
         time.sleep(1.5)

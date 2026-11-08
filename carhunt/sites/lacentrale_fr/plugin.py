@@ -1,5 +1,5 @@
 """La Centrale (lacentrale.fr): DataDome, dealer listings only. Read route = a non-automated plain-chrome tab that
-opens the home page first. Only the list URL is known (from the EV run); the result rows were never captured
+opens the home page first. Only the list URL is known; the result rows were never captured
 non-empty, so search/ad have no reader yet → Unsupported (see README "Gaps")."""
 from __future__ import annotations
 

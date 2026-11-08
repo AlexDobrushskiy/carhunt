@@ -1,4 +1,4 @@
-"""The 43 ev-say scenarios (EV run, 2026-11-05) ported to `carhunt say` + the config-driven guard.
+"""Guard scenarios for `carhunt say` + the config-driven guard.
 End to end via the CLI: fake wacli, cardb stub over HTTP, frozen clock. Nothing is ever sent."""
 from __future__ import annotations
 

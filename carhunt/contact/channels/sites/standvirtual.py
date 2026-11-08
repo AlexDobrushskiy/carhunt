@@ -1,8 +1,8 @@
 """standvirtual.com: the ad's "Mensagem" chat panel.
 
-Status: working (2026-11-01..05). Route: identity (OLX Group login, shared with olx.pt; it lives
-on the identity master, pool copies can be stale: re-seed them). Success = box cleared and the
-text visible in the panel; never retry without reading the chat first (sv-send). Read the thread
+Route: identity (OLX Group login, shared with olx.pt; it lives on the identity master, pool
+copies can be stale: re-seed them). Success = box cleared and the text visible in the panel;
+never retry without reading the chat first. Read the thread
 on the same ad URL. No site poll: the inbox is /contapessoal/messages, the site mails alerts.
 """
 from __future__ import annotations

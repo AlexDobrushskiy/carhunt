@@ -1,6 +1,6 @@
 """PAUSE file: while it exists every sender refuses. Only the owner or the schedule removes it.
 
-Agents never unpause themselves — the proposal to let them was rejected (EV run 11-05).
+Agents never unpause themselves.
 """
 from __future__ import annotations
 

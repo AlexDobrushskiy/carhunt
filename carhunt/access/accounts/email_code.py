@@ -8,9 +8,8 @@ r"""Read-only Gmail lookups for site verification codes and confirm links.
 Auth: config `accounts.gmail.oauth_client` (secret: Google client JSON, "installed"/"web" or flat
 {client_id, client_secret}) and `accounts.gmail.token` (secret: JSON with refresh_token, or the bare refresh token).
 Scope gmail.readonly; nothing is ever written to the mailbox or to the secrets.
-Codes and confirm links: check mail first, a "texted" code once arrived by email (10-31).
-Publish the Google OAuth app **In production**: a Testing app's refresh tokens die after 7 days, and every
-Gmail-dependent agent died at once (11-06).
+Codes and confirm links: check mail first, some "texted" codes arrive by email.
+Publish the Google OAuth app **In production**: a Testing app's refresh tokens die after 7 days.
 Query per site: site.yaml `account.mail_from` (Gmail query, e.g. `from:(example.com)`), else `from:<domain>`.
 """
 from __future__ import annotations
@@ -89,7 +88,7 @@ class Gmail:
                                        "refresh_token": c["refresh_token"], "grant_type": "refresh_token"}).encode()
         st, raw = self.transport("POST", c["token_uri"], {"Content-Type": "application/x-www-form-urlencoded"}, body)
         if st != 200:
-            # invalid_grant after ~7 days = OAuth app still in Testing (publish it In production, 11-06)
+            # invalid_grant after ~7 days = OAuth app still in Testing (publish it In production)
             raise GmailError(f"token refresh failed (HTTP {st}); invalid_grant → re-authorize and publish the "
                              f"OAuth app In production")
         d = json.loads(raw)

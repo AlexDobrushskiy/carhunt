@@ -336,7 +336,7 @@ def _evaluate(req: Request, ctx: Context) -> None:
             profile = "private" if profile == "private" else "dealer"
         _seller_hours(s, req, car, ctx.now, str(profile))
 
-    # duplicate (EV: a site opener went out twice, 2026-11-01)
+    # duplicate
     head = text[: s["duplicate_prefix"]]
     if any(e.counts and head and head in e.text for e in mine) or \
             (thread and any(m.from_me and head and head in m.text for m in thread)):

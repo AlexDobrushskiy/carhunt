@@ -1,7 +1,7 @@
 """Agent Chrome: executable lookup, launch flags, pid records of the browsers carhunt starts.
 
 Every Chrome we launch writes a pid record under $CARHUNT_HOME/browsers/run/; browser-reaper kills
-only recorded pids (never by name pattern: a sweep subagent's pkill once killed another agent's search, 11-03).
+only recorded pids (never by name pattern: that would kill other agents' browsers).
 """
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ def agent_chrome_path(*, update: bool = True) -> Path:
     """Executable of the re-signed Chrome clone (built/refreshed by browsers/bin/agent-chrome).
 
     `CARHUNT_CHROME` overrides (tests, Linux). Never /Applications/Google Chrome.app directly:
-    macOS takes the agent process for the user's Chrome (Dock click activates it, Quit fails, 10-16).
+    macOS takes the agent process for the user's Chrome (Dock click activates it, Quit fails).
     """
     if os.environ.get("CARHUNT_CHROME"):
         return Path(os.environ["CARHUNT_CHROME"])
@@ -35,7 +35,7 @@ def launch_args(profile: Path | None, debug_port: int | None, *, headless: bool 
                 extra: list[str] | None = None) -> list[str]:
     """Chrome flags for a person-like launch (no automation flags; attach later over the debug port)."""
     args = ["--no-first-run", "--no-default-browser-check",
-            # without these a launch on a persistent profile wiped every login (10-25)
+            # without these a launch on a persistent profile wipes every login
             "--use-mock-keychain", "--password-store=basic"]
     if profile is not None:
         args.append(f"--user-data-dir={profile}")

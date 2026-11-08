@@ -23,7 +23,7 @@ ORIGIN = "https://www.coches.net"
 GW = "https://web.gw.coches.net"
 GW_HEADERS = {"Origin": ORIGIN, "Referer": ORIGIN + "/", "X-Adevinta-Channel": "web-desktop",
               "X-Schibsted-Tenant": "coches", "Content-Type": "application/json"}
-API_MAX_PER_RUN = 60          # gateway reads per run (sweep allowance 11-07); Net counts only kind `load`
+API_MAX_PER_RUN = 60          # gateway reads per run; Net counts only kind `load`
 HP_TO_KW = 0.7355
 
 
@@ -94,7 +94,7 @@ class Plugin(BaseSite):
         return f"{ORIGIN}/segunda-mano/?{urllib.parse.urlencode(p)}"
 
     def search_body(self, q: SearchQuery, page: int = 1) -> dict:
-        """The full filter set the site's app posts (a shorter body got 400 on 11-05)."""
+        """The full filter set the site's app posts (a shorter body gets 400)."""
         rng = lambda lo=None, hi=None: {"from": lo, "to": hi}  # noqa: E731
         fuel = self.code("fuel", q.fuel, slug=False) if q.fuel else None
         filters: dict[str, Any] = {
@@ -133,7 +133,7 @@ class Plugin(BaseSite):
 
     def _page(self, url: str, ad_id: str | None = None) -> tuple[dict, str | None]:
         # ≤2 page loads per rolling hour for every agent on the IP: site.yaml pace.max_loads_per_hour, enforced by
-        # the shared ledger inside net.get (5th load at 10 s pace = bot page, 11-03)
+        # the shared ledger inside net.get (5th load at 10 s pace = bot page)
         r = self.net.get(url, ad_id=ad_id)
         props = window_var(r.text, "__INITIAL_PROPS__") if r.text else None
         return props if isinstance(props, dict) else {}, r.final_url
@@ -339,7 +339,7 @@ class Plugin(BaseSite):
     # --- phone -----------------------------------------------------------------
     def phone(self, ad: RawAd, *, reveal: bool = False) -> list[str]:
         """Page data first. `reveal=True`: the app's own `GET /details/<id>/phone` (no login), Spanish IP only —
-        403 from every non-ES client (11-02); 200 {phone} or 204 = the seller hides it (messages only)."""
+        403 from every non-ES client; 200 {phone} or 204 = the seller hides it (messages only)."""
         if ad.phones or not reveal:
             return list(ad.phones)
         url = f"{GW}/details/{ad.site_ref}/phone"

@@ -63,8 +63,7 @@ class Channel(ABC):
 
     # -- send path ----------------------------------------------------------------------------
     def check_text(self, text: str) -> str | None:
-        """Channel-specific refusal reason, or None. Sites: never a URL (the site attaches the ad;
-        a pasted link reads like a bot, EV 2026-11-04)."""
+        """Channel-specific refusal reason, or None. Sites: never a URL (the site attaches the ad)."""
         if self.kind == "site" and URL_RE.search(text):
             return "URL in a site message (the site attaches the ad)"
         if len(text) > self.max_len:
@@ -80,9 +79,8 @@ class Channel(ABC):
         ...
 
     def verify(self, to: str, text: str, result: SendResult) -> str:
-        """delivered | failed | unknown. Default: trust the send result's ok flag as unknown-safe.
-        Why: a coches.net script 'succeeded' and delivered nothing (2026-11-02), so adapters
-        should override with a real check (sent folder, thread re-read, confirmation text)."""
+        """delivered | failed | unknown. Default: ok → unknown, never delivered; adapters override
+        with a real check (sent folder, thread re-read, confirmation text)."""
         return UNKNOWN if result.ok else FAILED
 
     # -- read path ----------------------------------------------------------------------------

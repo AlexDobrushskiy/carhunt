@@ -85,7 +85,7 @@ class Plugin(BaseSite):
         return f"{API}?{urllib.parse.urlencode(p)}"
 
     def search(self, q: SearchQuery) -> Iterator[Card]:
-        """Sort is not honoured: the API ignores sort_by (11-04) — discover keeps a numeric id cursor instead."""
+        """Sort is not honoured: the API ignores sort_by — discover keeps a numeric id cursor instead."""
         fuel_key = self.code("fuel", q.fuel, slug=False) if q.fuel else None
         if q.fuel and not fuel_key:
             raise Unsupported(f"{self.id}: no combustivel key for fuel {q.fuel!r} (codes.yaml fuel)")
@@ -185,4 +185,4 @@ class Plugin(BaseSite):
         if ad.phones or not reveal or not ad.contact.get("phone"):
             return list(ad.phones)        # contact.phone false = chat only, no number exists
         raise Unsupported(f"{self.id}: phone reveal (/api/v1/offers/<id>/limited-phones/) needs a logged-in Bearer "
-                          "token (logged out → 400 'Disallowed for this user', 11-04); login lives in browsers/contact")
+                          "token (logged out → 400 'Disallowed for this user'); login lives in browsers/contact")
