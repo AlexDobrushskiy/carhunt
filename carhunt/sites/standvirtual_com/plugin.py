@@ -236,7 +236,8 @@ class Plugin(BaseSite):
             cached = json.loads(cache.read_text()).get("salt") if cache.exists() else None
         except (OSError, ValueError):
             pass
-        for s in (self._salt, cached):
+        known = (self.codes.get("cipher") or {}).get("salt")   # the site's public client constant, last seen
+        for s in (self._salt, cached, known):
             if s and self._proves(s, probe):
                 self._salt = s
                 return s

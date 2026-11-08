@@ -39,3 +39,10 @@ models:
   MINI: {Countryman: countryman}
   XPeng: {G6: g6}
   BYD: {Seal U: seal-u, Sealion 7: sealion-7}
+
+# The site's own client salt (a public constant in its JS: webpack module that does PBKDF2), last read 2026-11-04.
+# Used only after it authenticates an advert's token (AES-GCM rejects a wrong salt); when it stops working the plugin
+# re-discovers it from the page's script bundles and caches it in $CARHUNT_HOME/sites/standvirtual.com/.
+# The module is lazy-loaded (not in the page's script tags), so discovery can miss it: update this value then.
+cipher:
+  salt: d2905222-d0c5-4ec5-bfcf-e9c29041de3c

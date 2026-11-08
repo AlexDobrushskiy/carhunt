@@ -1,0 +1,67 @@
+{
+ "items": [
+  {
+   "id": "900000103",
+   "creationDate": "2026-11-03T09:00:00Z",
+   "title": "KIA EV6 Air",
+   "url": "/kia-ev6-air-5p-electrico-hibrido-2023-en-madrid-900000103-covo.aspx",
+   "price": {
+    "amount": 30003,
+    "taxTypeId": 1,
+    "hasTaxes": true,
+    "indicator": {
+     "average": 31000,
+     "rank": 3
+    },
+    "hasOnlineFinancing": false,
+    "hasReservation": false
+   },
+   "seller": {
+    "name": "Synthetic Dealer",
+    "isProfessional": true
+   },
+   "km": 20003,
+   "year": 2023,
+   "location": {
+    "provinceIds": [
+     28
+    ],
+    "regionId": 1,
+    "regionLiteral": "Comunidad Valenciana",
+    "mainProvince": "Madrid",
+    "mainProvinceId": 28,
+    "cityId": 28001,
+    "cityLiteral": "Madrid"
+   },
+   "resources": [
+    {
+     "type": "IMAGE",
+     "url": "https://img.example.invalid/cn/k3.jpg"
+    }
+   ],
+   "makeId": 22,
+   "make": "KIA",
+   "modelId": 1369,
+   "model": "EV6",
+   "fuelTypeId": 3,
+   "fuelType": "Eléctrico",
+   "hp": 229,
+   "isProfessional": true,
+   "publishedDate": "2026-11-03T09:00:00Z",
+   "phone": "555000303",
+   "hidePhone": false,
+   "offerType": {
+    "id": 0,
+    "literal": "Ocasión"
+   },
+   "drivenWheelsId": 4,
+   "transmissionTypeId": 1
+  }
+ ],
+ "paidItems": [],
+ "meta": {
+  "totalPages": 2,
+  "totalResults": 4
+ },
+ "aggregations": []
+}

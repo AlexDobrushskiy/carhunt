@@ -1,0 +1,109 @@
+{
+ "ad": {
+  "id": "900000101",
+  "title": "KIA EV6 Air",
+  "description": "Synthetic description.",
+  "vehicle": {
+   "vin": "SYN0000000000CN01",
+   "specs": {
+    "make": "KIA",
+    "model": "EV6",
+    "version": "Air 77kWh RWD",
+    "doors": 5,
+    "bodyTypeId": 6,
+    "power": 229,
+    "fuelTypeId": 3,
+    "transmissionTypeId": 1,
+    "seatingCapacity": 5,
+    "makeId": 22,
+    "modelId": 1369,
+    "versionId": 1,
+    "drivenWheelsId": 4,
+    "optionalEquipment": [
+     {
+      "title": "Otros extras",
+      "items": [
+       "Bomba de calor",
+       "Techo panorámico"
+      ],
+      "entries": []
+     }
+    ]
+   },
+   "hasVehicleHistory": false,
+   "warranty": {
+    "typeId": 4,
+    "months": 12,
+    "text": "12 meses (1 año)"
+   },
+   "km": 20001,
+   "colorId": 4,
+   "year": 2023,
+   "isCertified": false
+  },
+  "photos": [
+   "https://img.example.invalid/cn/d1.jpg",
+   "https://img.example.invalid/cn/d2.jpg"
+  ],
+  "offerTypeId": 0,
+  "professionalSeller": {
+   "id": "1"
+  },
+  "price": {
+   "price": 30001,
+   "hasTaxes": false,
+   "taxTypeId": 1
+  },
+  "status": "active",
+  "url": "/kia-ev6-air-5p-electrico-hibrido-2023-en-madrid-900000101-covo.aspx",
+  "publicationDate": "2026-11-03T10:00:00+01:00",
+  "creationDate": "2026-11-03T10:00:00+01:00",
+  "category": {
+   "category1Id": 2500
+  },
+  "provinceId": 28,
+  "location": {
+   "provinceIds": [
+    28
+   ],
+   "mainProvinceId": 28
+  }
+ },
+ "professionalSeller": {
+  "id": "1",
+  "name": "Synthetic Dealer",
+  "contact": {
+   "email": "dealer@example.com",
+   "phone": "555000301",
+   "phone1": "",
+   "hasCallTrackingService": false,
+   "hidePhone": false,
+   "hasWhatsappProduct": true
+  },
+  "location": {
+   "address": "Calle Sintética 1",
+   "city": "Madrid",
+   "provinceId": 28,
+   "province": "Madrid",
+   "zipCode": "28001"
+  },
+  "stockPageUrl": "https://www.coches.net/concesionario/synthetic/"
+ },
+ "vehicleSpecs": {
+  "horsePower": 229,
+  "electricFeatures": {
+   "powerSource": {
+    "maximumBatteryKWH": {
+     "value": "77.4",
+     "unit": "kWh"
+    }
+   }
+  }
+ },
+ "vehicleHistory": {
+  "hasReport": false
+ },
+ "trade": {
+  "isTradable": false
+ }
+}

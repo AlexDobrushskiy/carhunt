@@ -145,6 +145,8 @@ class Net:
         pace = meta.get("pace") or {}
         self.min_gap_s = float(pace.get("min_gap_s") or 6)
         self.max_loads = pace.get("max_loads_per_run")
+        self.per_hour = pace.get("max_loads_per_hour")
+        self._hour: list[float] = []
         self.loads = 0
         self._last = 0.0
         self._stack: contextlib.ExitStack | None = None
@@ -176,7 +178,13 @@ class Net:
                     if time.monotonic() + wait > deadline:
                         raise
                     time.sleep(max(wait, 0.5))
-        else:   # browsers' pace ledger not installed: in-process gap only
+        else:   # browsers' pace ledger not installed: in-process gap + hourly cap only
+            if kind == "load" and home and self.per_hour:
+                t = time.monotonic()
+                self._hour = [x for x in self._hour if t - x < 3600]
+                if len(self._hour) >= int(self.per_hour):
+                    raise PaceExceeded(self.site, kind, reason=f"max_loads_per_hour={self.per_hour} (in-process)")
+                self._hour.append(t)
             wait = self._last + self.min_gap_s - time.monotonic()
             if wait > 0:
                 time.sleep(wait)
@@ -199,10 +207,11 @@ class Net:
             method: str | None = None, check: bool = True) -> Response:
         if country is None:   # reads of a country_ip site always leave through that country
             country = self.meta.get("country_ip")
+        proxy = self._proxy(country)   # fail closed before taking a pace slot
         self.gate(kind, country=country)
         h = {"Accept": accept, "Accept-Language": self.meta.get("accept_language", "en-US,en;q=0.8")}
         h.update(headers or {})
-        r = http(url, headers=h, follow=follow, proxy=self._proxy(country), data=data, method=method)
+        r = http(url, headers=h, follow=follow, proxy=proxy, data=data, method=method)
         return raise_for(self.site, r, ad_id=ad_id) if check else r
 
     def json(self, url: str, **kw) -> Any:

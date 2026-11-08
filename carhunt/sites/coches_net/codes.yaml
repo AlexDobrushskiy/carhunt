@@ -1,0 +1,117 @@
+# coches.net — numeric ids (the site has no make/model slugs in its filters). Source: the list page's own
+# `listFiltersOptions.vehicles` + the request bodies the site's app sent (11-04..07). Every make/model must be listed.
+#
+# Page route:    https://www.coches.net/segunda-mano/?MakeIds[i]=…&ModelIds[i]=…&Fueltype2List=3&MinYear&MaxYear&MaxKms
+#                &MinPrice&MaxPrice&st=2&fi=Price&or=1&pg=N   (param names = the site bundle's FILTER_QUERY_PARAMS)
+# Gateway route: POST https://web.gw.coches.net/search/listing  {pagination, sort, filters} (same ids)
+makes:        # make → [makeId, site label]
+  Audi: [4, AUDI]
+  BMW: [7, BMW]
+  BYD: [1352, BYD]
+  Cupra: [1400, CUPRA]
+  Ford: [15, FORD]
+  Hyundai: [18, HYUNDAI]
+  Kia: [22, KIA]
+  Mercedes-Benz: [28, MERCEDES-BENZ]
+  MG: [29, MG]
+  Mini: [222, MINI]
+  Nissan: [31, NISSAN]
+  Peugeot: [33, PEUGEOT]
+  Polestar: [1402, POLESTAR]
+  Renault: [35, RENAULT]
+  Skoda: [40, SKODA]
+  Tesla: [1354, TESLA]
+  Toyota: [46, TOYOTA]
+  Volkswagen: [47, VOLKSWAGEN]
+  Volvo: [48, VOLVO]
+  XPeng: [1435, XPENG]
+models:       # make → model → [[modelId, site label], …]: one model name can span several site models (body styles)
+  Volkswagen:
+    ID.3: [[1325, ID.3], [1719, ID.3 Neo]]
+    ID.4: [[1334, ID.4]]
+    ID.5: [[1388, ID.5]]
+    ID.7: [[1510, ID.7]]
+    ID. Buzz: [[1428, ID. BUZZ]]
+  Audi:
+    Q4 e-tron: [[1368, Q4 etron], [1376, Q4 Sportback etron]]
+    Q4 Sportback e-tron: [[1376, Q4 Sportback etron]]
+    Q6 e-tron: [[1545, Q6 e-tron], [1608, Q6 Sportback e-tron]]
+  Skoda:
+    Enyaq: [[1341, Enyaq], [1435, Enyaq Coupe]]
+    Enyaq Coupe: [[1435, Enyaq Coupe]]
+    Elroq: [[1598, Elroq]]
+  BMW:
+    iX1: [[1444, iX1]]
+    iX2: [[1515, ix2]]
+    iX3: [[1324, iX3]]
+    i4: [[1374, i4]]
+  Hyundai:
+    Ioniq 5: [[1371, IONIQ 5]]
+    Ioniq 6: [[1465, IONIQ 6]]
+    Kona: [[1239, Kona]]
+  Toyota:
+    bZ4X: [[1478, BZ4X]]
+  Mercedes-Benz:
+    EQA: [[1355, EQA]]
+    EQB: [[1390, EQB]]
+  Kia:
+    EV6: [[1369, EV6]]
+    EV3: [[1591, EV3]]
+    EV9: [[1502, EV9]]
+    Niro: [[1197, Niro], [1266, e-Niro]]
+  Cupra:
+    Tavascan: [[1555, Tavascan]]
+    Born: [[1381, Born]]
+  BYD:
+    Seal U: [[1536, Seal U]]
+    Sealion 7: [[1610, Sealion 7]]
+    Seal: [[1509, Seal]]
+    Atto 3: [[1480, Atto 3], [1700, Atto 3 Evo]]
+  Mini:
+    Countryman: [[971, Countryman]]
+    Aceman: [[1556, AcEMAN]]
+  XPeng:
+    G6: [[1593, G6]]
+    G9: [[1595, G9]]
+  Tesla:
+    Model 3: [[1262, Model 3]]
+    Model Y: [[1328, Model Y]]
+  Ford:
+    Mustang Mach-E: [[1326, Mustang Mach-E]]
+    Explorer: [[1618, Explorer EV]]
+  Renault:
+    Megane E-Tech: [[1395, Megane E-Tech]]
+    Scenic E-Tech: [[1529, Scenic E-Tech]]
+  Nissan:
+    Ariya: [[1425, Ariya]]
+  Polestar:
+    "2": [[1420, "2"]]
+    "4": [[1516, "4"]]
+  Volvo:
+    EX30: [[1500, EX30]]
+    EX40: [[1544, EX40]]
+    EC40: [[1548, EC40]]
+  MG:
+    MG4: [[1443, MG4]]
+  Peugeot:
+    e-2008: [[1303, e-2008]]
+    E-3008: [[1523, E-3008]]
+fuel:         # cardb powertrain → fuelTypeId (page Fueltype2List / gateway fuelTypeIds)
+  diesel: 1
+  petrol: 2
+  bev: 3
+  hev: 4
+  phev: 5
+fuel_names: {1: Diésel, 2: Gasolina, 3: Eléctrico, 4: Híbrido, 5: Híbrido enchufable, 6: GLP, 7: GNC, 8: Otros}
+seller:       # page `st` / gateway sellerTypeId (0 = any)
+  dealer: 1
+  private: 2
+drive: {1: all, 3: front, 4: rear}               # drivenWheelsId (bundle: SEARCH_BOX_SELECT_DRIVEN_WHEELS_*)
+gearbox: {1: automatic, 2: manual}               # transmissionTypeId
+sort:         # page: no fi/or = the site's default "relevance" (newest first after promoted rows); no creation-date sort exists
+  newest: {page: {}, gateway: {term: relevance, order: desc}}
+  relevance: {page: {}, gateway: {term: relevance, order: desc}}
+  price: {page: {fi: Price, or: "1"}, gateway: {term: price, order: asc}}
+category1: 2500                                  # second-hand cars (Section1Id / categories.category1Ids)
+offer_types: [0, 2, 3, 4, 5]                     # gateway offerTypeIds the site's app sends for second-hand
+page_size: 30                                    # gateway pagination.size (the page route serves 35)

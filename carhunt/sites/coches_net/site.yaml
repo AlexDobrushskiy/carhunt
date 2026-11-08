@@ -1,0 +1,39 @@
+site: coches.net
+name: coches.net
+kind: marketplace
+countries: [ES]
+hosts: ['(^|\.)coches\.net$']
+ad_id: ['-(\d{6,})-[a-z]{4}\.aspx']
+wall: Imperva ABP (reese84) via CloudFront
+route: http
+country_ip: null
+accept_language: "es-ES,es;q=0.9"
+pace:
+  min_gap_s: 12
+  max_loads_per_run: 60
+  max_loads_per_hour: 2
+  why: >-
+    page loads (kind load): ≤2 per rolling hour shared by every agent on the IP — the 5th load at 10 s pace got the bot
+    page twice (11-03), also via the ES proxy; 2/h ran 4/4 clean. Gateway JSON reads (kind api, ES IP): 11 pages ≥12 s
+    apart passed on 11-05/06/07; run allowance 60 (11-07)
+account:
+  needed_for: [message]
+  verification: >-
+    email account, email link (11-01); the profile form takes only a Spanish mobile + Spanish postcode (11-05) —
+    don't fake them
+phone: reveal
+messaging: "logged in, Spanish residential IP, non-Playwright browser: 'Contactar' once → contact-mail 2xx; never Enter in the box (resets the form)"
+liveness:
+  gone_redirect: '/segunda-mano/'
+  evidence: >-
+    302 to a model list page (/<make>/<model>/segunda-mano/ or /segunda-mano/) = the site's own "ad gone" (7 checks
+    11-04..07; Imperva never redirects); 200 + ad id = live; km-0 pages sometimes 200 without the id → unknown
+proxy: {sticky_minutes: 30}
+measured: 2026-11-07
+notes:
+  - "Never open coches.net in a Playwright-attached browser: Imperva sees the CDP domains and flagged every agent browser on the IP for hours (11-01→02)"
+  - "Contact and phone APIs answer 403 to every non-Spanish IP, whatever the client (5 stacks tried 11-02); a Spanish residential IP passes (11-03)"
+  - "Free VPNs (VPN Gate) and datacenter exits get the bot page on the first load (11-02)"
+  - "Gateway search body: the short body got 400 (11-05); the full filter set the site's app sends passes"
+  - "No creation-date sort exists: the default order is relevance (promoted rows first) → a sweep covers every page"
+  - "A 'not sent' contact can still arrive (aborted XHR delivered, 11-03): check relay mail before any re-send"
