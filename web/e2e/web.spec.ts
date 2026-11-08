@@ -158,6 +158,20 @@ test("photo lightbox opens, pages and closes", async ({ page }) => {
   await expect(dlg).toBeHidden();
 });
 
+test("photos load through the proxy", async ({ page, request }) => {
+  const { bev } = seeded();
+  await page.goto(`/cars/${bev}`);
+  const img = page.getByTestId("gallery-photo").first().locator("img");
+  // `complete` is true for a broken image too; a decoded image has a width.
+  await expect.poll(() => img.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBeGreaterThan(0);
+  const src = await img.getAttribute("src");
+  expect(src).toMatch(/^\/photos\/\d+\?size=/);
+  const res = await request.get(src!.replace(/size=\w+/, "size=thumb"));
+  expect(res.status()).toBe(200);
+  expect(res.headers()["content-type"]).toMatch(/^image\//);
+  expect((await request.get("/photos/abc")).status()).toBe(400);
+});
+
 test("the browser never sees a token; cross-site writes are refused", async ({ page }) => {
   const { bev } = seeded();
   const html = await (await page.request.get(`/cars/${bev}`)).text();

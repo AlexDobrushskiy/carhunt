@@ -27,6 +27,7 @@ storage_state*.json
 *.db-journal
 evdb-data/
 photos/
+!web/src/pages/photos/
 screenshots/
 *.png
 *.jpg
