@@ -60,8 +60,8 @@ def home(tmp_path, monkeypatch, example_config):
 
 @pytest.fixture
 def config(home):
-    from carhunt.orchestrate import _core
-    return _core.load_config()
+    from carhunt.orchestrate import settings
+    return settings.load()
 
 
 @pytest.fixture

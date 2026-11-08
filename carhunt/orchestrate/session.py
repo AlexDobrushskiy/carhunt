@@ -17,7 +17,9 @@ from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Protocol
 
-from . import _core
+from carhunt.core import paths
+
+from . import settings
 
 CTX_RE = re.compile(r"ctx:(\d{1,3})%")
 UUID_RE = re.compile(r"[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}", re.I)
@@ -40,7 +42,7 @@ class Backend(Protocol):
 
 def ctx_file(sid: str) -> Path:
     """Written by hooks/statusline.sh on every statusline render: {"pct": N, "ts": epoch}."""
-    return _core.home() / "ctx" / f"{_core.safe_name(sid, 'session id')}.json"
+    return paths.home() / "ctx" / f"{paths.safe_name(sid, 'session id')}.json"
 
 
 def ctx_from_file(sid: str, max_age_s: int = CTX_FRESH_S) -> int | None:
@@ -60,7 +62,7 @@ def ctx_from_screen(text: str) -> int | None:
 
 def mailbox_marker(sid: str) -> Path:
     """Written by the carhunt mailbox receiver hook while a Claude Code listens in that session."""
-    return _core.home() / "mailbox" / f"{_core.safe_name(sid, 'session id')}.json"
+    return paths.home() / "mailbox" / f"{paths.safe_name(sid, 'session id')}.json"
 
 
 def pid_alive(pid: object) -> bool:
@@ -231,9 +233,9 @@ class AgtermBackend:
 
 
 def backend(config: Mapping | None = None) -> Backend:
-    config = config if config is not None else _core.load_config()
-    kind = _core.cfg(config, "orchestrate.session_backend", "agterm")
+    config = config if config is not None else settings.load()
+    kind = settings.get(config, "orchestrate.session_backend", "agterm")
     if kind == "agterm":
-        return AgtermBackend(mailbox=_core.cfg(config, "orchestrate.mailbox", "carhunt"),
-                             workspace=_core.cfg(config, "orchestrate.workspace", "") or "")
+        return AgtermBackend(mailbox=settings.get(config, "orchestrate.mailbox", "carhunt"),
+                             workspace=settings.get(config, "orchestrate.workspace", "") or "")
     raise SessionError(f"unknown session backend {kind!r} (supported: agterm)")

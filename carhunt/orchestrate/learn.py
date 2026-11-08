@@ -10,7 +10,9 @@ from collections.abc import Mapping
 from datetime import timedelta
 from pathlib import Path
 
-from . import _core, launch, msg, pause, state
+from carhunt.core import clock, paths
+
+from . import launch, msg, pause, state
 from .session import Backend
 
 LEARNING = "learning"
@@ -29,11 +31,11 @@ def _live_roles(backend: Backend) -> list[str]:
 def night(backend: Backend, config: Mapping | None = None) -> list[str]:
     """PAUSE + ask every live agent for its lessons. Returns the roles asked."""
     pause.pause("night pause", by="schedule", config=config)
-    day = _core.now(config).date().isoformat()
+    day = clock.now().date().isoformat()
     tmpl = launch.templates_dir() / "lessons.md"
     asked = []
     for role in _live_roles(backend):
-        f = _core.agent_dir(role) / "lessons" / f"{day}.md"
+        f = paths.agent_dir(role) / "lessons" / f"{day}.md"
         msg.send(role, f"Night pause is on (no sends). Finish the current step, then write {f} in the "
                  f"format of {tmpl} (≤30 lines, evidence for each line). Then arm your background wait "
                  "and stop. Seller replies that arrive now wait for the morning.",
@@ -48,10 +50,10 @@ def start(backend: Backend, config: Mapping | None = None) -> str:
 
 def collect(day: str | None = None, config: Mapping | None = None) -> dict[str, list[str]]:
     """Inputs for the learning session (paths only; it reads them itself)."""
-    day = day or _core.now(config).date().isoformat()
+    day = day or clock.now().date().isoformat()
     out: dict[str, list[str]] = {"lessons": [], "logs": [], "digest_inputs": []}
     for role in state.roles():
-        d = _core.agent_dir(role)
+        d = paths.agent_dir(role)
         for key, p in (("lessons", d / "lessons" / f"{day}.md"), ("logs", d / "log.md"),
                        ("digest_inputs", d / "digest-input.md")):
             if p.is_file():
@@ -60,18 +62,18 @@ def collect(day: str | None = None, config: Mapping | None = None) -> dict[str, 
 
 
 def day_file(day: str) -> Path:
-    return _core.agent_dir(LEARNING) / "days" / f"{day}.md"
+    return paths.agent_dir(LEARNING) / "days" / f"{day}.md"
 
 
 def morning(backend: Backend, config: Mapping | None = None) -> list[str]:
     """Remove PAUSE and point each live agent at last night's changes."""
     pause.unpause(by="schedule")
-    yday = (_core.now(config).date() - timedelta(days=1)).isoformat()
+    yday = (clock.now().date() - timedelta(days=1)).isoformat()
     f = day_file(yday)
     told = []
     for role in _live_roles(backend):
         note = (f"Re-read the sections listed under 'Lessons applied' in {f} that touch "
-                f"{_core.home() / 'learned' / (role + '.md')} or learned/common.md."
+                f"{paths.home() / 'learned' / (role + '.md')} or learned/common.md."
                 if f.is_file() else "No learning changes last night.")
         msg.send(role, f"Unpaused, sends allowed again. {note}", backend=backend, sender="schedule")
         told.append(role)

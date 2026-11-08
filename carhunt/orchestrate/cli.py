@@ -9,12 +9,14 @@ import json
 import sys
 from pathlib import Path
 
-from . import _core
+from carhunt.core import clock
+
+from . import settings
 
 
 def _backend():
     from .session import backend
-    return backend(_core.load_config())
+    return backend(settings.load())
 
 
 def _print(obj) -> None:
@@ -30,8 +32,9 @@ def _fail(e: Exception) -> int:
 
 def cmd_agent_launch(a) -> int:
     from . import launch
+    extra = launch.parse_vars(a.var)
     sid = launch.launch(a.role, successor_of=a.successor_of, name=a.name, backend=_backend(),
-                        force=a.force)
+                        force=a.force, extra=extra)
     _print({"role": a.role, "session": sid})
     return 0
 
@@ -46,10 +49,10 @@ def cmd_agent_side(a) -> int:
 def _resolve(target: str | None) -> tuple[str, str]:
     from . import msg
     if not target:
-        sid = _core.self_session_id()
+        sid = settings.self_session_id()
         if not sid:
             raise RuntimeError("no target and own session id unknown")
-        return (_core.self_role() or "self"), sid
+        return (settings.self_role() or "self"), sid
     return target, msg.resolve(target)
 
 
@@ -85,7 +88,7 @@ def cmd_agent_ctx(a) -> int:
     if pct is None:
         print("unknown (statusline not printing ctx:N%? run `carhunt doctor`)", file=sys.stderr)
         return 1
-    over = pct >= int(_core.cfg(_core.load_config(), "orchestrate.handover_ctx_pct", 50))
+    over = pct >= int(settings.get(settings.load(), "orchestrate.handover_ctx_pct", 50))
     print(f"{pct}{'  (hand over now)' if over else ''}")
     return 0
 
@@ -99,7 +102,7 @@ def cmd_agent_close(a) -> int:
 # -- state
 
 def _role(a) -> str:
-    role = getattr(a, "role", None) or _core.self_role()
+    role = getattr(a, "role", None) or settings.self_role()
     if not role:
         raise RuntimeError("--role needed outside an agent session (CARHUNT_AGENT unset)")
     return role
@@ -132,15 +135,15 @@ def cmd_state_done(a) -> int:
 def cmd_state_handover(a) -> int:
     from . import state
     text = sys.stdin.read() if a.notes_file == "-" else Path(a.notes_file).read_text()
-    sid = state.handover(_role(a), state.load_notes(text), me=_core.self_session_id(), backend=_backend())
+    sid = state.handover(_role(a), state.load_notes(text), me=settings.self_session_id(), backend=_backend())
     _print({"successor": sid, "next": "stop now; the successor closes this session after `state takeover`"})
     return 0
 
 
 def cmd_state_takeover(a) -> int:
     from . import state
-    closed = state.takeover(_role(a), me=_core.self_session_id(), backend=_backend())
-    _print({"active_agent": _core.self_session_id(), "closed_predecessor": closed})
+    closed = state.takeover(_role(a), me=settings.self_session_id(), backend=_backend())
+    _print({"active_agent": settings.self_session_id(), "closed_predecessor": closed})
     return 0
 
 
@@ -193,7 +196,7 @@ def cmd_unpause(a) -> int:
 
 def cmd_digest(a) -> int:
     from . import digest
-    slot = a.slot or ("morning" if _core.now().hour < 14 else "evening")
+    slot = a.slot or ("morning" if clock.now().hour < 14 else "evening")
     backend = None
     try:
         backend = _backend()
@@ -221,7 +224,7 @@ def cmd_learn_collect(a) -> int:
 
 def cmd_schedule(a) -> int:
     from . import schedule
-    cfg = _core.load_config()
+    cfg = settings.load()
     if a.action == "show":
         print("\n".join(schedule.show(cfg)))
     elif a.action == "install":
@@ -276,7 +279,7 @@ def cmd_hooks(a) -> int:
         print("not applied")
         return 1
     if a.action == "install":
-        hooks.write_guards(_core.load_config())
+        hooks.write_guards(settings.load())
     backup = hooks.write(path, new)
     print(f"written {path}" + (f" (backup {backup.name})" if backup else ""))
     return 0
@@ -298,6 +301,8 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     p.add_argument("--successor-of")
     p.add_argument("--name")
     p.add_argument("--force", action="store_true", help="relaunch even if state says running")
+    p.add_argument("--var", action="append", metavar="KEY=VALUE",
+                   help="per-launch brief value, repeatable (vet/buy: car, vin, country, destination, …)")
     p.set_defaults(func=wrap(cmd_agent_launch))
     p = ag.add_parser("side", help="start a one-off side-task session")
     p.add_argument("name")

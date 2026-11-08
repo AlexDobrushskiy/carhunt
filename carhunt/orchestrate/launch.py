@@ -12,7 +12,9 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from . import _core
+from carhunt.core import clock, paths
+
+from . import settings
 from .session import Backend
 
 PLACEHOLDER = re.compile(r"(?<!\{)\{([a-z_][a-z0-9_]*(?:\.[a-z0-9_]+)*)\}(?!\})")
@@ -31,6 +33,9 @@ def flatten(d: Mapping, prefix: str = "") -> dict[str, str]:
         elif isinstance(v, (list, tuple)):
             if all(not isinstance(x, (Mapping, list)) for x in v):
                 out[key] = ", ".join(str(x) for x in v)
+            elif all(isinstance(x, Mapping) for x in v):
+                # e.g. search.models -> "make=Skoda model=Enyaq tier=1; make=…"
+                out[key] = "; ".join(" ".join(f"{k2}={v2}" for k2, v2 in x.items()) for x in v)
         elif v is not None:
             out[key] = str(v)
     return out
@@ -50,26 +55,57 @@ def unrendered(text: str) -> list[str]:
 
 
 def templates_dir() -> Path:
-    return _core.repo_root() / "agents" / "templates"
+    return paths.repo_root() / "agents" / "templates"
 
 
-def role_brief_path(role: str) -> Path:
-    """User-local roles ($CARHUNT_HOME/roles/<role>/brief.md) win over the repo's."""
-    _core.safe_name(role, "role")
-    for p in (_core.home() / "roles" / role / "brief.md",
-              _core.repo_root() / "agents" / "roles" / role / "brief.md"):
+def _brief_file(role: str) -> Path | None:
+    for p in (paths.home() / "roles" / role / "brief.md",
+              paths.repo_root() / "agents" / "roles" / role / "brief.md"):
         if p.is_file():
             return p
+    return None
+
+
+def resolve_role(role: str) -> tuple[Path, str | None]:
+    """(brief, variant). User-local roles ($CARHUNT_HOME/roles/<role>/brief.md) win over the repo's.
+
+    A role `<base>-<variant>` without its own brief runs `<base>`'s brief with {variant} set,
+    so two agents of one kind (outreach-home, outreach-abroad) keep separate state and caps.
+    """
+    paths.safe_name(role, "role")
+    if p := _brief_file(role):
+        return p, None
+    if "-" in role:
+        base, variant = role.rsplit("-", 1)
+        if base and variant and (p := _brief_file(base)):
+            return p, variant
     raise LaunchError(f"no brief for role {role!r} (agents/roles/{role}/brief.md)")
 
 
+VAR_KEY = re.compile(r"^[a-z_][a-z0-9_]*(?:\.[a-z0-9_]+)*$")
+
+
+def parse_vars(items: list[str] | None) -> dict[str, str]:
+    """`--var k=v` pairs; a plain key `k` also gets `k_lc` (lower case) unless given."""
+    out: dict[str, str] = {}
+    for item in items or []:
+        k, sep, v = item.partition("=")
+        if not sep or not VAR_KEY.match(k):
+            raise LaunchError(f"--var wants key=value with a lower-case key, got {item!r}")
+        out[k] = v
+    for k, v in list(out.items()):
+        if "." not in k and not k.endswith("_lc"):
+            out.setdefault(f"{k}_lc", v.lower())
+    return out
+
+
 def variables(config: Mapping, role: str, name: str, extra: Mapping[str, str] | None = None) -> dict:
-    adir = _core.agent_dir(role)
+    adir = paths.agent_dir(role)
     v = flatten(config)
     v.update({
-        "home": str(_core.home()),
-        "date": _core.now(config).date().isoformat(),
-        "learned.dir": str(_core.home() / "learned"),
+        "home": str(paths.home()),
+        "date": clock.now().date().isoformat(),
+        "learned.dir": str(paths.home() / "learned"),
         "agent.role": role,
         "agent.name": name,
         "agent.dir": str(adir),
@@ -82,10 +118,15 @@ def variables(config: Mapping, role: str, name: str, extra: Mapping[str, str] | 
 
 def compose(role: str, config: Mapping, name: str, *, body_path: Path | None = None,
             extra: Mapping[str, str] | None = None) -> str:
-    v = variables(config, role, name, extra)
-    parts = [render((templates_dir() / "common.md").read_text(), v),
-             render((body_path or role_brief_path(role)).read_text(), v)]
-    learned = _core.home() / "learned"
+    variant = None
+    if body_path is None:
+        body_path, variant = resolve_role(role)
+    v = variables(config, role, name, {**({"variant": variant} if variant else {}), **(extra or {})})
+    try:
+        parts = [render((templates_dir() / "common.md").read_text(), v), render(body_path.read_text(), v)]
+    except LaunchError as e:
+        raise LaunchError(f"{e} (role {role}: pass per-launch values with --var key=value)") from None
+    learned = paths.home() / "learned"
     for f in (learned / "common.md", learned / f"{role}.md"):
         if f.is_file() and f.read_text().strip():
             # local rules written by the learning session; included verbatim
@@ -94,8 +135,8 @@ def compose(role: str, config: Mapping, name: str, *, body_path: Path | None = N
 
 
 def agent_command(config: Mapping, prompt: str) -> list[str]:
-    cli = _core.cfg(config, "orchestrate.agent_cli", "claude")
-    args = list((_core.cfg(config, "orchestrate.agent_args", {}) or {}).get(cli) or [])
+    cli = settings.get(config, "orchestrate.agent_cli", "claude")
+    args = list((settings.get(config, "orchestrate.agent_args", {}) or {}).get(cli) or [])
     if cli == "claude":
         # prompt first: variadic flags like --allowedTools would swallow a trailing prompt
         return ["claude", prompt, *args]
@@ -111,8 +152,8 @@ def launch(role: str, *, successor_of: str | None = None, name: str | None = Non
     """Render, init state (fresh launch only), spawn. Returns the new session id."""
     from . import state
 
-    config = config if config is not None else _core.load_config()
-    adir = _core.agent_dir(role)
+    config = config if config is not None else settings.load()
+    adir = paths.agent_dir(role)
     name = name or f"carhunt-{role}"
     brief = adir / "brief.md"
     if successor_of:
@@ -128,10 +169,10 @@ def launch(role: str, *, successor_of: str | None = None, name: str | None = Non
         brief.write_text(compose(role, config, name, body_path=body_path, extra=extra))
         (adir / "lessons").mkdir(exist_ok=True)
     env = {
-        "CARHUNT_HOME": str(_core.home()),
+        "CARHUNT_HOME": str(paths.home()),
         "CARHUNT_AGENT": role,
         "CARDB_AUTHOR": role,
-        "CARHUNT_REPO": str(_core.repo_root()),
+        "CARHUNT_REPO": str(paths.repo_root()),
     }
     exe = shutil.which("carhunt")
     if exe:
@@ -150,13 +191,13 @@ def launch(role: str, *, successor_of: str | None = None, name: str | None = Non
     sid = backend.spawn(name, str(adir), cmd, env, after=successor_of)
     if not successor_of:
         state.init(role, active_agent=sid, name=name,
-                   cli=_core.cfg(config, "orchestrate.agent_cli", "claude"), brief=str(brief))
+                   cli=settings.get(config, "orchestrate.agent_cli", "claude"), brief=str(brief))
     return sid
 
 
 def side_task(name: str, task_text: str, *, backend: Backend, config: Mapping | None = None) -> str:
     """One-off side session from agents/templates/side-task.md; role = side-<name>."""
-    role = f"side-{_core.safe_name(name, 'side task')}"
+    role = f"side-{paths.safe_name(name, 'side task')}"
     return launch(role, backend=backend, config=config, name=f"carhunt-{role}",
                   body_path=templates_dir() / "side-task.md",
                   extra={"task.name": name, "task.body": task_text.strip()})

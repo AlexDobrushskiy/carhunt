@@ -17,7 +17,9 @@ import time
 from collections.abc import Mapping
 from pathlib import Path
 
-from . import _core
+from carhunt.core import paths
+
+from . import settings
 
 MARKER = "carhunt_hook.py"
 FILE_TOOLS = "Read|Edit|Write|MultiEdit|NotebookEdit|Grep|Glob"
@@ -34,7 +36,7 @@ def settings_path() -> Path:
 
 
 def hook_script() -> Path:
-    return _core.repo_root() / "hooks" / MARKER
+    return paths.repo_root() / "hooks" / MARKER
 
 
 def _cmd(name: str, python: str, home: Path) -> str:
@@ -62,7 +64,7 @@ def _foreign_has(hooks: Mapping, event: str, needle: str, async_rewake: bool | N
 def desired(current: Mapping, *, python: str | None = None, home: Path | None = None) -> dict[str, list]:
     """Our entries per event, minus the ones a foreign hook already covers."""
     py = python or sys.executable
-    hm = home or _core.home()
+    hm = home or paths.home()
     want: dict[str, list] = {"PreToolUse": [
         {"matcher": f"Bash|Monitor|{FILE_TOOLS}",
          "hooks": [{"type": "command", "command": _cmd("secret-guard", py, hm), "timeout": 10}]},
@@ -151,9 +153,9 @@ def write(path: Path, data: Mapping) -> Path | None:
 
 def write_guards(config: Mapping) -> Path:
     """Guard config the stdlib hook reads (no YAML parser there)."""
-    p = _core.home() / "hooks" / "guards.json"
+    p = paths.home() / "hooks" / "guards.json"
     p.parent.mkdir(parents=True, exist_ok=True)
-    g = _core.cfg(config, "orchestrate.hooks", {}) or {}
+    g = settings.get(config, "orchestrate.hooks", {}) or {}
     p.write_text(json.dumps({"secret_globs": g.get("secret_globs") or [],
                              "send_patterns": g.get("send_patterns") or []}, indent=2) + "\n")
     return p
@@ -175,7 +177,7 @@ def statusline_status(path: Path) -> tuple[str, str]:
 
 
 def statusline_entry() -> dict:
-    return {"type": "command", "command": shlex.quote(str(_core.repo_root() / "hooks" / "statusline.sh"))}
+    return {"type": "command", "command": shlex.quote(str(paths.repo_root() / "hooks" / "statusline.sh"))}
 
 
 def probe_statusline(cmd: str, sid: str = "carhunt-doctor") -> bool:

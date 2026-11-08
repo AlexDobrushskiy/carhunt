@@ -3,19 +3,10 @@ from __future__ import annotations
 
 import shutil
 import subprocess
-from dataclasses import dataclass
 
-from . import _core
+from carhunt.core.doctor import Check
 
-try:
-    from carhunt.core.doctor import Check  # type: ignore[import-not-found]
-except ImportError:
-    @dataclass
-    class Check:  # type: ignore[no-redef]
-        name: str
-        status: str  # ok | warn | fail
-        detail: str = ""
-        fix: str = ""
+from . import settings
 
 
 def _agterm() -> Check:
@@ -26,11 +17,11 @@ def _agterm() -> Check:
     res = subprocess.run([ctl, "version"], capture_output=True, text=True, check=False, timeout=10)
     if res.returncode != 0:
         return Check("orchestrate.agterm", "fail", "agterm control socket not reachable", "start agterm")
-    return Check("orchestrate.agterm", "ok", res.stdout.strip())
+    return Check("orchestrate.agterm", "ok", (res.stdout.strip().splitlines() or [""])[0])
 
 
 def _agent_cli(config) -> Check:
-    cli = _core.cfg(config, "orchestrate.agent_cli", "claude")
+    cli = settings.get(config, "orchestrate.agent_cli", "claude")
     if shutil.which(cli):
         return Check("orchestrate.agent_cli", "ok", cli)
     return Check("orchestrate.agent_cli", "fail", f"{cli} not on PATH",
@@ -85,7 +76,7 @@ def _states() -> Check:
 
 
 def checks() -> list[Check]:
-    config = _core.load_config()
+    config = settings.load()
     out = []
     for fn in (_agterm, lambda: _agent_cli(config), _statusline, _hooks, lambda: _schedule(config), _states):
         try:

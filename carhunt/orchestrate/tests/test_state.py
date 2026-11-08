@@ -79,3 +79,22 @@ def test_cleanup_closes_completed_once(home, config, fake, dummy_role):
     assert state.cleanup(fake) == []
     launch.launch("dummy", backend=fake, config=config)  # completed role can start again
     assert "closed_at" not in read_state(home, "dummy")
+
+
+def test_contact_say_accepts_launched_agent_until_handover(home, config, fake, dummy_role, monkeypatch):
+    """launch writes active_agent the way contact's `say` checks it (role dir + AGTERM_SESSION_ID)."""
+    say = pytest.importorskip("carhunt.contact.say")
+    s = {"require_active_agent": True}
+    old = launch.launch("dummy-home", backend=fake, config=config)
+    env = fake.sessions[old]["env"]
+    assert env["CARHUNT_AGENT"] == env["CARDB_AUTHOR"] == "dummy-home"
+    assert "AGTERM_SESSION_ID" not in env, "agterm sets the child's own id; never inherit the launcher's"
+    for k in ("CARHUNT_AGENT", "CARDB_AUTHOR"):
+        monkeypatch.setenv(k, env[k])
+    monkeypatch.setenv("AGTERM_SESSION_ID", old)
+    assert say.caller_problem(s) is None
+    new = state.handover("dummy-home", {"unanswered_inbound": []}, me=old, backend=fake, config=config)
+    state.takeover("dummy-home", me=new, backend=fake)
+    assert "not the active dummy-home agent" in say.caller_problem(s)
+    monkeypatch.setenv("AGTERM_SESSION_ID", new)
+    assert say.caller_problem(s) is None
