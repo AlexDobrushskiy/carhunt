@@ -76,7 +76,7 @@ def check(site: BaseSite, url: str, *, country: str | None = None) -> Liveness:
     one in-tab fetch (browser routes)."""
     rules = site.meta.get("liveness") or {}
     aid = site.ad_id(url)
-    if country or site.meta.get("route", "http") == "http":
+    if country or site.meta.get("route", "http") == "http":   # Net.get adds the site's own country_ip
         r: Response = site.net.get(url, follow=False, check=False, ad_id=aid, country=country)
         final = r.location
     else:

@@ -57,7 +57,7 @@ class BaseSite:
 
     def __init__(self, net: Any = None):
         from carhunt.sites import _net
-        self.meta = load_meta(self.pkg)
+        self.meta = with_overrides(load_meta(self.pkg))
         self.id: str = self.meta["site"]
         self.net = net or _net.Net(self.id, self.meta)
         self.codes = load_codes(self.pkg)
@@ -119,6 +119,19 @@ class BaseSite:
 
 
 # --- metadata ----------------------------------------------------------------
+
+OVERRIDABLE = ("country_ip", "route", "pace", "caps", "tab_home", "accept_language", "liveness", "proxy")
+
+
+def with_overrides(meta: dict) -> dict:
+    """site.yaml + config `sites.overrides[<id>]` (dicts merged one level deep), e.g. leboncoin reads via a FR exit."""
+    over = overrides(meta["site"])
+    out = dict(meta)
+    for k in OVERRIDABLE:
+        if k in over:
+            out[k] = {**(meta.get(k) or {}), **over[k]} if isinstance(over[k], dict) else over[k]
+    return out
+
 
 def overrides(site_id: str) -> dict:
     """config `sites.overrides[<id>]` ({} without a config: plugins and tests run on defaults)."""

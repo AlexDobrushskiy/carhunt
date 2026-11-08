@@ -51,3 +51,21 @@ def test_fake_block_knob(monkeypatch):
     with base.fake_sites():
         with pytest.raises(base.Blocked):
             list(base.get("fake").search(SearchQuery()))
+
+
+def test_config_overrides_merge(monkeypatch):
+    monkeypatch.setattr(base, "overrides", lambda sid: {"country_ip": "FR", "pace": {"min_gap_s": 20}, "wall": "x"})
+    meta = base.with_overrides(base.load_meta("autoscout24"))
+    assert meta["country_ip"] == "FR" and meta["pace"]["min_gap_s"] == 20
+    assert meta["pace"]["max_loads_per_run"] == 120 and meta["wall"] != "x"   # one level deep; wall not overridable
+
+
+def test_wall_signatures():
+    from carhunt.sites._net import Response, raise_for
+    for text, sig in (("<h1>Access is temporarily restricted</h1>", "datadome-hard-block"),
+                      ("<script src=https://geo.captcha-delivery.com/x>", "datadome"),
+                      ("<title>Just a moment...</title>", "cloudflare"),
+                      ("Pardon Our Interruption", "imperva")):
+        with pytest.raises(base.Blocked) as e:
+            raise_for("t", Response(200, "https://t.example.invalid/", text))
+        assert e.value.signature == sig

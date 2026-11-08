@@ -1,0 +1,40 @@
+# leboncoin list URL: https://www.leboncoin.fr/recherche?category=2&<filters>&sort=time&order=desc&page=N
+# Ranges are "<lo>-<hi>", "min"/"max" = open end (regdate=2023-max, mileage=min-50000, price=min-42000).
+# regdate = model year ("Année modèle"), not first registration.
+category: "2"           # Voitures
+ranges:                 # SearchQuery field pair → URL param
+  year: regdate
+  km: mileage
+  price: price
+fuel:                   # cardb powertrain → `fuel` code (others: leave unfiltered)
+  bev: "4"              # Électrique
+seller:                 # owner_type
+  private: private
+  dealer: pro           # = the ads' owner.type value; filter itself not measured
+sort:                   # price: not measured → not listed (site default order)
+  newest: {sort: time, order: desc}
+  relevance: {}
+brands:                 # u_car_brand, used for a make-only query
+  Volkswagen: VOLKSWAGEN
+  Audi: AUDI
+  Skoda: SKODA
+  Mercedes-Benz: MERCEDES-BENZ
+  BMW: BMW
+  Hyundai: HYUNDAI
+  Toyota: TOYOTA
+  MINI: MINI
+  Cupra: CUPRA
+  Xpeng: XPENG
+  Kia: KIA
+models:                 # u_car_model (the site's own normalised model; comma = several). Missing → text=<make> <model>
+  Volkswagen: {ID.4: VOLKSWAGEN_ID.4, ID.5: VOLKSWAGEN_ID.5}
+  Audi: {Q4 e-tron: AUDI_Q4}          # "AUDI_Q4 e-tron"/"AUDI_Q4 Sportback e-tron" matched nothing (11-03)
+  Skoda: {Enyaq: "SKODA_Enyaq,SKODA_Enyaq Coupé"}
+  Mercedes-Benz: {EQA: MERCEDES-BENZ_EQA, EQB: MERCEDES-BENZ_EQB}
+  BMW: {iX1: BMW_iX1}
+  Hyundai: {Ioniq 5: HYUNDAI_Ioniq 5}
+  Toyota: {bZ4X: TOYOTA_bZ4X}
+  MINI: {Countryman: MINI_Countryman}
+  Cupra: {Tavascan: CUPRA_Tavascan}
+  Xpeng: {G6: XPENG_G6}
+  Kia: {EV6: KIA_EV6}

@@ -1,0 +1,25 @@
+site: carsbat.com
+name: carsbat
+kind: vin-history
+countries: [DE]
+hosts: ['(^|\.)carsbat\.com$']
+ad_id: ['/detail/([a-z0-9]{17}-[a-z0-9]+)/?']
+wall: Cloudflare
+route: plain-chrome
+country_ip: null
+pace:
+  min_gap_s: 10
+  why: "not measured; Cloudflare: one non-automated browser tab, a few lookups per car"
+account:
+  needed_for: [vin]
+  verification: "free account, e-mail confirmation (login form /accounts/login/)"
+phone: none
+messaging: "none: auction archive, no sellers to contact"
+liveness: {supported: false, evidence: "archive lots, not live ads"}
+measured: 2026-11-01
+notes:
+  - "EU auction archive (OpenLane, BCA-type lots): price history with/without VAT, sale date, country, km, damage flag, keys, seller type, ~30 photos"
+  - "countries = where the measured lot was sold; lots come from several EU auctions"
+  - "lane and plain HTTP get Cloudflare's 'Just a moment' → plain-chrome or the identity browser"
+  - "Lot pages /en/detail/<vin lowercase>-<hash>/ are public; the VIN search /en/vin-search/?query=<VIN> needs the login and redirects to the lot when the VIN is archived"
+  - "Photos only through the browser session's own request (plain HTTP 403)"

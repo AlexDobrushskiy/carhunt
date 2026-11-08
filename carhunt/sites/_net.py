@@ -30,7 +30,8 @@ UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML
 HTML = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
 JSON = "application/json, text/plain, */*"
 BOT = re.compile(r"eres un bot|pardon our interruption|captcha-delivery|geo\.captcha|zugriff verweigert|access denied|"
-                 r"request blocked|just a moment|verify you are human|are you a robot|ich bin kein roboter", re.I)
+                 r"request blocked|just a moment|verify you are human|are you a robot|ich bin kein roboter|"
+                 r"access (is )?temporarily restricted", re.I)
 BLOCK_STATUS = {401, 403, 429}
 GONE_STATUS = {404, 410}
 MAX_PACE_WAIT_S = 180   # wait for a pace slot up to this long, else raise PaceExceeded (caller stops the site)
@@ -49,9 +50,24 @@ class Response:
         return json.loads(self.text)
 
 
+# wall signature by page text (first match wins); names feed the browsers skill's escalation ladder
+SIGNATURES = [
+    ("datadome-hard-block", re.compile(r"access (is )?temporarily restricted", re.I)),
+    ("datadome", re.compile(r"captcha-delivery|geo\.captcha", re.I)),
+    ("cloudflare", re.compile(r"just a moment|verify you are human", re.I)),
+    ("imperva", re.compile(r"pardon our interruption|eres un bot|request blocked", re.I)),
+    ("akamai", re.compile(r"zugriff verweigert|access denied", re.I)),
+]
+
+
 def bot_page(text: str, ad_id: str | None = None) -> bool:
     """A challenge/bot page; a page that carries the ad id is content, not a wall (some ads quote 'captcha')."""
     return bool(BOT.search(text[:20000])) and not (ad_id and ad_id in text)
+
+
+def bot_signature(text: str) -> str:
+    head = text[:20000]
+    return next((name for name, rx in SIGNATURES if rx.search(head)), "bot-page")
 
 
 def raise_for(site: str, r: Response, *, ad_id: str | None = None, ok: tuple[int, ...] = (200,)) -> Response:
@@ -64,7 +80,7 @@ def raise_for(site: str, r: Response, *, ad_id: str | None = None, ok: tuple[int
     if r.status == 0:
         raise Blocked("network", site=site, url=r.url, detail=r.text[:120])
     if r.text and bot_page(r.text, ad_id):
-        raise Blocked("bot-page", site=site, url=r.url)
+        raise Blocked(bot_signature(r.text), site=site, url=r.url)
     if r.status not in ok and not (300 <= r.status < 400):
         raise Blocked(f"http-{r.status}", site=site, url=r.url)
     return r
@@ -110,7 +126,9 @@ def http(url: str, *, headers: dict[str, str] | None = None, follow: bool = True
     if loc and loc.startswith("/"):
         loc = "/".join(url.split("/")[:3]) + loc
     return Response(status, url, _decode(body, hdr.get("Content-Encoding")), location=loc,
-                    final_url=final if final != url else None, headers={k.lower(): v for k, v in hdr.items()})
+                    final_url=final if final != url else None,
+                    # repeated Set-Cookie headers joined: a dict keeps only the last (DataDome rotates its cookie)
+                    headers={k.lower(): v for k, v in hdr.items()} | {"set-cookie": "\n".join(hdr.get_all("Set-Cookie") or [])})
 
 
 TAB_FETCH_JS = """async ([u, opts]) => { try {
@@ -136,8 +154,9 @@ class Net:
     def gate(self, kind: str = "load", *, country: str | None = None) -> None:
         """Take a slot before the request (a 403 still costs the slot: the site counted it).
         A country route has its own exit IP, so it is paced on its own ledger key (`<site>@<CC>`)."""
-        key = f"{self.site}@{country}" if country else self.site
-        if kind == "load" and not country and self.max_loads and self.loads >= int(self.max_loads):
+        home = country is None or country == self.meta.get("country_ip")   # the site's normal read route
+        key = self.site if home else f"{self.site}@{country}"
+        if kind == "load" and home and self.max_loads and self.loads >= int(self.max_loads):
             raise PaceExceeded(self.site, kind, reason=f"max_loads_per_run={self.max_loads}")
         try:
             from carhunt.access import pace as shared
@@ -162,7 +181,7 @@ class Net:
             if wait > 0:
                 time.sleep(wait)
         self._last = time.monotonic()
-        if kind == "load" and not country:
+        if kind == "load" and home:
             self.loads += 1
 
     def _proxy(self, country: str | None) -> str | None:
@@ -178,6 +197,8 @@ class Net:
     def get(self, url: str, *, kind: str = "load", accept: str = HTML, follow: bool = True, ad_id: str | None = None,
             headers: dict[str, str] | None = None, country: str | None = None, data: bytes | None = None,
             method: str | None = None, check: bool = True) -> Response:
+        if country is None:   # reads of a country_ip site always leave through that country
+            country = self.meta.get("country_ip")
         self.gate(kind, country=country)
         h = {"Accept": accept, "Accept-Language": self.meta.get("accept_language", "en-US,en;q=0.8")}
         h.update(headers or {})
