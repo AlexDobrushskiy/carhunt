@@ -442,3 +442,40 @@ func TestPriceSanityProfileBounds(t *testing.T) {
 	c.upsert(ad(2, 5000))                          // at min
 	c.call("POST", "/api/v1/listings/upsert", ad(3, -1), 422, nil)
 }
+
+// GET /cars rows (CarSummary) and queue items carry `version`, equal to the detail's and rising on writes.
+func TestCarListRowsCarryVersion(t *testing.T) {
+	c := newServer(t)
+	id := c.qcar("ver", nil)
+	rowVersion := func(path string, pick func(map[string]any) []any) float64 {
+		t.Helper()
+		var raw map[string]any
+		c.call("GET", path, nil, 200, &raw)
+		for _, r := range pick(raw) {
+			row := r.(map[string]any)
+			if car, ok := row["car"].(map[string]any); ok {
+				row = car
+			}
+			if row["id"] == float64(id) {
+				v, ok := row["version"].(float64)
+				if !ok {
+					t.Fatalf("%s: row without a numeric version: %v", path, row)
+				}
+				return v
+			}
+		}
+		t.Fatalf("%s: car %d not listed", path, id)
+		return 0
+	}
+	cars := func(m map[string]any) []any { return m["cars"].([]any) }
+	items := func(m map[string]any) []any { return m["items"].([]any) }
+
+	v1 := rowVersion("/api/v1/cars", cars)
+	if v1 < 1 || int64(v1) != c.car(id).Version || rowVersion("/api/v1/queue?tier=1,2,3", items) != v1 {
+		t.Fatalf("list version %v, detail %d", v1, c.car(id).Version)
+	}
+	c.call("PATCH", fmt.Sprintf("/api/v1/cars/%d", id), map[string]any{"summary": "x"}, 200, nil)
+	if v2 := rowVersion("/api/v1/cars", cars); v2 <= v1 || int64(v2) != c.car(id).Version {
+		t.Fatalf("list version after write %v (was %v), detail %d", v2, v1, c.car(id).Version)
+	}
+}
