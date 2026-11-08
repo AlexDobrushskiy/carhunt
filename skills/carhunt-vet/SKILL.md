@@ -29,7 +29,7 @@ Facts about one car → evidence pack → visit-ready gate → buy → import. K
 | `cardb fact CAR key=value:source` · `cardb opt CAR key=yes:photo:#3` · `cardb event CAR --type vin_check --summary …` | write results |
 
 ## Evidence pack (ask order) and fact keys
-`registration_doc` → `vin` (car field) → own checks `vin_check` → `service_history` → `soh` (BEV/PHEV) → `recall_status` → `odometer_photo` → `charging_inlet` (imports, China/US VINs) → `warranty` → `accidents` → optional `tyres`, `video_walkaround`, `history_report` (finalists).
+`registration_doc` → `vin` (car field) → own checks `vin_check` → `service_history` → `battery_soh` (BEV/PHEV) → `recall_status` → `odometer_photo` → `charging_inlet` (imports, China/US VINs) → `warranty` → `accidents` → optional `tyres`, `video_walkaround`, `history_report` (finalists).
 A fact value starting `refused` = refusal (red flag); `unknown|pending|asked|missing` = not in yet. Visit-ready = all required items in, no refusal, no red VIN flag, no open `*_conflict`.
 
 ## Where to look

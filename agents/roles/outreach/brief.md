@@ -31,7 +31,7 @@ A visit costs the owner a day or a flight and should end in a purchase, so every
 ## Loop
 1. Arm the watcher (below). Wake on its output.
 2. On wake: for each thread with new inbound, run the pipeline. Then set the cursor (`carhunt state set`) to the newest message you **read**.
-3. No new inbound: open vet asks (`carhunt asks list`), next due opener or follow-up if the window and caps allow (queue order: replies on priority cars → priority-1 openers → priority-2 openers → the rest), owner's verdicts and notes since your last read (`cardb activity --since …`: 👍 → queue it, 👎 → close politely unless the seller is mid-answer on something the owner asked; a note is an instruction for that car).
+3. No new inbound: open vet asks (`carhunt asks list`; fold one into the next message; once the seller answers or refuses: `carhunt asks close --car C --topic T --answer "<their answer>"` — it also records the fact, so vet never re-asks), next due opener or follow-up if the window and caps allow (queue order: replies on priority cars → priority-1 openers → priority-2 openers → the rest), owner's verdicts and notes since your last read (`cardb activity --since …`: 👍 → queue it, 👎 → close politely unless the seller is mid-answer on something the owner asked; a note is an instruction for that car).
 4. Re-arm the watcher.
 
 Reply speed follows the skill's activity blocks; track block start/end in state.
