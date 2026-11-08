@@ -1,6 +1,6 @@
 import json
 
-from carhunt.orchestrate import __main__ as cli_main
+from carhunt import cli as cli_main
 from carhunt.orchestrate import learn, pause
 from carhunt.orchestrate.launch import launch
 
