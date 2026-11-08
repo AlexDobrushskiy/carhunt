@@ -50,11 +50,11 @@ E2E_KEEP_GOING=1 E2E_PATCH=/tmp/fix.diff tests/e2e/run.sh   # try an uncommitted
 | `bootstrap-dry` | `scripts/bootstrap --dry-run …` | the dry run only prints its plan: `HOME` stays unchanged |
 | `bootstrap` | `scripts/bootstrap --yes --skip-mcp --skip-browsers-launchd --skip-compose --skip-schedule` | venv, `carhunt`/`cardb` on `PATH`, Playwright Chromium, cardb build + init (file secrets), config, folder trust, guard hooks + statusline in `$CARHUNT_HOME/claude/settings.json` (and none in `~/.claude`), browsers/install (Agent Chrome clone) |
 | `bootstrap2` | the same command again | re-runs are safe: the config, the cardb tokens and the agent `settings.json` stay the same |
-| `cardb` | `cardb serve` on a free port, `cardb.url` set in the config | the host binary serves; the port is configurable |
+| `cardb` | `cardb serve` on a free port, `cardb.url` rewritten in the config (in place, validated) | the host binary serves; the port is configurable |
 | `compose` | (`E2E_COMPOSE=1`) `docker compose up --build cardb` on another free port | the image builds and passes its health check |
 | `sweep` | `carhunt sweep --sites fake --max 5` then `cardb ls` | discover → sites (fixture plugin) → cardb writes: ≥ 1 car |
 | `web-suite` | `npm run e2e` in `web/` with `CARDB_BIN` = the built cardb | the web's own Playwright suite (throwaway cardb + synthetic seed) |
-| `web-live` | build the web and start it on the swept cardb, with tokens from `carhunt secret exec` | `/health` responds, a page shows the swept car; sets `web.url` for doctor if the schema allows it |
+| `web-live` | build the web and start it on the swept cardb, with tokens from `carhunt secret exec` | `/health` responds, a page shows the swept car; `web.url` in the config is set to it (doctor checks this instance) |
 | `doctor` | `carhunt doctor --json` with cardb and web up | no `fail`; only the allowed warns (below) |
 | `say` | `carhunt say --channel whatsapp --car N --opener --dry-run`, with a stub `wacli` that logs its calls | guard decision + payload (exit 0 or 10); the stub logs no `send` |
 | `evidence` | `carhunt evidence N` and `--write-asks` | vet reads cardb (exit 0 = visit-ready, 4 = items missing) and writes an `ask` event |
@@ -72,7 +72,6 @@ E2E_KEEP_GOING=1 E2E_PATCH=/tmp/fix.diff tests/e2e/run.sh   # try an uncommitted
 | `access: mcp servers` | the browser MCP servers run under launchd, which the e2e skips |
 | `access: identity master` | the owner's one-time site logins (`pw-identity login`) are manual |
 | `orchestrate.schedule` | the launchd day schedule is skipped in the e2e |
-| `web` | only while the config schema has no `web.url`: the e2e web runs on a free port that doctor can't be told about |
 
 Any other warn, or any fail, fails the step.
 
