@@ -1,3 +1,4 @@
 # Synthetic fixture for carhunt/access tests (not a real site).
+site: oncefix
 name: oncefix.example.invalid
 account: {needed_for: [message], verification: sms-once, mail_from: "from:(oncefix.example.invalid)"}

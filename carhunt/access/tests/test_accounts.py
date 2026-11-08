@@ -131,8 +131,8 @@ def test_policy_gate(env):
     p = sms.policy("twofafix")
     assert not p.allowed and "every new-device login" in p.reason
     assert not sms.policy("unknown.example.invalid").allowed  # fail closed
-    alpha = sms.policy("tablefix-alpha")  # free-text verification isn't an explicit sms-once
-    assert not alpha.allowed and alpha.verification == "email + sms (domestic mobile)"
+    own = sms.policy("ownfix")  # the owner's own number: never a rented one
+    assert not own.allowed and "own" in own.reason
 
 
 def test_rent_refuses_sms_2fa_site_before_any_provider_call(env):

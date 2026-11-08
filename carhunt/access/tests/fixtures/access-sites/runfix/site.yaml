@@ -1,3 +1,4 @@
 # Synthetic fixture for carhunt/access tests (not a real site).
+site: runfix
 name: runfix.example.invalid
-pace: {min_gap_s: 0, per_hour: 100, max_loads_per_run: 2}
+pace: {min_gap_s: 0, max_loads_per_hour: 100, max_loads_per_run: 2}

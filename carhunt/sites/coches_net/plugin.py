@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import json
 import re
-import time
 import urllib.parse
 from collections.abc import Callable, Iterator
 from typing import Any
@@ -56,7 +55,6 @@ class Plugin(BaseSite):
     def __init__(self, net: Any = None):
         super().__init__(net)
         self.api_calls = 0
-        self._page_loads: list[float] = []
 
     # --- query (codes.yaml only) ---------------------------------------------
     def vehicles(self, q: SearchQuery) -> list[dict]:
@@ -133,17 +131,9 @@ class Plugin(BaseSite):
         except ValueError as e:
             raise Blocked("gateway-not-json", site=self.id, url=url) from e
 
-    def _page_gate(self) -> None:
-        """≤2 page loads per rolling hour even without the shared ledger (5th load at 10 s pace = bot page, 11-03)."""
-        per_hour = int((self.meta.get("pace") or {}).get("max_loads_per_hour") or 2)
-        now = time.monotonic()
-        self._page_loads = [t for t in self._page_loads if now - t < 3600]
-        if len(self._page_loads) >= per_hour:
-            raise PaceExceeded(self.id, "load", reason=f"max_loads_per_hour={per_hour} (page route)")
-        self._page_loads.append(now)
-
     def _page(self, url: str, ad_id: str | None = None) -> tuple[dict, str | None]:
-        self._page_gate()
+        # ≤2 page loads per rolling hour for every agent on the IP: site.yaml pace.max_loads_per_hour, enforced by
+        # the shared ledger inside net.get (5th load at 10 s pace = bot page, 11-03)
         r = self.net.get(url, ad_id=ad_id)
         props = window_var(r.text, "__INITIAL_PROPS__") if r.text else None
         return props if isinstance(props, dict) else {}, r.final_url
@@ -343,9 +333,7 @@ class Plugin(BaseSite):
 
     def is_live(self, url: str, *, country: str | None = None) -> Liveness:
         """One page read without redirects (site.yaml `gone_redirect`); counts against the ≤2/h home page budget
-        unless it goes through a `country` exit (liveness --proxy-priority)."""
-        if not country:
-            self._page_gate()
+        unless it goes through a `country` exit (liveness --proxy-priority): the ledger paces each exit apart."""
         return super().is_live(url, country=country)
 
     # --- phone -----------------------------------------------------------------

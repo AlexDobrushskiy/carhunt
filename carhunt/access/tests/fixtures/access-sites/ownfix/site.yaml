@@ -1,0 +1,4 @@
+# Synthetic fixture for carhunt/access tests (not a real site).
+site: ownfix
+name: ownfix.example.invalid
+account: {needed_for: [message], verification: sms-own, note: "owner's own mobile accepted"}
