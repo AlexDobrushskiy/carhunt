@@ -25,12 +25,13 @@ Private repository, all rights reserved.
 git clone <this repo> carhunt && cd carhunt
 scripts/bootstrap                 # --dry-run prints every step first; idempotent, re-run is safe
 ```
-Bootstrap: brew deps → `.venv` + `carhunt` on PATH (`~/.local/bin`) → build cardb → `npm ci` (web) → `$CARHUNT_HOME` (default `~/.carhunt`) + `config.yaml` → `cardb init` → `docker compose up -d` → links `skills/carhunt-*` into `~/.claude/skills` → agent browsers + MCP servers (asks first) → guard hooks → git privacy hooks → doctor.
+Bootstrap: brew deps → `.venv` → build cardb → `carhunt` + `cardb` on PATH (`~/.local/bin`) → `npm ci` (web) + Playwright Chromium → `$CARHUNT_HOME` (default `~/.carhunt`) + `config.yaml` → `cardb init` → cardb + web in Docker → links `skills/carhunt-*` into `~/.claude/skills` → agent browsers + MCP servers (asks first) → folder trust, guard hooks + statusline for agents (your `~/.claude` settings untouched) → launchd day schedule (asks; `--skip-schedule`) → git privacy hooks → doctor. `scripts/bootstrap --help` lists the `--skip-*` flags.
 
 Then:
 ```sh
 $EDITOR ~/.carhunt/config.yaml    # owner, search (your buyer profile), notify, sites.enabled
 carhunt config validate                   # schema check (unknown keys are errors)
+cardb profile check ~/.carhunt/config.yaml   # the buyer profile as cardb reads it (offline)
 carhunt secret set telegram_bot_token     # only for the providers you enable (no-echo prompt):
                                           # telegram_chat_id, proxy_credentials, sms_api_key, gmail_*
 carhunt doctor                            # ok / warn / fail per component, each with a fix line

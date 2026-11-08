@@ -54,6 +54,7 @@ Layout, module boundaries and the interfaces between them. Commands and config k
 - Contract: `cardb/api/openapi.yaml`. Buyer profile (tiers, hard filters, weights, families, options, home) read from `config.yaml` `owner` + `search`; no buyer constants in Go.
 - **Ranking lives here only** (queue: tier, fair price per peer group, landed cost, score). Discover writes facts, never scores.
 - `powertrain` block (BEV/PHEV/HEV/ICE); price sanity on write; `If-Match` on PATCH; `users` (owner + viewers) with per-user verdicts.
+- `cardb profile check FILE`: validates a config's buyer profile offline, as the server would read it.
 - `cardb init`: data dir `$CARHUNT_HOME/cardb/`, tokens into the secrets backend, hashes in `<data>/tokens`. Author: `CARDB_AUTHOR` (set per agent by launch), else token name. Exit codes 0/1/2/3, `--json` everywhere.
 
 ### access (`carhunt.access`, `browsers/bin/`) — [browsers.md](browsers.md)
@@ -93,13 +94,13 @@ Config `search` → per-site query → cursor → scope filter → detail read �
 
 ### orchestrate (`carhunt.orchestrate`) — [orchestrate.md](orchestrate.md)
 - Session backend: `spawn, send, screen, ctx_percent, close, alive`; agterm (`agtermctl`, mailbox). Agent CLI `claude` (default) or `codex`.
-- `carhunt agent launch ROLE [--var k=v]…`: render `agents/templates/common.md` + role brief + learned rules → `$CARHUNT_HOME/agents/ROLE/brief.md`, init `state.json`, spawn with `CARHUNT_AGENT=ROLE`, `CARDB_AUTHOR=ROLE`. Unknown placeholder fails the launch. `BASE-VARIANT` roles (`outreach-home`, `outreach-abroad`) run `BASE`'s brief with `{variant}` and keep their own state. `$CARHUNT_HOME/roles/<role>/brief.md` overrides the repo's.
+- `carhunt agent launch ROLE [--var K=V]… [--successor-of ID]`: render `agents/templates/common.md` + role brief + learned rules → `$CARHUNT_HOME/agents/ROLE/brief.md`, init `state.json`, spawn with `CARHUNT_AGENT=ROLE`, `CARDB_AUTHOR=ROLE`. Unknown placeholder fails the launch. Role `BASE-VARIANT` without its own brief → `agents/roles/BASE/brief.md` with `{variant}` set (`outreach-home`, `outreach-abroad`: own state, inbox, caps). `$CARHUNT_HOME/roles/<role>/brief.md` overrides the repo's.
 - Hooks: `carhunt hooks install` writes guards (secret-guard, send-guard, mailbox, identity lease) into `$CARHUNT_HOME/claude/settings.json`; launch passes it with `claude --settings` and refuses an unguarded claude agent. The user's global settings stay untouched (`--user` opts in).
 - `state.json` (`agents/state.schema.json`): `active_agent, status, handover_from, handover_notes{…}, pending_owner[], open_issues[], cursors{}`. Handover at measured ctx ≥ `orchestrate.handover_ctx_pct` (50).
 - Day on launchd (`carhunt schedule install`): sweep, unpause, digests, night pause + learning, cleanup.
 
 ## Config sections
-`owner` (core) · `secrets` (core) · `notify` (core) · `cardb` (db) · `search` (db + discover) · `browsers`, `net`, `accounts` (browsers) · `sites` (sites) · `discover` · `contact` · `vet` · `orchestrate`. Unknown keys anywhere are errors (typo guard). Keys per section: the module doc's "Config" table.
+`owner` (core) · `secrets` (core) · `notify` (core) · `cardb` (db) · `web` (web: `url`, checked by doctor) · `search` (db + discover) · `browsers`, `net`, `accounts` (browsers) · `sites` (sites) · `discover` · `contact` · `vet` · `orchestrate`. Unknown keys anywhere are errors (typo guard). Keys per section: the module doc's "Config" table.
 
 ## Tests
 - Root `conftest.py` isolates every suite (`tests/`, `carhunt/<pkg>/tests`): temp `CARHUNT_HOME` per test, `CARHUNT_SECRETS_BACKEND=file`, inherited `CARHUNT_*`/`CARDB_*` env dropped, real Keychain blocked unless a test is marked `keychain` and `CARHUNT_TEST_KEYCHAIN=1`. It builds `cardb` so real-cardb tests run instead of skipping.
