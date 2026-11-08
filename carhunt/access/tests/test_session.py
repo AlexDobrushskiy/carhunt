@@ -125,9 +125,14 @@ class FakePage:
             return 200
         return {"status": 200, "headers": {}, "text": "{}"} if arg else 42
 
-    def goto(self, url, wait_until=None):
-        self.urls.append(url)
+    def goto(self, url, wait_until=None, timeout=None):
+        self.urls.append((url, timeout))
         return types.SimpleNamespace(status=410)
+
+    url = "https://sessfix.example.invalid/now"
+
+    def locator(self, css):
+        return f"locator:{css}"
 
     def content(self):
         return self._html
@@ -203,6 +208,55 @@ def test_camoufox_missing_has_fix_line(env, monkeypatch):
     monkeypatch.setitem(sys.modules, "camoufox.sync_api", None)
     with pytest.raises(RuntimeError, match="camoufox not installed"), session.tab("camoufox"):
         pass
+
+
+def test_browser_tab_is_a_playwright_page_for_callers(env, monkeypatch):
+    """contact's senders + sites' Net use the handle as a Playwright Page (locator, url, content, goto(timeout=))."""
+    import carhunt.access.plainchrome as pc
+    opened = []
+
+    @contextlib.contextmanager
+    def open_tab(url, *, profile=None, fresh=False, **kw):
+        opened.append(fresh)
+        yield object(), page
+    page = FakePage()
+    monkeypatch.setattr(pc, "open_tab", open_tab)
+    with session.tab("plain-chrome", site="sessfix", fresh=True) as t:
+        with pytest.raises(RuntimeError, match="goto"):
+            t.locator("a")  # the browser opens on the first URL
+        assert t.goto("https://sessfix.example.invalid/a") == 200
+        assert t.goto("https://sessfix.example.invalid/b", wait_until="load", timeout=60000, paced=False) == 410
+        assert t.locator("textarea") == "locator:textarea" and t.url.endswith("/now") and "<title>" in t.content()
+        assert page.urls == [("https://sessfix.example.invalid/b", 60000)]
+    assert opened == [True]
+    assert pace.check("sessfix", "load").used_hour == 1  # paced=False: the caller already took the slot
+
+
+def test_fresh_refused_on_persistent_profiles(env):
+    for kw in ({"route": "identity"}, {"route": "plain-chrome", "country": "fr"}):
+        with pytest.raises(ValueError, match="fresh"), session.tab(fresh=True, **kw):
+            pass
+
+
+def test_camoufox_main_world_eval_and_country_locale(env, monkeypatch):
+    seen = {}
+
+    class Camoufox:
+        def __init__(self, **kw):
+            seen.update(kw)
+
+        def __enter__(self):
+            return types.SimpleNamespace(new_page=lambda: FakePage())
+
+        def __exit__(self, *a):
+            return False
+    monkeypatch.setitem(sys.modules, "camoufox", types.ModuleType("camoufox"))
+    monkeypatch.setitem(sys.modules, "camoufox.sync_api", types.SimpleNamespace(Camoufox=Camoufox))
+    monkeypatch.setattr(session.proxy, "get", lambda cc, *a, **k: "http://u:p@proxy.example.invalid:1")
+    monkeypatch.setattr(session.proxy, "verify_exit", lambda url, cc: "198.51.100.7")
+    with session.tab("camoufox", country="ES", site="sessfix") as t:
+        assert t.locator("form") == "locator:form"   # page there from the start
+    assert seen["main_world_eval"] is True and seen["locale"].startswith("es") and seen["proxy"]["username"] == "u"
 
 
 @pytest.mark.chrome

@@ -1,4 +1,5 @@
 # Synthetic fixture for carhunt/access tests (not a real site).
+site: pacefix
 name: pacefix.example.invalid
-pace: {min_gap_s: 0, per_hour: 7, max_loads_per_run: 100}
+pace: {min_gap_s: 0, max_loads_per_hour: 7, max_loads_per_run: 100}
 caps: {phone_per_day: 3, send_per_day: 2}

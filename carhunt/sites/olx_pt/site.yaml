@@ -16,11 +16,13 @@ caps:
   why: "phone reveal needs a login (see account); one at a time, ≥12 s apart (11-04)"
 account:
   needed_for: [phone, message]
-  verification: "OLX Group email login (shared with standvirtual.com)"
+  verification: email
+  note: "OLX Group email login (shared with standvirtual.com)"
+  mail_from: "from:(olx.pt OR standvirtual.com)"
 phone: reveal-login
 messaging: "site chat, logged in; ads with contact.phone=false are chat-only"
 liveness: {mode: fetch, evidence: "410 = gone; 200 + ad id = live (in-tab fetch, measured 11-04)"}
-cursor: {strategy: full, key: site_ref, why: "API ignores sort_by (11-04): page the whole filtered set"}
+cursor: {strategy: full, why: "API ignores sort_by (11-04): page the whole filtered set"}
 measured: 2026-11-07
 notes:
   - "Any plain HTTP client gets CloudFront 403 (TLS/HTTP2 fingerprint): reads are the site's JSON API fetched inside one real tab (11-01)"

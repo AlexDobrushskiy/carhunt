@@ -24,12 +24,9 @@ CookieSource = Callable[[], "str | None"]
 
 
 def jar_cookie() -> str | None:
-    """The trust jar's leboncoin `datadome` cookie (browsers module), None when the jar or the cookie is missing."""
-    try:
-        from carhunt.access import jar  # type: ignore[attr-defined]
-    except ImportError:
-        return None
-    return jar.cookie("leboncoin.fr", "datadome")
+    """The trust jar's leboncoin `datadome` cookie (read-only), None when the jar or the cookie is missing."""
+    from carhunt.access import jar
+    return jar.get("leboncoin.fr", "datadome")
 
 
 def attrs(ad: dict) -> tuple[dict[str, Any], dict[str, Any]]:

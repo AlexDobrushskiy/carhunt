@@ -21,13 +21,13 @@ Reference for the `carhunt-browsers` skill. Hold/release rules stay in SKILL.md.
 - Blocked as automation on a login page (Cloudflare "Just a moment", Google)? Don't hand the owner a click path: `pw-identity acquire <you> --any`, then `plain-chrome --profile <path> open <url>` and drive it. Akamai/DataDome sites block even a Playwright-launched headed Chrome (10-25).
 
 ## Create site accounts
-- Agents create the accounts they need, with the owner's main email (`accounts.email`) or a plus-address (`accounts.gmail.plus_address`), and a generated password: `creds.new(<domain>, <email>)` (stores `site_<domain>_user/_pass`, prints neither, refuses to overwrite).
+- Agents create the accounts they need, with the owner's main email (`accounts.email`) or a plus-address (`accounts.gmail.plus_address`), and a generated password: `carhunt creds new <site> --user <email>` / `creds.new(<domain>, <email>)` (stores `site_<domain>_user/_pass`, prints neither, refuses to overwrite).
 - Real name + photo on the profile helps with private sellers (11-04); many sites allow the photo only in their app → skip, don't ask.
 - Forms demanding domestic data you don't have (local mobile, postcode) → stop and report; never invent values (coches.net, 11-05).
 - "Continue with Google" only: never type the owner's Google password on a third-party site; use the site's guest form instead (AutoScout24).
 
 ## Verification codes and links
-- **Email first**, even when the site says "texted" (one arrived by email, 10-31): `from carhunt.access.accounts import wait_code, wait_link`; take `t0 = time.time()` **before** the site sends, then `wait_code(site, since=t0)` / `wait_link(site, since=t0, pattern=…)`. Read-only Gmail API, token from secrets; query = site.yaml `account.mail_from`, else `from:<domain>`.
+- **Email first**, even when the site says "texted" (one arrived by email, 10-31): `from carhunt.access.accounts import wait_code, wait_link`; take `t0 = time.time()` **before** the site sends, then `wait_code(site, since=t0)` / `wait_link(site, since=t0, pattern=…)` — CLI: `carhunt email-code <site> --since <t0> [--link REGEX]` (prints only the code/link). Read-only Gmail API, token from secrets; query = site.yaml `account.mail_from`, else `from:<domain>`.
 - A code that goes **only** to the owner's phone → one `ask` notification, batched with any other pending codes (owner, 10-21: agents must not be blocked by anything they can do themselves).
 - Some activations fail on IP, not the number: kleinanzeigen refused the activation link on a residential range ("IP-Bereich vorübergehend gesperrt") until the owner opened it on mobile data (11-02).
 - Phone verification: try the owner's own number first (subito accepted a foreign EU mobile, 11-02). Rented numbers: see proxies-and-sms.md.
