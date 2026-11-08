@@ -1,0 +1,65 @@
+wmi,manufacturer,market,confidence
+WVW,Volkswagen (cars),,V
+WVG,Volkswagen (SUV / ID family),,V
+WV1,Volkswagen Commercial,,V
+WV2,Volkswagen Commercial (buses/vans),,V
+WAU,Audi,,V
+WUA,Audi Sport,,V
+TMB,Skoda,,V
+VSS,SEAT / Cupra,,V
+WBA,BMW,,V
+WBY,BMW i,,V
+WMW,MINI,,V
+WDD,Mercedes-Benz (cars),,V
+W1K,Mercedes-Benz (cars),,V
+W1N,Mercedes-Benz (SUV),,V
+WDC,Mercedes-Benz (SUV),,V
+W1V,Mercedes-Benz (vans),,V
+WP0,Porsche (cars),,V
+WP1,Porsche (SUV),,V
+WF0,Ford Germany,,V
+W0L,Opel,,V
+W0V,Opel,,V
+VF1,Renault,,V
+VF3,Peugeot,,V
+VF7,Citroen,,V
+VR3,Peugeot,,V
+VR7,Citroen,,V
+VXK,Opel / DS (Stellantis),,A
+ZFA,Fiat,,V
+ZAR,Alfa Romeo,,V
+KMH,Hyundai,,V
+KNA,Kia,,V
+KND,Kia (SUV),,V
+TMA,Hyundai (Czech plant),,V
+U5Y,Kia (Slovak plant),,V
+JTD,Toyota,,V
+JTM,Toyota (SUV),,V
+JTN,Toyota,,A
+SB1,Toyota (UK plant),,V
+NMT,Toyota (Turkish plant),,V
+VNK,Toyota (French plant),,V
+JN1,Nissan,,V
+SJN,Nissan (UK plant),,V
+VNV,Nissan (French plant),,A
+YV1,Volvo (cars),,V
+LYV,Volvo (China plant; EU export models exist),china_built,A
+LPS,Polestar (China plant; EU export),china_built,A
+LRW,Tesla (Shanghai; EU export),china_built,V
+XP7,Tesla (Berlin),,V
+5YJ,Tesla (Fremont),,V
+7SA,Tesla (US),,V
+LSJ,MG / SAIC (China; EU export),china_built,A
+LGX,BYD (China),china_built,I
+LFV,FAW-Volkswagen / FAW-Audi (China JV),china_jv,V
+LSV,SAIC Volkswagen (China JV),china_jv,V
+LBV,BMW Brilliance (China JV),china_jv,V
+LE4,Beijing Benz (China JV),china_jv,A
+LTV,FAW Toyota (China JV),china_jv,A
+LVG,GAC Toyota (China JV),china_jv,A
+LHG,GAC Honda (China JV),china_jv,A
+LVH,Dongfeng Honda (China JV),china_jv,A
+LDC,Dongfeng Peugeot-Citroen (China JV),china_jv,A
+LSG,SAIC General Motors (China JV),china_jv,A
+1FA,Ford (US),,V
+1G1,Chevrolet (US),,V
