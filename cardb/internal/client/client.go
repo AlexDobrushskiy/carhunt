@@ -1,4 +1,4 @@
-// Package client is a typed HTTP client for the ev-listings API (api/openapi.yaml).
+// Package client is a typed HTTP client for the cardb API (api/openapi.yaml).
 package client
 
 import (
@@ -21,12 +21,14 @@ import (
 	"carhunt/cardb/internal/api"
 )
 
-// Client talks to one ev-listings server. Author, when set, is sent as X-Author on every request.
+// Client talks to one cardb server. Author, when set, is sent as X-Author on every request.
 type Client struct {
 	BaseURL string // server root, with or without the /api/v1 suffix
 	Token   string
 	Author  string
 	HTTP    *http.Client
+	// TokenSource says where Token came from or why it is missing (shown on a 401).
+	TokenSource string
 }
 
 // New returns a client with a default HTTP timeout (server-side photo fetches can be slow).
@@ -40,6 +42,7 @@ type APIError struct {
 	Message string
 	Method  string
 	Path    string
+	Body    []byte // raw error body (412 carries version + car, 422 price rejections carry reason)
 }
 
 func (e *APIError) Error() string {
@@ -104,7 +107,11 @@ func (c *Client) send(req *http.Request, out any) (int, error) {
 		return resp.StatusCode, err
 	}
 	if resp.StatusCode >= 300 {
-		return resp.StatusCode, apiError(req, resp.StatusCode, data)
+		err := apiError(req, resp.StatusCode, data)
+		if resp.StatusCode == http.StatusUnauthorized && c.Token == "" && c.TokenSource != "" {
+			err.(*APIError).Message += "; token " + c.TokenSource
+		}
+		return resp.StatusCode, err
 	}
 	if out != nil && len(bytes.TrimSpace(data)) > 0 {
 		if err := json.Unmarshal(data, out); err != nil {
@@ -128,7 +135,7 @@ func apiError(req *http.Request, status int, body []byte) error {
 			msg = http.StatusText(status)
 		}
 	}
-	return &APIError{Status: status, Message: msg, Method: req.Method, Path: req.URL.Path}
+	return &APIError{Status: status, Message: msg, Method: req.Method, Path: req.URL.Path, Body: body}
 }
 
 func (c *Client) do(ctx context.Context, method, path string, query url.Values, body, out any) (int, error) {
@@ -181,9 +188,12 @@ func (c *Client) Health(ctx context.Context) (api.Health, error) {
 	return h, err
 }
 
-func (c *Client) Stats(ctx context.Context) (api.Stats, error) {
+func (c *Client) Stats(ctx context.Context) (api.Stats, error) { return c.StatsFor(ctx, "") }
+
+// StatsFor counts user's verdicts in by_verdict ("" = owner).
+func (c *Client) StatsFor(ctx context.Context, user string) (api.Stats, error) {
 	var s api.Stats
-	_, err := c.do(ctx, "GET", "/stats", nil, nil, &s)
+	_, err := c.do(ctx, "GET", "/stats", userQuery(user), nil, &s)
 	return s, err
 }
 
@@ -219,12 +229,14 @@ type CarFilter struct {
 	SellerTypes   []string
 	Statuses      []string
 	Verdicts      []string // up|maybe|down|none
+	User          string   // whose verdict to show/filter ("" = owner)
 	Options       []string // key:value
 	NeedsOwner    *bool
 	HasDuplicates *bool
 	GoodDeal      *bool
 	ModelFamilies []string // canonical family names or "none"
 	Tiers         []int    // "To rate" tiers 1|2|3
+	Fuels         []string // powertrain.fuel; unknown = no fuel recorded
 	Market        string
 	Sort          string
 	Order         string
@@ -291,7 +303,11 @@ func (f CarFilter) Values() url.Values {
 	for _, t := range f.Tiers {
 		q.Add("tier", strconv.Itoa(t))
 	}
+	for _, v := range f.Fuels {
+		q.Add("fuel", v)
+	}
 	set("market", f.Market)
+	set("user", f.User)
 	set("sort", f.Sort)
 	set("order", f.Order)
 	setInt("limit", f.Limit)
@@ -306,9 +322,21 @@ func (c *Client) ListCars(ctx context.Context, f CarFilter) (api.CarList, error)
 }
 
 func (c *Client) GetCar(ctx context.Context, car string) (api.CarDetail, error) {
+	return c.GetCarFor(ctx, car, "")
+}
+
+// GetCarFor is GetCar with `verdict` = user's verdict ("" = owner).
+func (c *Client) GetCarFor(ctx context.Context, car, user string) (api.CarDetail, error) {
 	var out api.CarDetail
-	_, err := c.do(ctx, "GET", carPath(car), nil, nil, &out)
+	_, err := c.do(ctx, "GET", carPath(car), userQuery(user), nil, &out)
 	return out, err
+}
+
+func userQuery(user string) url.Values {
+	if user == "" {
+		return nil
+	}
+	return url.Values{"user": {user}}
 }
 
 func (c *Client) CreateCar(ctx context.Context, in api.CarInput) (api.CarDetail, error) {
@@ -410,7 +438,12 @@ func (c *Client) PutVerdict(ctx context.Context, car string, in api.VerdictInput
 }
 
 func (c *Client) DeleteVerdict(ctx context.Context, car string) error {
-	_, err := c.do(ctx, "DELETE", carPath(car, "verdict"), nil, nil, nil)
+	return c.DeleteVerdictFor(ctx, car, "")
+}
+
+// DeleteVerdictFor clears user's verdict ("" = the token's user, else the owner).
+func (c *Client) DeleteVerdictFor(ctx context.Context, car, user string) error {
+	_, err := c.do(ctx, "DELETE", carPath(car, "verdict"), userQuery(user), nil, nil)
 	return err
 }
 

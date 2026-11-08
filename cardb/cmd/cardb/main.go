@@ -1,4 +1,4 @@
-// Command cardb is the ev-listings server and its CLI client in one binary.
+// Command cardb is the carhunt listings DB server and its CLI client in one binary.
 package main
 
 import (
@@ -10,6 +10,7 @@ import (
 
 	"carhunt/cardb/internal/cli"
 	"carhunt/cardb/internal/server"
+	"carhunt/cardb/internal/setup"
 )
 
 func main() {
@@ -28,6 +29,8 @@ func run(ctx context.Context, args []string) int {
 			err = server.Backup(args[1:])
 		case "healthcheck":
 			err = server.Healthcheck()
+		case "init":
+			err = setup.Init(args[1:], os.Stdout)
 		default:
 			return cli.Run(ctx, args, os.Stdout, os.Stderr)
 		}

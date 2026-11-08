@@ -46,7 +46,7 @@ func (e *env) client() (*client.Client, error) {
 		return nil, err
 	}
 	if cl.BaseURL == "" {
-		return nil, errors.New("no server configured: set CARDB_URL and CARDB_TOKEN, pass --server/--token, or run `cardb config set --url URL --token TOKEN`")
+		return nil, errors.New("no server configured: set CARDB_URL, pass --server, or run `cardb config set --url URL`")
 	}
 	e.cl = cl
 	return cl, nil
@@ -64,14 +64,14 @@ var commands []command
 func init() {
 	commands = []command{
 		{"upsert", "--url URL [fields…] | --from-json FILE|-", "create/update a listing by URL (idempotent); prints car + listing ids and duplicate candidates", cmdUpsert},
-		{"show", "CAR", "full card: specs, seller, listings + price history, options, facts, verdict, notes, timeline, chat", cmdShow},
-		{"ls", "[filters]", "list/filter cars (table; --json raw)", cmdLs},
-		{"queue", "[--tier 1,2] [--tier 3] [--spec confirmed|unknown] [--user NAME] [--limit N] [--offset N]", "\"To rate\" queue: unrated cars passing the profile's hard filters, by tier / deal / score", cmdQueue},
+		{"show", "CAR [--user U]", "full card: specs, seller, listings + price history, options, facts, verdict, notes, timeline, chat", cmdShow},
+		{"ls", "[filters] [--user U]", "list/filter cars (table; --json raw); --user = whose verdict to show/filter", cmdLs},
+		{"queue", "[--tier 1,2] [--tier 3] [--spec confirmed|unknown] [--user NAME] [--limit N] [--offset N]", "\"To rate\" queue: cars the user has not rated passing the profile's hard filters, by tier / deal / score", cmdQueue},
 		{"profile", "", "the server's buyer profile: tiers, hard filters, options wanted, weights", cmdProfile},
-		{"set", "CAR [--km N --vin V …] [--clear FIELD]", "update car fields (only given fields change)", cmdSet},
-		{"status", "CAR STATUS [--reason R]", "set status: " + strings.Join(statusList(), " "), cmdStatus},
+		{"set", "CAR [--km N --fuel F …] [--red-flag-add T] [--clear FIELD] [--if-version N]", "update car fields (only given fields change)", cmdSet},
+		{"status", "CAR STATUS [--reason R] [--if-version N]", "set status: " + strings.Join(statusList(), " "), cmdStatus},
 		{"needs-owner", "CAR REASON | CAR --clear", "flag/unflag a car for the owner's attention", cmdNeedsOwner},
-		{"verdict", "CAR up|maybe|down|clear [--note N]", "the owner's verdict (also 👍 🤔 👎, like/dislike)", cmdVerdict},
+		{"verdict", "CAR up|maybe|down|clear [--note N] [--user U]", "a user's verdict, default the token's user else the owner (also 👍 🤔 👎, like/dislike)", cmdVerdict},
 		{"deal", "CAR on|off [--note N] [--at T]", "flag/unflag a good deal (also yes/no, true/false, ✓/✗); --note \"\" clears the note", cmdDeal},
 		{"opt", "CAR key=value[:source[:ref]]… [--rm KEY]", "set equipment options with evidence", cmdOpt},
 		{"fact", "CAR key=value[:source[:ref]]… [--rm KEY]", "set free-form facts with evidence", cmdFact},
@@ -94,10 +94,10 @@ func init() {
 		{"merge", "TARGET SOURCE…", "merge SOURCE cars into TARGET", cmdMerge},
 		{"split", "CAR --listing ID… [--move-messages] [--keep-photos]", "move listings out to a new car", cmdSplit},
 		{"families", "[--known]", "model families with car counts (+ unmapped); --known lists every family name", cmdFamilies},
-		{"stats", "", "counts per status / verdict", cmdStats},
+		{"stats", "[--user U]", "counts per status / verdict", cmdStats},
 		{"activity", "[--since 24h|RFC3339] [--limit N]", "global feed of events + messages", cmdActivity},
 		{"health", "", "server liveness (no auth)", cmdHealth},
-		{"config", "set|show", "client config (~/.config/cardb/config.json)", cmdConfig},
+		{"config", "set|show", "client config (~/.config/cardb/config.json: url, author; the token comes from CARDB_TOKEN or the secrets backend)", cmdConfig},
 		{"version", "", "print the cardb version", cmdVersion},
 		{"help", "[COMMAND]", "show help", cmdHelp},
 	}
@@ -105,7 +105,8 @@ func init() {
 
 // Server-side subcommands handled by cmd/cardb; listed here for help output only.
 var serverCommands = []command{
-	{name: "serve", summary: "run the HTTP server (CARDB_DATA_DIR, CARDB_LISTEN, CARDB_TOKENS / CARDB_TOKENS_FILE)"},
+	{name: "init", args: "[--home DIR] [--backend keychain|file|op] [--rotate]", summary: "create the data dir and API tokens (stored in the secrets backend, hashes in <data dir>/tokens); idempotent"},
+	{name: "serve", summary: "run the HTTP server (CARDB_DATA_DIR, CARDB_LISTEN; tokens: <data dir>/tokens or CARDB_TOKENS / CARDB_TOKENS_FILE)"},
 	{name: "backup", args: "DEST.sqlite3", summary: "consistent SQLite snapshot (VACUUM INTO)"},
 	{name: "healthcheck", summary: "container healthcheck against the local listener"},
 }
@@ -234,15 +235,22 @@ func (e *env) fail(err error) int {
 			code = ExitNotFound
 		}
 	}
+	msg, extra := apiFailure(err)
+	if msg == "" {
+		msg = err.Error()
+	}
 	if e.json {
-		out := map[string]any{"error": err.Error(), "exit_code": code}
+		out := map[string]any{"error": msg, "exit_code": code}
 		if status != 0 {
 			out["status"] = status
+		}
+		for k, v := range extra {
+			out[k] = v
 		}
 		b, _ := json.Marshal(out)
 		fmt.Fprintln(e.stderr, string(b))
 	} else {
-		fmt.Fprintf(e.stderr, "cardb: %v\n", err)
+		fmt.Fprintf(e.stderr, "cardb: %s\n", msg)
 		if code == ExitUsage {
 			fmt.Fprintln(e.stderr, "run `cardb help` or `cardb help COMMAND` for usage")
 		}
@@ -439,7 +447,7 @@ func cmdVersion(e *env, args []string) error {
 
 func cmdConfig(e *env, args []string) error {
 	if len(args) == 0 || args[0] == "-h" || args[0] == "--help" {
-		fmt.Fprintln(e.stdout, "usage: cardb config set [--url URL] [--token T] [--author A]\n       cardb config show")
+		fmt.Fprintln(e.stdout, "usage: cardb config set [--url URL] [--author A]\n       cardb config show")
 		if len(args) == 0 {
 			return usageErrorf("config: missing subcommand")
 		}
@@ -447,9 +455,13 @@ func cmdConfig(e *env, args []string) error {
 	}
 	switch args[0] {
 	case "set":
-		f := newFlags(e, "config set", "token", "author")
-		u := f.String("url", "", "server URL, e.g. https://ev.example.lan")
-		tok := f.String("token", "", "API token")
+		for _, a := range args[1:] {
+			if n, _, _ := strings.Cut(strings.TrimLeft(a, "-"), "="); strings.HasPrefix(a, "-") && n == "token" {
+				return usageErrorf("config set: the token is not stored in the client config; use `cardb init` (secrets backend) or CARDB_TOKEN")
+			}
+		}
+		f := newFlags(e, "config set", "author")
+		u := f.String("url", "", "server URL, e.g. http://127.0.0.1:8484")
 		au := f.String("author", "", "default author (empty string clears)")
 		pos, err := f.parse(args[1:])
 		if err != nil {
@@ -466,16 +478,13 @@ func cmdConfig(e *env, args []string) error {
 		if f.isSet("url") {
 			c.URL = strings.TrimRight(*u, "/")
 		}
-		if f.isSet("token") {
-			c.Token = *tok
-		}
 		if f.isSet("author") {
 			c.Author = *au
 		}
 		if err := client.SaveConfigFile(path, c); err != nil {
 			return err
 		}
-		return e.emit(map[string]any{"path": path, "url": c.URL, "token_set": c.Token != "", "author": c.Author},
+		return e.emit(map[string]any{"path": path, "url": c.URL, "author": c.Author},
 			func(w io.Writer) { fmt.Fprintf(w, "wrote %s\n", path) })
 	case "show":
 		f := newFlags(e, "config show")
@@ -486,13 +495,13 @@ func cmdConfig(e *env, args []string) error {
 		if err != nil {
 			return err
 		}
-		masked := ""
+		tok := "none: " + c.TokenSource
 		if c.Token != "" {
-			masked = c.Token[:min(4, len(c.Token))] + "…"
+			tok = "set, from " + c.TokenSource
 		}
-		return e.emit(map[string]any{"path": client.ConfigPath(), "url": c.URL, "token": masked, "author": c.Author},
+		return e.emit(map[string]any{"path": client.ConfigPath(), "url": c.URL, "token_set": c.Token != "", "token_source": c.TokenSource, "author": c.Author},
 			func(w io.Writer) {
-				fmt.Fprintf(w, "config: %s\nurl:    %s\ntoken:  %s\nauthor: %s\n", client.ConfigPath(), c.URL, masked, c.Author)
+				fmt.Fprintf(w, "config: %s\nurl:    %s\ntoken:  %s\nauthor: %s\n", client.ConfigPath(), c.URL, tok, c.Author)
 			})
 	}
 	return usageErrorf("config: unknown subcommand %q (set|show)", args[0])

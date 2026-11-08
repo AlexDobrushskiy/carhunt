@@ -1,4 +1,4 @@
-// Package server is the ev-listings HTTP API (`cardb serve`).
+// Package server is the cardb HTTP API (`cardb serve`).
 //
 // In-process use (tests, e2e):
 //
@@ -22,6 +22,7 @@ import (
 
 	"carhunt/cardb/internal/api"
 	"carhunt/cardb/internal/profile"
+	"carhunt/cardb/internal/setup"
 	"carhunt/cardb/internal/store"
 )
 
@@ -32,26 +33,32 @@ func envOr(k, def string) string {
 	return def
 }
 
-// ParseTokens parses "name:token" pairs separated by commas or newlines; # starts a comment line.
+// ParseTokens parses "name:token" or "name:sha256:<hex>" pairs separated by commas or newlines; # starts a comment line.
 func ParseTokens(s string) (map[string]string, error) {
 	out := map[string]string{}
-	sc := bufio.NewScanner(strings.NewReader(strings.ReplaceAll(s, ",", "\n")))
+	sc := bufio.NewScanner(strings.NewReader(s))
 	for sc.Scan() {
-		line := strings.TrimSpace(sc.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
+		if strings.HasPrefix(strings.TrimSpace(sc.Text()), "#") {
 			continue
 		}
-		name, tok, ok := strings.Cut(line, ":")
-		name, tok = strings.TrimSpace(name), strings.TrimSpace(tok)
-		if !ok || name == "" || tok == "" {
-			return nil, fmt.Errorf("bad token entry %q (want name:token)", line)
+		for _, entry := range strings.Split(sc.Text(), ",") {
+			entry = strings.TrimSpace(entry)
+			if entry == "" {
+				continue
+			}
+			name, tok, ok := strings.Cut(entry, ":")
+			name, tok = strings.TrimSpace(name), strings.TrimSpace(tok)
+			if !ok || name == "" || tok == "" {
+				return nil, fmt.Errorf("bad token entry (want name:token or name:sha256:<hex>)")
+			}
+			out[name] = tok
 		}
-		out[name] = tok
 	}
 	return out, sc.Err()
 }
 
-func loadTokens() (map[string]string, error) {
+// loadTokens reads CARDB_TOKENS and CARDB_TOKENS_FILE; when neither is set, <dataDir>/tokens (written by cardb init).
+func loadTokens(dataDir string) (map[string]string, error) {
 	tokens := map[string]string{}
 	if v := os.Getenv("CARDB_TOKENS"); v != "" {
 		t, err := ParseTokens(v)
@@ -62,21 +69,30 @@ func loadTokens() (map[string]string, error) {
 			tokens[k] = v
 		}
 	}
-	if f := os.Getenv("CARDB_TOKENS_FILE"); f != "" {
+	f := os.Getenv("CARDB_TOKENS_FILE")
+	if f == "" && os.Getenv("CARDB_TOKENS") == "" {
+		if _, err := os.Stat(setup.TokensFile(dataDir)); err == nil {
+			f = setup.TokensFile(dataDir)
+		}
+	}
+	if f != "" {
 		b, err := os.ReadFile(f)
 		if err != nil {
-			return nil, fmt.Errorf("CARDB_TOKENS_FILE: %w", err)
+			return nil, fmt.Errorf("tokens file: %w", err)
 		}
 		t, err := ParseTokens(string(b))
 		if err != nil {
-			return nil, fmt.Errorf("CARDB_TOKENS_FILE: %w", err)
+			return nil, fmt.Errorf("%s: %w", f, err)
 		}
 		for k, v := range t {
 			tokens[k] = v
 		}
 	}
 	if len(tokens) == 0 {
-		return nil, errors.New("no API tokens: set CARDB_TOKENS (name:token,…) or CARDB_TOKENS_FILE")
+		return nil, fmt.Errorf("no API tokens: run `cardb init` (writes %s), or set CARDB_TOKENS (name:token,…) / CARDB_TOKENS_FILE", setup.TokensFile(dataDir))
+	}
+	if _, err := tokenEntries(tokens); err != nil {
+		return nil, err
 	}
 	return tokens, nil
 }
@@ -86,15 +102,11 @@ func Main(ctx context.Context, args []string) error {
 	fs := flag.NewFlagSet("serve", flag.ContinueOnError)
 	listen := fs.String("listen", envOr("CARDB_LISTEN", "127.0.0.1:8484"), "listen address (env CARDB_LISTEN)")
 	config := fs.String("config", profile.Resolve(), "buyer profile: carhunt config.yaml (env CARHUNT_CONFIG / CARHUNT_HOME); missing = neutral profile")
-	dataDir := fs.String("data", envOr("CARDB_DATA_DIR", "./data"), "data directory (env CARDB_DATA_DIR)")
+	dataDir := fs.String("data", "", "data directory (default env CARDB_DATA_DIR, config cardb.data_dir, $CARHUNT_HOME/cardb)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, nil)))
-	tokens, err := loadTokens()
-	if err != nil {
-		return err
-	}
 	prof := profile.Default()
 	if *config != "" {
 		p, err := profile.Load(*config)
@@ -110,12 +122,21 @@ func Main(ctx context.Context, args []string) error {
 			return err
 		}
 	}
+	if *dataDir == "" {
+		*dataDir = setup.DataDir(setup.Home(), prof.Cardb.DataDir)
+	}
+	tokens, err := loadTokens(*dataDir)
+	if err != nil {
+		return err
+	}
 	st, err := store.Open(*dataDir)
 	if err != nil {
 		return err
 	}
 	defer st.Close()
-	st.SetProfile(prof)
+	if err := st.SetProfile(prof); err != nil {
+		return fmt.Errorf("sync users from the profile: %w", err)
+	}
 
 	srv := &http.Server{
 		Addr:              *listen,
@@ -149,12 +170,16 @@ func Main(ctx context.Context, args []string) error {
 	return nil
 }
 
-// Backup runs `cardb backup <dest.sqlite3>`: a VACUUM INTO snapshot of $CARDB_DATA_DIR/cardb.sqlite3.
+// Backup runs `cardb backup <dest.sqlite3>`: a VACUUM INTO snapshot of <data dir>/cardb.sqlite3 (data dir as for serve).
 func Backup(args []string) error {
 	if len(args) != 1 || args[0] == "" {
 		return errors.New("usage: cardb backup <dest.sqlite3>")
 	}
-	dataDir := envOr("CARDB_DATA_DIR", "./data")
+	prof, err := profile.LoadDefault()
+	if err != nil {
+		return err
+	}
+	dataDir := setup.DataDir(setup.Home(), prof.Cardb.DataDir)
 	if _, err := os.Stat(dataDir + "/cardb.sqlite3"); err != nil {
 		return fmt.Errorf("no database in %s: %w", dataDir, err)
 	}

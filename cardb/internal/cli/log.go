@@ -69,7 +69,7 @@ func cmdMsg(e *env, args []string) error {
 	dir := f.String("dir", "", "in (from seller) | out (to seller)")
 	f.StringVar(dir, "direction", "", "alias of --dir")
 	at := f.String("at", "", "message time (RFC 3339 or 'YYYY-MM-DD HH:MM' local; default now)")
-	sender := f.String("sender", "", "who wrote it: agent session id, 'owner', seller name/number")
+	sender := f.String("sender", "", "who wrote it: agent session id, the owner's name, seller name/number")
 	senderKind := f.String("sender-kind", "", "seller|agent|owner|system")
 	externalID := f.String("external-id", "", "channel message id (idempotency key)")
 	dedupeKey := f.String("dedupe-key", "", "idempotency key when there is no --external-id")

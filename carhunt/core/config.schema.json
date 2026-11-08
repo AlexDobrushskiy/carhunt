@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "carhunt/config.schema.json",
+  "title": "carhunt config",
+  "description": "Top-level sections are fixed (typo guard). Inside a module's section unknown keys are allowed so each module can extend it; core validates only the keys it reads.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["owner"],
+  "$defs": {
+    "window": {"type": "string", "pattern": "^([01]\\d|2[0-3]):[0-5]\\d-([01]\\d|2[0-3]):[0-5]\\d$"},
+    "hhmm": {"type": "string", "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"},
+    "secretRef": {"type": "string", "pattern": "^secret:[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$"},
+    "section": {"type": "object", "additionalProperties": true}
+  },
+  "properties": {
+    "owner": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["tz"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "languages": {"type": "array", "items": {"type": "string", "pattern": "^[a-z]{2,3}$"}},
+        "tz": {"type": "string", "minLength": 1, "description": "IANA zone, e.g. Europe/Berlin; checked against zoneinfo at load"},
+        "home": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "city": {"type": "string"},
+            "country": {"type": "string", "pattern": "^[A-Z]{2}$"},
+            "lat": {"type": "number", "minimum": -90, "maximum": 90},
+            "lon": {"type": "number", "minimum": -180, "maximum": 180}
+          }
+        }
+      }
+    },
+    "secrets": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "backend": {"enum": ["keychain", "op", "file"]},
+        "keychain_service": {"type": "string", "minLength": 1},
+        "op_vault": {"type": "string", "minLength": 1}
+      }
+    },
+    "notify": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "backend": {"enum": ["telegram", "stdout", "none"]},
+        "telegram": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "bot_token": {"$ref": "#/$defs/secretRef"},
+            "chat_id": {"oneOf": [{"$ref": "#/$defs/secretRef"}, {"type": "integer"}, {"type": "string", "pattern": "^-?\\d+$"}]},
+            "api_base": {"type": "string", "pattern": "^https?://"}
+          }
+        },
+        "quiet_hours": {"$ref": "#/$defs/window"},
+        "quiet": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "digest": {"enum": ["hold", "silent"]},
+            "ask": {"enum": ["hold", "silent"]},
+            "urgent": {"enum": ["hold", "silent"]}
+          }
+        },
+        "digests": {"type": "array", "items": {"$ref": "#/$defs/hhmm"}},
+        "default_agent": {"type": "string", "minLength": 1}
+      }
+    },
+    "search": {"$ref": "#/$defs/section"},
+    "cardb": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "url": {"type": "string", "pattern": "^https?://"},
+        "token": {"$ref": "#/$defs/secretRef"},
+        "data_dir": {"type": "string"}
+      }
+    },
+    "browsers": {"$ref": "#/$defs/section"},
+    "net": {"$ref": "#/$defs/section"},
+    "accounts": {"$ref": "#/$defs/section"},
+    "sites": {"$ref": "#/$defs/section"},
+    "discover": {"$ref": "#/$defs/section"},
+    "contact": {"$ref": "#/$defs/section"},
+    "vet": {"$ref": "#/$defs/section"},
+    "orchestrate": {"$ref": "#/$defs/section"},
+    "privacy": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {"denylist": {"type": "string"}}
+    }
+  }
+}

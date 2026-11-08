@@ -27,6 +27,7 @@ var specCols = []specCol{
 	{"battery_net_kwh", 'f'}, {"battery_gross_kwh", 'f'}, {"power_kw", 'f'}, {"drive", 's'}, {"seats", 'i'},
 	{"colour", 's'}, {"interior", 's'}, {"interior_tone", 's'}, {"wheels_in", 'i'}, {"vin", 's'}, {"plate", 's'},
 	{"country", 's'}, {"city", 's'}, {"distance_km", 'i'},
+	{"fuel", 's'}, {"engine_cc", 'i'}, {"gearbox", 's'}, {"wltp_range_km", 'i'}, {"wltp_consumption", 'f'}, {"co2_g_km", 'i'},
 	{"lat", 'f'}, {"lon", 'f'}, // car location (migration 8)
 }
 
@@ -63,6 +64,8 @@ func normSpec(col string, v any) (any, error) {
 			if !slices.Contains([]string{"fwd", "rwd", "awd", "unknown"}, x) {
 				return nil, invalidf("drive must be fwd|rwd|awd|unknown")
 			}
+		case "fuel", "gearbox":
+			return normEnum(col, x)
 		case "interior_tone":
 			x = strings.ToLower(x)
 			if !slices.Contains([]string{"dark", "grey", "brown", "light", "unknown"}, x) {
@@ -130,13 +133,12 @@ func specsMap(s api.CarSpecs) (map[string]any, error) {
 	if s.Km != nil {
 		put("km", *s.Km)
 	}
-	if pt := s.Powertrain; pt != nil {
-		if pt.BatteryNetKwh != nil {
-			put("battery_net_kwh", *pt.BatteryNetKwh)
-		}
-		if pt.BatteryGrossKwh != nil {
-			put("battery_gross_kwh", *pt.BatteryGrossKwh)
-		}
+	pt, err := withLegacyBattery(s)
+	if err != nil {
+		return nil, err
+	}
+	for k, v := range powertrainValues(pt) {
+		put(k, v)
 	}
 	if s.PowerKw != nil {
 		put("power_kw", *s.PowerKw)
@@ -220,7 +222,9 @@ func specsStruct(m map[string]any) api.CarSpecs {
 		WheelsIn: in("wheels_in"), VIN: str("vin"), Plate: str("plate"), Country: str("country"),
 		City: str("city"), DistanceKm: in("distance_km"), Lat: fl("lat"), Lon: fl("lon"),
 	}
-	if pt := (&api.Powertrain{BatteryNetKwh: fl("battery_net_kwh"), BatteryGrossKwh: fl("battery_gross_kwh")}); !pt.Empty() {
+	if pt := (&api.Powertrain{Fuel: str("fuel"), BatteryNetKwh: fl("battery_net_kwh"), BatteryGrossKwh: fl("battery_gross_kwh"),
+		EngineCc: in("engine_cc"), Gearbox: str("gearbox"), WltpRangeKm: in("wltp_range_km"),
+		WltpConsumption: fl("wltp_consumption"), Co2GKm: in("co2_g_km")}); !pt.Empty() {
 		s.Powertrain = pt
 	}
 	s.Year = yearOf(s.RegDate)
@@ -273,6 +277,7 @@ type carRow struct {
 	GoodDealNote     sql.NullString
 	GoodDealBy       sql.NullString
 	GoodDealAt       sql.NullFloat64
+	Version          int64
 }
 
 // family is the effective model family: the manual override, else derived from make/model/variant.
@@ -313,7 +318,7 @@ var carSelect = func() string {
 	}
 	cols = append(cols, "seller_id", "summary", "status", "status_reason", "status_changed_at", "needs_owner",
 		"needs_owner_reason", "red_flags", "open_questions", "merged_into", "created_at", "updated_at",
-		"model_family_override", "good_deal", "good_deal_note", "good_deal_by", "good_deal_at")
+		"model_family_override", "good_deal", "good_deal_note", "good_deal_by", "good_deal_at", "version")
 	return "SELECT " + strings.Join(cols, ", ") + " FROM cars"
 }()
 
@@ -338,7 +343,7 @@ func scanCar(sc scanner) (*carRow, error) {
 	var needs, goodDeal int
 	dest = append(dest, &c.SellerID, &c.Summary, &c.Status, &c.StatusReason, &c.StatusChangedAt, &needs,
 		&c.NeedsOwnerReason, &redFlags, &openQ, &c.MergedInto, &c.CreatedAt, &c.UpdatedAt,
-		&c.FamilyOverride, &goodDeal, &c.GoodDealNote, &c.GoodDealBy, &c.GoodDealAt)
+		&c.FamilyOverride, &goodDeal, &c.GoodDealNote, &c.GoodDealBy, &c.GoodDealAt, &c.Version)
 	if err := sc.Scan(dest...); err != nil {
 		return nil, err
 	}
@@ -841,6 +846,9 @@ func (s *Store) SetStatus(ctx context.Context, ref string, in api.StatusInput, a
 		if err != nil {
 			return err
 		}
+		if err := s.checkVersion(tx, car, in.Version); err != nil {
+			return err
+		}
 		if _, err := setStatus(tx, car, in.Status, strings.TrimSpace(in.Reason), author, atOr(in.At, s.nowTS())); err != nil {
 			return err
 		}
@@ -861,13 +869,20 @@ func (s *Store) PatchCar(ctx context.Context, ref string, patch map[string]json.
 		}
 		now = ts(t)
 	}
-	err := s.tx(ctx, func(tx *sql.Tx) error {
+	wantVersion, err := decodeVersion(patch["version"])
+	if err != nil {
+		return nil, err
+	}
+	err = s.tx(ctx, func(tx *sql.Tx) error {
 		id, err := resolveCar(tx, ref)
 		if err != nil {
 			return err
 		}
 		car, err := loadCar(tx, id)
 		if err != nil {
+			return err
+		}
+		if err := s.checkVersion(tx, car, wantVersion); err != nil {
 			return err
 		}
 		specVals := map[string]any{}
@@ -886,7 +901,7 @@ func (s *Store) PatchCar(ctx context.Context, ref string, patch map[string]json.
 		sort.Strings(keys)
 		for _, k := range keys {
 			raw := patch[k]
-			if kind, ok := specKind(k); ok {
+			if kind, ok := specKind(k); ok && !powertrainOnly[k] {
 				v, err := decodeSpecRaw(k, kind, raw)
 				if err != nil {
 					return err
@@ -1010,6 +1025,16 @@ func (s *Store) PatchCar(ctx context.Context, ref string, patch map[string]json.
 					}
 					familyChange = &specChange{From: auto(prev), To: auto(next)}
 				}
+			case "powertrain":
+				pt, err := decodePowertrainPatch(raw)
+				if err != nil {
+					return err
+				}
+				for c, v := range pt {
+					specVals[c] = v
+				}
+			case "version", "red_flags_add", "red_flags_remove", "open_questions_add", "open_questions_remove":
+				continue // version: checked above; list ops: applied after the loop
 			case "good_deal", "good_deal_note":
 				return invalidf("%s is set with PUT /cars/{car}/good-deal", k)
 			case "seller_id":
@@ -1037,6 +1062,11 @@ func (s *Store) PatchCar(ctx context.Context, ref string, patch map[string]json.
 			}
 		}
 
+		opSets, opArgs, err := listOpSets(car, patch)
+		if err != nil {
+			return err
+		}
+		sets, args = append(sets, opSets...), append(args, opArgs...)
 		if len(sets) > 0 || len(patch) > 0 {
 			args = append(args, now, id)
 			if _, err := tx.Exec("UPDATE cars SET "+strings.Join(append(sets, "updated_at = ?"), ", ")+" WHERE id = ?", args...); err != nil {

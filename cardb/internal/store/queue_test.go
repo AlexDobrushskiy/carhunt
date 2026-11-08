@@ -522,11 +522,14 @@ func TestPoolExclusions(t *testing.T) {
 		r.car(cb{id: 5, make: "VW", model: "ID.4 Pro", kw: 210, year: 2024, km: 20000, price: 45000, country: "PT"}), // over the cap: still a peer
 		r.car(cb{id: 6, make: "VW", model: "ID.4 Pro", kw: 210, year: 2024, km: 20000, price: 30000, country: "CH"}), // out of scope
 	)
+	forced := r.car(cb{id: 7, make: "VW", model: "ID.4 Pro", kw: 210, year: 2024, km: 20000, price: 30000, country: "PT"})
+	forced.priceFlags = []string{"price_net"} // forced past price sanity
+	cars = append(cars, forced)
 	var ids []int64
 	for _, rc := range r.pool(cars) {
 		ids = append(ids, rc.c.ID)
 	}
-	for _, id := range []int64{1, 2, 3, 4, 6} {
+	for _, id := range []int64{1, 2, 3, 4, 6, 7} {
 		if slices.Contains(ids, id) {
 			t.Errorf("car %d in the pool", id)
 		}

@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"io"
@@ -26,13 +25,18 @@ const tokenNameKey ctxKey = 0
 
 type handler struct {
 	st     *store.Store
-	tokens map[string]string // name → token
+	tokens []tokenEntry // sha256 of each accepted token
 	fetch  *http.Client
 }
 
-// NewHandler returns the full HTTP handler (API under /api/v1, plus /healthz). tokens maps name → bearer token.
+// NewHandler returns the full HTTP handler (API under /api/v1, plus /healthz). tokens maps name → bearer token
+// or "sha256:<hex>" of it. It panics on a malformed hash (Main validates tokens before).
 func NewHandler(st *store.Store, tokens map[string]string) http.Handler {
-	h := &handler{st: st, tokens: tokens, fetch: &http.Client{Timeout: photoFetchTimeout}}
+	entries, err := tokenEntries(tokens)
+	if err != nil {
+		panic(err)
+	}
+	h := &handler{st: st, tokens: entries, fetch: &http.Client{Timeout: photoFetchTimeout}}
 	mux := http.NewServeMux()
 	route := func(pattern string, fn func(w http.ResponseWriter, r *http.Request) error) {
 		mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
@@ -121,21 +125,25 @@ func (h *handler) auth(next http.Handler) http.Handler {
 		tok = strings.TrimSpace(tok)
 		name := ""
 		if tok != "" {
-			for n, t := range h.tokens {
-				if subtle.ConstantTimeCompare([]byte(tok), []byte(t)) == 1 {
-					name = n
-				}
-			}
+			name = matchToken(h.tokens, tok)
 		}
 		if name == "" {
-			w.Header().Set("WWW-Authenticate", `Bearer realm="ev-listings"`)
+			w.Header().Set("WWW-Authenticate", `Bearer realm="cardb"`)
 			writeJSON(w, http.StatusUnauthorized, api.Error{Error: "missing or invalid bearer token"})
 			return
 		}
 		if lw, ok := w.(*logWriter); ok {
 			lw.token = name
 		}
-		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), tokenNameKey, name)))
+		ctx := context.WithValue(r.Context(), tokenNameKey, name)
+		if h.viewerToken(name) {
+			if !viewerAllowed(r) {
+				forbidden(w, "token "+name+" is a viewer: read-only except its own verdict")
+				return
+			}
+			ctx = context.WithValue(ctx, viewerKey, true)
+		}
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
@@ -195,6 +203,17 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 			store.KindConflict:   http.StatusConflict,
 			store.KindTooLarge:   http.StatusRequestEntityTooLarge,
 		}[se.Kind]
+		if se.Kind == store.KindPrecondition {
+			status = http.StatusPreconditionFailed
+		}
+		if len(se.Details) > 0 {
+			body := map[string]any{"error": se.Msg}
+			for k, v := range se.Details {
+				body[k] = v
+			}
+			writeJSON(w, status, body)
+			return
+		}
 		writeJSON(w, status, api.Error{Error: se.Msg})
 		return
 	}
@@ -225,8 +244,11 @@ func decode(w http.ResponseWriter, r *http.Request, v any) error {
 	return nil
 }
 
-// author picks body author → X-Author header → token name.
+// author picks body author → X-Author header → token name; a viewer token always writes as itself.
 func author(r *http.Request, body string) string {
+	if isViewer(r) {
+		return tokenName(r)
+	}
 	if a := strings.TrimSpace(body); a != "" {
 		return a
 	}
@@ -257,7 +279,11 @@ func (h *handler) health(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *handler) stats(w http.ResponseWriter, r *http.Request) error {
-	st, err := h.st.Stats(r.Context())
+	user, err := h.queryUser(r)
+	if err != nil {
+		return err
+	}
+	st, err := h.st.Stats(r.Context(), user)
 	if err != nil {
 		return err
 	}
@@ -271,7 +297,7 @@ func parseCarFilter(r *http.Request) (store.CarFilter, error) {
 		Q: q.Get("q"), Make: q.Get("make"), Model: q.Get("model"), Market: q.Get("market"),
 		Sort: q.Get("sort"), Order: q.Get("order"),
 		Drive: q["drive"], Country: q["country"], SellerType: q["seller_type"], Status: q["status"], Verdict: q["verdict"],
-		ModelFamily: q["model_family"], Tier: q["tier"],
+		ModelFamily: q["model_family"], Tier: q["tier"], Fuel: q["fuel"], User: q.Get("user"),
 	}
 	intp := func(name string, dst **int) error {
 		v := q.Get(name)
@@ -364,12 +390,18 @@ func (h *handler) createCar(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *handler) getCar(w http.ResponseWriter, r *http.Request) error {
-	out, err := h.st.GetCar(r.Context(), r.PathValue("car"))
+	out, err := h.st.GetCarFor(r.Context(), r.PathValue("car"), r.URL.Query().Get("user"))
 	if err != nil {
 		return err
 	}
+	setETag(w, out.Version)
 	writeJSON(w, http.StatusOK, out)
 	return nil
+}
+
+// setETag sends the car version as ETag ("<version>"), the value If-Match takes back.
+func setETag(w http.ResponseWriter, version int64) {
+	w.Header().Set("ETag", strconv.Quote(strconv.FormatInt(version, 10)))
 }
 
 func (h *handler) patchCar(w http.ResponseWriter, r *http.Request) error {
@@ -381,10 +413,18 @@ func (h *handler) patchCar(w http.ResponseWriter, r *http.Request) error {
 	if raw, ok := patch["author"]; ok {
 		_ = json.Unmarshal(raw, &bodyAuthor)
 	}
+	v, err := store.ParseVersion(r.Header.Get("If-Match"))
+	if err != nil {
+		return err
+	}
+	if v != nil {
+		patch["version"] = json.RawMessage(strconv.FormatInt(*v, 10)) // If-Match wins over a body version
+	}
 	out, err := h.st.PatchCar(r.Context(), r.PathValue("car"), patch, author(r, bodyAuthor))
 	if err != nil {
 		return err
 	}
+	setETag(w, out.Version)
 	writeJSON(w, http.StatusOK, out)
 	return nil
 }
@@ -402,10 +442,18 @@ func (h *handler) setStatus(w http.ResponseWriter, r *http.Request) error {
 	if err := decode(w, r, &in); err != nil {
 		return err
 	}
+	v, err := store.ParseVersion(r.Header.Get("If-Match"))
+	if err != nil {
+		return err
+	}
+	if v != nil {
+		in.Version = v
+	}
 	out, err := h.st.SetStatus(r.Context(), r.PathValue("car"), in, author(r, in.Author))
 	if err != nil {
 		return err
 	}
+	setETag(w, out.Version)
 	writeJSON(w, http.StatusOK, out)
 	return nil
 }
@@ -518,27 +566,6 @@ func (h *handler) deleteNote(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func (h *handler) putVerdict(w http.ResponseWriter, r *http.Request) error {
-	var in api.VerdictInput
-	if err := decode(w, r, &in); err != nil {
-		return err
-	}
-	out, err := h.st.SetVerdict(r.Context(), r.PathValue("car"), in, author(r, in.Author))
-	if err != nil {
-		return err
-	}
-	writeJSON(w, http.StatusOK, out)
-	return nil
-}
-
-func (h *handler) deleteVerdict(w http.ResponseWriter, r *http.Request) error {
-	if err := h.st.ClearVerdict(r.Context(), r.PathValue("car"), author(r, "")); err != nil {
-		return err
-	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
-}
-
 func (h *handler) putGoodDeal(w http.ResponseWriter, r *http.Request) error {
 	// note: absent = keep (while staying on), "" or null = clear.
 	var in struct {
@@ -573,7 +600,11 @@ func (h *handler) putGoodDeal(w http.ResponseWriter, r *http.Request) error {
 
 func (h *handler) queue(w http.ResponseWriter, r *http.Request) error {
 	q := r.URL.Query()
-	f := store.QueueFilter{Tier: q["tier"], Spec: q.Get("spec"), User: q.Get("user")}
+	f := store.QueueFilter{Tier: q["tier"], Spec: q.Get("spec")}
+	var err error
+	if f.User, err = h.queryUser(r); err != nil {
+		return err
+	}
 	for name, dst := range map[string]*int{"limit": &f.Limit, "offset": &f.Offset} {
 		if v := q.Get(name); v != "" {
 			n, err := strconv.Atoi(v)

@@ -37,11 +37,11 @@ func validateSource(src string) error {
 	return nil
 }
 
-func defaultSource(src, author string) string {
+func defaultSource(tx *sql.Tx, src, author string) string {
 	if src != "" {
 		return src
 	}
-	if author == "owner" {
+	if isOwner(tx, author) {
 		return "owner"
 	}
 	return "agent_inference"
@@ -94,7 +94,7 @@ func setOption(tx *sql.Tx, carID int64, key string, in api.OptionInput, at float
 	if err := validateOption(key, in); err != nil {
 		return nil, err
 	}
-	in.Source = defaultSource(in.Source, in.Author)
+	in.Source = defaultSource(tx, in.Source, in.Author)
 	cur, err := loadOption(tx, carID, key)
 	if err != nil {
 		return nil, err
@@ -147,7 +147,7 @@ func setFact(tx *sql.Tx, carID int64, key string, in api.FactInput, at float64, 
 		return nil, err
 	}
 	in.Value = strings.TrimSpace(in.Value)
-	in.Source = defaultSource(in.Source, in.Author)
+	in.Source = defaultSource(tx, in.Source, in.Author)
 	cur, err := loadFact(tx, carID, key)
 	if err != nil {
 		return nil, err
@@ -241,14 +241,18 @@ func touch(tx *sql.Tx, carID int64, at float64) error {
 
 var verdictEmoji = map[string]string{"up": "👍", "maybe": "🤔", "down": "👎"}
 
-// SetVerdict handles PUT /cars/{car}/verdict.
+// SetVerdict handles PUT /cars/{car}/verdict for in.User ("" = the owner; unknown user → 422).
 func (s *Store) SetVerdict(ctx context.Context, ref string, in api.VerdictInput, author string) (*api.Verdict, error) {
 	if !slices.Contains(api.VerdictValues, in.Value) {
 		return nil, invalidf("verdict value must be up|maybe|down")
 	}
 	note := strings.TrimSpace(in.Note)
 	return carScoped(s, ctx, ref, func(tx *sql.Tx, id int64) (*api.Verdict, error) {
-		cur, err := loadVerdict(tx, id)
+		u, err := userByName(tx, in.User)
+		if err != nil {
+			return nil, err
+		}
+		cur, err := loadVerdict(tx, id, u.name)
 		if err != nil {
 			return nil, err
 		}
@@ -256,43 +260,48 @@ func (s *Store) SetVerdict(ctx context.Context, ref string, in api.VerdictInput,
 			return cur, nil
 		}
 		now := atOr(in.At, s.nowTS())
-		if _, err := tx.Exec(`INSERT INTO verdicts (car_id, value, note, author, updated_at) VALUES (?, ?, ?, ?, ?)
-			ON CONFLICT (car_id) DO UPDATE SET value = excluded.value, note = excluded.note, author = excluded.author, updated_at = excluded.updated_at`,
-			id, in.Value, nullStr(note), author, now); err != nil {
+		if _, err := tx.Exec(`INSERT INTO verdicts (car_id, user_id, value, note, author, updated_at) VALUES (?, ?, ?, ?, ?, ?)
+			ON CONFLICT (car_id, user_id) DO UPDATE SET value = excluded.value, note = excluded.note, author = excluded.author, updated_at = excluded.updated_at`,
+			id, u.id, in.Value, nullStr(note), author, now); err != nil {
 			return nil, err
 		}
 		var from any
 		if cur != nil {
 			from = cur.Value
 		}
-		summary := fmt.Sprintf("verdict %s %s", verdictEmoji[in.Value], in.Value)
+		summary := fmt.Sprintf("%sverdict %s %s", userLabel(u), verdictEmoji[in.Value], in.Value)
 		if note != "" {
 			summary += ": " + note
 		}
 		if _, err := addEvent(tx, ev{CarID: id, Type: "verdict", At: now, Author: author, Summary: summary,
-			Data: map[string]any{"from": from, "to": in.Value, "note": nullStr(note)}}); err != nil {
+			Data: map[string]any{"user": u.name, "from": from, "to": in.Value, "note": nullStr(note)}}); err != nil {
 			return nil, err
 		}
 		if err := touch(tx, id, now); err != nil {
 			return nil, err
 		}
-		return loadVerdict(tx, id)
+		return loadVerdict(tx, id, u.name)
 	})
 }
 
-// ClearVerdict handles DELETE /cars/{car}/verdict.
-func (s *Store) ClearVerdict(ctx context.Context, ref, author string) error {
+// ClearVerdict handles DELETE /cars/{car}/verdict for user ("" = the owner; unknown user → 422).
+func (s *Store) ClearVerdict(ctx context.Context, ref, user, author string) error {
 	_, err := carScoped(s, ctx, ref, func(tx *sql.Tx, id int64) (bool, error) {
-		cur, err := loadVerdict(tx, id)
+		u, err := userByName(tx, user)
+		if err != nil {
+			return false, err
+		}
+		cur, err := loadVerdict(tx, id, u.name)
 		if err != nil || cur == nil {
 			return false, err
 		}
 		now := s.nowTS()
-		if _, err := tx.Exec("DELETE FROM verdicts WHERE car_id = ?", id); err != nil {
+		if _, err := tx.Exec("DELETE FROM verdicts WHERE car_id = ? AND user_id = ?", id, u.id); err != nil {
 			return false, err
 		}
-		_, err = addEvent(tx, ev{CarID: id, Type: "verdict", At: now, Author: author, Summary: "verdict cleared (was " + cur.Value + ")",
-			Data: map[string]any{"from": cur.Value, "to": nil}})
+		_, err = addEvent(tx, ev{CarID: id, Type: "verdict", At: now, Author: author,
+			Summary: userLabel(u) + "verdict cleared (was " + cur.Value + ")",
+			Data:    map[string]any{"user": u.name, "from": cur.Value, "to": nil}})
 		if err == nil {
 			err = touch(tx, id, now)
 		}
@@ -302,16 +311,6 @@ func (s *Store) ClearVerdict(ctx context.Context, ref, author string) error {
 }
 
 // --- notes ---------------------------------------------------------------------
-
-func authorKind(author string) string {
-	switch {
-	case author == "owner":
-		return "owner"
-	case strings.HasPrefix(author, "import"):
-		return "import"
-	}
-	return "agent"
-}
 
 func loadNote(tx *sql.Tx, id int64) (*api.Note, error) {
 	n, err := scanNote(tx.QueryRow(noteSelect+" WHERE id = ?", id))
@@ -339,7 +338,7 @@ func (s *Store) AddNote(ctx context.Context, ref string, in api.NoteInput, autho
 	return carScoped(s, ctx, ref, func(tx *sql.Tx, id int64) (*api.Note, error) {
 		now := atOr(in.At, s.nowTS())
 		r, err := tx.Exec("INSERT INTO notes (car_id, author, author_kind, text, pinned, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-			id, author, authorKind(author), text, boolInt(in.Pinned), now, now)
+			id, author, authorKind(tx, author), text, boolInt(in.Pinned), now, now)
 		if err != nil {
 			return nil, err
 		}

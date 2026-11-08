@@ -79,7 +79,9 @@ search:
 	if err != nil {
 		t.Fatal(err)
 	}
-	c.st.SetProfile(fr)
+	if err := c.st.SetProfile(fr); err != nil {
+		t.Fatal(err)
+	}
 	q := c.queue("tier=1,2,3")
 	frOrder := queueIDs(q)
 	if !slices.Equal(frOrder[:3], []int64{ev6fr, ev6pt, old}[:3]) || len(frOrder) != 5 {
@@ -96,7 +98,9 @@ search:
 	}
 	// Same data, back to the EV buyer.
 	ev, _ := profile.Load("../profile/testdata/ev.yaml")
-	c.st.SetProfile(ev)
+	if err := c.st.SetProfile(ev); err != nil {
+		t.Fatal(err)
+	}
 	if got := queueIDs(c.queue("tier=1,2,3")); !slices.Equal(got, evOrder) {
 		t.Fatalf("back to EV: %v", got)
 	}

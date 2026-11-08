@@ -4,7 +4,6 @@ import (
 	"cmp"
 	"context"
 	"database/sql"
-	"encoding/json"
 	"slices"
 	"sort"
 	"strconv"
@@ -17,10 +16,10 @@ import (
 // "To rate" queue: cars the user has not rated that pass the profile's hard filters, ranked by rank.go.
 // DESIGN.md "To rate queue" / "Ranking" document every rule; keep them in sync.
 
-// rankInputs loads summaries plus what ranking needs beyond them (facts, red flags, VIN, seats, price flags) and
+// rankInputs loads summaries plus what ranking needs beyond them (facts, red flags, VIN, seats) and
 // derives tier/landed cost for every car.
-func (s *Store) rankInputs(tx *sql.Tx, now time.Time) ([]*summaryRow, []*rankCar, error) {
-	rows, err := s.buildSummaries(tx)
+func (s *Store) rankInputs(tx *sql.Tx, now time.Time, user string) ([]*summaryRow, []*rankCar, error) {
+	rows, err := s.buildSummaries(tx, user)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -57,59 +56,18 @@ func (s *Store) rankInputs(tx *sql.Tx, now time.Time) ([]*summaryRow, []*rankCar
 	}); err != nil {
 		return nil, nil, err
 	}
-	priceFlags, err := livePriceFlags(tx)
-	if err != nil {
-		return nil, nil, err
-	}
 	cars := make([]*rankCar, len(rows))
 	for i, r := range rows {
 		c := &r.CarSummary
 		ex := extras[c.ID]
-		rc := &rankCar{c: c, seats: ex.seats, facts: facts[c.ID], redFlags: ex.flags, hasVIN: ex.hasVIN, createdT: r.createdT}
+		rc := &rankCar{c: c, seats: ex.seats, facts: facts[c.ID], redFlags: ex.flags, hasVIN: ex.hasVIN, priceFlags: c.PriceFlags, createdT: r.createdT}
 		if rc.facts == nil {
 			rc.facts = map[string]string{}
-		}
-		if c.Price != nil {
-			rc.priceFlags = priceFlags[[2]int64{c.ID, int64(*c.Price)}]
 		}
 		cars[i] = rc
 	}
 	s.rk.prepare(cars, now)
 	return rows, cars, nil
-}
-
-// livePriceFlags: (car, price) → price_flags of live listings at that price. Reads listings.price_flags only when
-// the column exists (JSON list or comma list).
-func livePriceFlags(tx *sql.Tx) (map[[2]int64][]string, error) {
-	out := map[[2]int64][]string{}
-	var n int
-	if err := tx.QueryRow("SELECT COUNT(*) FROM pragma_table_info('listings') WHERE name = 'price_flags'").Scan(&n); err != nil || n == 0 {
-		return out, err
-	}
-	err := eachRow(tx, "SELECT car_id, price, price_flags FROM listings WHERE status = 'live' AND price IS NOT NULL AND price_flags IS NOT NULL", nil,
-		func(sc scanner) error {
-			var car, price int64
-			var raw string
-			if err := sc.Scan(&car, &price, &raw); err != nil {
-				return err
-			}
-			var flags []string
-			if json.Unmarshal([]byte(raw), &flags) != nil {
-				for _, f := range strings.Split(raw, ",") {
-					if f = strings.TrimSpace(f); f != "" {
-						flags = append(flags, f)
-					}
-				}
-			}
-			k := [2]int64{car, price}
-			for _, f := range flags {
-				if !slices.Contains(out[k], f) {
-					out[k] = append(out[k], f)
-				}
-			}
-			return nil
-		})
-	return out, err
 }
 
 type queueEntry struct {
@@ -196,7 +154,7 @@ func joinInts(xs []int, sep string) string {
 type QueueFilter struct {
 	Tier          []string // default profile queue_default_tiers
 	Spec          string   // "", "confirmed" or "unknown" (see specMatch)
-	User          string   // whose verdict makes a car rated; default owner
+	User          string   // whose verdict counts as rated; "" = owner (resolved by the handler)
 	Limit, Offset int
 }
 
@@ -239,19 +197,11 @@ func (s *Store) Queue(ctx context.Context, f QueueFilter) (*api.Queue, error) {
 	if f.Spec != "" && len(p.Search.MustHave) == 0 {
 		return nil, badRequestf("spec needs search.must_have in the profile")
 	}
-	user := p.Owner.Name
-	if f.User != "" {
-		u, ok := p.User(f.User)
-		if !ok {
-			return nil, badRequestf("unknown user %q", f.User)
-		}
-		user = u.Name
-	}
 	now := s.now()
 	var cars []*rankCar
 	if err := s.tx(ctx, func(tx *sql.Tx) error {
 		var err error
-		_, cars, err = s.rankInputs(tx, now)
+		_, cars, err = s.rankInputs(tx, now, f.User)
 		return err
 	}); err != nil {
 		return nil, err
@@ -264,7 +214,7 @@ func (s *Store) Queue(ctx context.Context, f QueueFilter) (*api.Queue, error) {
 	var entries []*queueEntry
 	for _, rc := range cars {
 		c := rc.c
-		if rk.exclusion(rc, user) != "" || !specMatch(c, p.Search.MustHave, f.Spec) {
+		if rk.exclusion(rc, f.User) != "" || !specMatch(c, p.Search.MustHave, f.Spec) {
 			continue
 		}
 		out.Counts[strconv.Itoa(c.Tier)]++

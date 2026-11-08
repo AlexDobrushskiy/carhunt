@@ -59,7 +59,9 @@ func newServerWith(t *testing.T, profilePath string) *client {
 		if err != nil {
 			t.Fatal(err)
 		}
-		st.SetProfile(p)
+		if err := st.SetProfile(p); err != nil {
+			t.Fatal(err)
+		}
 	}
 	srv := httptest.NewServer(NewHandler(st, map[string]string{"agents": "tok-agents", "web": "tok-web"}))
 	t.Cleanup(srv.Close)
@@ -845,9 +847,9 @@ func photoFiles(t *testing.T, dir string) []string {
 func TestDeleteCar(t *testing.T) {
 	c := newServer(t)
 	u := fmt.Sprintf("https://example.invalid/e2e-%d", time.Now().UnixNano())
-	junk := c.upsert(map[string]any{"url": u, "make": "Junk", "model": "Ad", "price": 1000, "km": 1000, "reg_date": "2024-01", "city": "Porto",
+	junk := c.upsert(map[string]any{"url": u, "make": "Junk", "model": "Ad", "price": 9000, "km": 1000, "reg_date": "2024-01", "city": "Porto",
 		"seller": map[string]any{"type": "dealer", "name": "Junk Motors", "contacts": []map[string]any{{"kind": "phone", "value": "955 999 000"}}}})
-	c.upsert(map[string]any{"url": u, "price": 900})
+	c.upsert(map[string]any{"url": u, "price": 8900})
 	keep := c.upsert(map[string]any{"url": "https://www.olx.pt/d/anuncio/keep-IDkeep1.html", "make": "Junk", "model": "Ad", "km": 1100, "reg_date": "2024-01", "city": "Porto"})
 	if len(keep.DuplicateCandidates) != 1 {
 		t.Fatalf("setup: expected a duplicate proposal, got %+v", keep.DuplicateCandidates)
@@ -926,9 +928,9 @@ func TestNotesCRUD(t *testing.T) {
 		t.Fatalf("mobile.de market = %v", car.Market)
 	}
 	var n1, n2 api.Note
-	c.as("owner").call("POST", fmt.Sprintf("/api/v1/cars/%d/notes", r.CarID), map[string]any{"text": "Ask about the heat pump"}, 201, &n1)
+	c.as("Owner").call("POST", fmt.Sprintf("/api/v1/cars/%d/notes", r.CarID), map[string]any{"text": "Ask about the heat pump"}, 201, &n1)
 	c.call("POST", fmt.Sprintf("/api/v1/cars/%d/notes", r.CarID), map[string]any{"text": "Seller replies slowly", "author": "import-wa"}, 201, &n2)
-	if n1.Author != "owner" || n1.AuthorKind != "owner" || n2.AuthorKind != "import" {
+	if n1.Author != "Owner" || n1.AuthorKind != "owner" || n2.AuthorKind != "import" {
 		t.Fatalf("author kinds = %q %q", n1.AuthorKind, n2.AuthorKind)
 	}
 	c.call("POST", fmt.Sprintf("/api/v1/cars/%d/notes", r.CarID), map[string]any{"text": "   "}, 422, nil)
@@ -1527,8 +1529,8 @@ func TestDeleteMessage(t *testing.T) {
 	before := c.car(car).UpdatedAt
 
 	var del api.Message
-	c.as("ev-listings-db-fix").call("DELETE", fmt.Sprintf("/api/v1/messages/%d?reason=%s", dup.ID, "double-logged+(dup+of+%23"+fmt.Sprint(keep.ID)+")"), nil, 200, &del)
-	if del.DeletedAt == nil || deref(del.DeletedBy) != "ev-listings-db-fix" || deref(del.DeletedReason) != "double-logged (dup of #"+fmt.Sprint(keep.ID)+")" {
+	c.as("cardb-db-fix").call("DELETE", fmt.Sprintf("/api/v1/messages/%d?reason=%s", dup.ID, "double-logged+(dup+of+%23"+fmt.Sprint(keep.ID)+")"), nil, 200, &del)
+	if del.DeletedAt == nil || deref(del.DeletedBy) != "cardb-db-fix" || deref(del.DeletedReason) != "double-logged (dup of #"+fmt.Sprint(keep.ID)+")" {
 		t.Fatalf("deleted = %+v", del)
 	}
 	// Gone from the car, the message list, the list summary, stats and activity.
@@ -1566,7 +1568,7 @@ func TestDeleteMessage(t *testing.T) {
 		}
 	}
 	evs := eventsOfType(c.events(car), "message_deleted")
-	if !sawEvent || len(evs) != 1 || evs[0].Author != "ev-listings-db-fix" || !strings.Contains(evs[0].Summary, "double-logged") {
+	if !sawEvent || len(evs) != 1 || evs[0].Author != "cardb-db-fix" || !strings.Contains(evs[0].Summary, "double-logged") {
 		t.Fatalf("message_deleted events = %+v (in activity: %v)", evs, sawEvent)
 	}
 	// Re-posting the deleted row's own key returns it (still deleted), not a new row.

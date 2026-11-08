@@ -58,7 +58,7 @@ type rankCar struct {
 	facts      map[string]string
 	redFlags   []string
 	hasVIN     bool
-	priceFlags []string // flags of the live listing(s) giving the price (forced past price sanity)
+	priceFlags []string // CarSummary.PriceFlags: the price listing was forced past the price sanity check
 	createdT   float64
 
 	text   carText
@@ -250,10 +250,12 @@ func (r *ranker) locate(s *api.CarSpecs) {
 
 var queueClosedStatuses = []string{"closed", "dropped", "bought"}
 
-// ratedBy reports whether user has a verdict on the car. Seam for per-user verdicts: today the single verdict
-// counts for everyone.
+// ratedBy reports whether user ("" = owner) has a verdict on the car. Summaries are built for that user, so
+// Verdict is theirs.
 func ratedBy(c *api.CarSummary, user string) bool {
-	_ = user
+	if user != "" && c.Verdicts != nil {
+		return c.VerdictOf(user) != nil
+	}
 	return c.Verdict != nil
 }
 
@@ -564,13 +566,13 @@ func (r *ranker) trimOf(t carText) string {
 	return fmt.Sprintf("~%d hp %s", int(math.Round(float64(t.hps[0])/b)*b), drive)
 }
 
-// pool: the comparable asks — live, priced, in scope (price cap aside), no VAT reserve, not closed/dropped, mapped
-// family — minus outliers (outside outlier_low…outlier_high × median within a family+trim band of ≥ outlier_min_n).
+// pool: the comparable asks — live, priced, price not forced past sanity, in scope (price cap aside), no VAT
+// reserve, not closed/dropped, mapped family — minus outliers (outside outlier_low…outlier_high × median within a family+trim band of ≥ outlier_min_n).
 func (r *ranker) pool(cars []*rankCar) []*rankCar {
 	var in []*rankCar
 	for _, rc := range cars {
 		c := rc.c
-		if c.LiveListingCount == 0 || rc.landed == nil || rc.landed.vat || rc.fam == "" || c.Status == "closed" || c.Status == "dropped" {
+		if c.LiveListingCount == 0 || rc.landed == nil || rc.landed.vat || len(rc.priceFlags) > 0 || rc.fam == "" || c.Status == "closed" || c.Status == "dropped" {
 			continue
 		}
 		if r.scopeExclusion(rc, false) != "" {

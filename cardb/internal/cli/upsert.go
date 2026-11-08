@@ -31,6 +31,8 @@ func cmdUpsert(e *env, args []string) error {
 	title := f.String("title", "", "ad title")
 	price := f.String("price", "", "asking price, integer euros ('34 600' ok)")
 	priceNote := f.String("price-note", "", "price note, e.g. 'IVA dedutível', 'negotiable'")
+	priceVat := f.String("price-vat", "", "gross|net|margin (gross = incl. VAT; cardb stores gross)")
+	force := f.Bool("force", false, "store a price that fails the sanity check (×100, lease, net); it gets flagged")
 	specs := addSpecFlags(f)
 	seller := addSellerFlags(f)
 	var opts, facts, photos, aliases multi
@@ -76,7 +78,10 @@ func cmdUpsert(e *env, args []string) error {
 		return usageErrorf("upsert: --url is required (or --from-json FILE)")
 	}
 	in := api.ListingUpsert{URL: strings.TrimSpace(*lurl), Site: *site, Title: *title, PriceNote: *priceNote,
-		Car: *car, Slug: *slug, Summary: *summary, Overwrite: *overwrite, Aliases: aliases}
+		Car: *car, Slug: *slug, Summary: *summary, Overwrite: *overwrite, Aliases: aliases, Force: *force}
+	if in.PriceVat, err = parsePriceVat(*priceVat); err != nil {
+		return err
+	}
 	if f.isSet("price") {
 		p, err := parseIntLenient(*price)
 		if err != nil {

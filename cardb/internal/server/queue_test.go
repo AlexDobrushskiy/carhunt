@@ -381,7 +381,7 @@ func TestQueueFairPrice(t *testing.T) {
 	c.call("PUT", fmt.Sprintf("/api/v1/cars/%d/verdict", rated), map[string]any{"value": "down"}, 200, nil)
 	c.qcar("dear", map[string]any{"price": 45000})
 	c.qcar("other", map[string]any{"price": 33000})
-	c.qcar("gone", map[string]any{"price": 1000, "listing_status": "removed"})
+	c.qcar("gone", map[string]any{"price": 10000, "listing_status": "removed"})
 	c.qcar("unpriced", map[string]any{"price": nil})
 	es := c.qcar("es", map[string]any{"price": 30000, "country": "ES", "city": "Vigo", "distance_km": 950})
 	// Audi Q4: two cars → no fair price. Unmapped family.

@@ -16,12 +16,15 @@ func cmdLs(e *env, args []string) error {
 	var statuses, verdicts, countries, sellerTypes, opts, drives, families, tiers multi
 	f.Var(&statuses, "status", "status (repeatable or comma list)")
 	f.Var(&verdicts, "verdict", "up|maybe|down|none (repeatable/comma; 👍 🤔 👎 ok)")
+	user := f.String("user", "", "whose verdict to show and filter on (default the owner)")
 	f.Var(&countries, "country", "ISO-2 country (repeatable/comma)")
 	f.Var(&sellerTypes, "seller-type", "private|dealer|reseller|unknown (repeatable/comma)")
 	f.Var(&opts, "opt", "option filter key:value, value yes|no|unknown|yes_or_unknown (repeatable, ANDed)")
 	f.Var(&drives, "drive", "fwd|rwd|awd|unknown (repeatable/comma)")
 	f.Var(&families, "family", "model family, e.g. \"Audi Q4,VW ID.4\" (repeatable/comma; none = unmapped; see cardb families)")
 	f.Var(&tiers, "tier", "\"To rate\" tier (repeatable/comma; see cardb profile)")
+	var fuels multi
+	f.Var(&fuels, "fuel", strings.Join(api.Fuels, "|")+" (repeatable/comma; unknown = no fuel recorded)")
 	goodDeal := f.Bool("good-deal", false, "only cars flagged as a good deal (--good-deal=false: only unflagged)")
 	minHp := f.String("min-hp", "", "min metric horsepower (rounded kW × 1.36)")
 	maxHp := f.String("max-hp", "", "max metric horsepower")
@@ -70,6 +73,12 @@ func cmdLs(e *env, args []string) error {
 	}
 	if flt.HpMin != nil && flt.HpMax != nil && *flt.HpMin > *flt.HpMax {
 		return usageErrorf("--min-hp must not exceed --max-hp")
+	}
+	for _, fu := range splitList(fuels) {
+		if fu = api.NormFuel(fu); fu == "" {
+			return usageErrorf("--fuel: want %s", strings.Join(api.Fuels, "|"))
+		}
+		flt.Fuels = append(flt.Fuels, fu)
 	}
 	for _, d := range splitList(drives) {
 		d = strings.ToLower(d)
@@ -159,6 +168,7 @@ func cmdLs(e *env, args []string) error {
 	if err != nil {
 		return err
 	}
+	flt.User = *user
 	list, err := cl.ListCars(e.ctx, flt)
 	if err != nil {
 		return err
@@ -224,6 +234,7 @@ func printCarTable(w io.Writer, list api.CarList) {
 
 func cmdShow(e *env, args []string) error {
 	f := newFlags(e, "show")
+	user := f.String("user", "", "whose verdict to show first (default the owner)")
 	pos, err := f.parse(args)
 	if err != nil {
 		return err
@@ -235,7 +246,7 @@ func cmdShow(e *env, args []string) error {
 	if err != nil {
 		return err
 	}
-	car, err := cl.GetCar(e.ctx, pos[0])
+	car, err := cl.GetCarFor(e.ctx, pos[0], *user)
 	if err != nil {
 		return err
 	}
@@ -267,6 +278,7 @@ func printCard(w io.Writer, c api.CarDetail, ref string) {
 	if len(c.MergedFrom) > 0 {
 		ids = append(ids, "merged from "+joinIDs(c.MergedFrom))
 	}
+	ids = append(ids, fmt.Sprintf("version %d", c.Version)) // for --if-version
 	if len(ids) > 0 {
 		fmt.Fprintln(w, strings.Join(ids, " · "))
 	}
@@ -311,18 +323,6 @@ func printCard(w io.Writer, c api.CarDetail, ref string) {
 	if s.Km != nil {
 		l1 = append(l1, fmtKm(s.Km))
 	}
-	if pt := s.Powertrain; pt != nil && (pt.BatteryNetKwh != nil || pt.BatteryGrossKwh != nil) {
-		b := "battery "
-		if pt.BatteryNetKwh != nil {
-			b += fmtFloat(*pt.BatteryNetKwh)
-		} else {
-			b += "?"
-		}
-		if pt.BatteryGrossKwh != nil {
-			b += "/" + fmtFloat(*pt.BatteryGrossKwh)
-		}
-		l1 = append(l1, b+" kWh")
-	}
 	if s.PowerKw != nil {
 		l1 = append(l1, fmtPower(s.PowerKw))
 	}
@@ -365,6 +365,9 @@ func printCard(w io.Writer, c api.CarDetail, ref string) {
 		if len(l) > 0 {
 			fmt.Fprintf(w, "  %s\n", strings.Join(l, " · "))
 		}
+	}
+	if pt := fmtPowertrain(s.Powertrain); pt != "" {
+		fmt.Fprintf(w, "  powertrain: %s\n", pt)
 	}
 	if len(c.RedFlags) > 0 {
 		fmt.Fprintln(w, "\nRED FLAGS")
@@ -410,16 +413,7 @@ func printCard(w io.Writer, c api.CarDetail, ref string) {
 	}
 
 	fmt.Fprintln(w, "\nVERDICT")
-	if c.Verdict == nil {
-		fmt.Fprintln(w, "  — (none yet)")
-	} else {
-		v := c.Verdict
-		line := fmt.Sprintf("  %s %s", verdictEmoji(v), v.Value)
-		if v.Note != nil && *v.Note != "" {
-			line += " — " + *v.Note
-		}
-		fmt.Fprintf(w, "%s  (%s, %s)\n", line, v.Author, fmtTime(v.UpdatedAt))
-	}
+	printVerdicts(w, c.Verdict, c.Verdicts)
 
 	if len(c.Notes) > 0 {
 		fmt.Fprintf(w, "\nNOTES (%d)\n", len(c.Notes))
@@ -483,7 +477,11 @@ func printListing(w io.Writer, l api.Listing) {
 	if l.PriceNote != nil && *l.PriceNote != "" {
 		price += " (" + *l.PriceNote + ")"
 	}
+	if l.PriceVat != "" && l.PriceVat != "unknown" {
+		price += " " + l.PriceVat
+	}
 	fmt.Fprintf(w, "  listing %d · car %d · %s · %s · %s\n", l.ID, l.CarID, l.Site, l.Status, price)
+	printPriceFlags(w, l.PriceFlags)
 	fmt.Fprintf(w, "    %s\n", l.URL)
 	if l.Title != nil && *l.Title != "" {
 		fmt.Fprintf(w, "    %q\n", *l.Title)
@@ -743,6 +741,7 @@ func cmdSplit(e *env, args []string) error {
 
 func cmdStats(e *env, args []string) error {
 	f := newFlags(e, "stats")
+	user := f.String("user", "", "whose verdicts to count (default the owner)")
 	if _, err := f.parse(args); err != nil {
 		return err
 	}
@@ -750,7 +749,7 @@ func cmdStats(e *env, args []string) error {
 	if err != nil {
 		return err
 	}
-	s, err := cl.Stats(e.ctx)
+	s, err := cl.StatsFor(e.ctx, *user)
 	if err != nil {
 		return err
 	}

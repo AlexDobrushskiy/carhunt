@@ -15,6 +15,7 @@ import (
 
 	"carhunt/cardb/internal/api"
 	"carhunt/cardb/internal/cli"
+	"carhunt/cardb/internal/secrets"
 )
 
 // e2e drives cli.Run against a real in-process server (see startServer in server_test.go).
@@ -30,8 +31,12 @@ func newE2E(t *testing.T) *e2e {
 	t.Setenv("CARDB_CONFIG", filepath.Join(t.TempDir(), "config.json"))
 	t.Setenv("CARDB_URL", "")
 	t.Setenv("CARDB_TOKEN", "")
-	t.Setenv("CARDB_AUTHOR", "")
-	t.Setenv("AGTERM_SESSION_ID", "agent-session-1")
+	t.Setenv("CARDB_AUTHOR", "agent-session-1")
+	home := t.TempDir()
+	t.Setenv("CARHUNT_HOME", home)
+	t.Setenv("CARHUNT_CONFIG", filepath.Join(home, "config.yaml"))
+	t.Setenv("CARHUNT_SECRETS_BACKEND", "file")
+	t.Setenv("CARHUNT_SECRET_CARDB_TOKEN", "")
 	url, token := startServer(t)
 	return &e2e{t: t, url: url, token: token}
 }
@@ -454,14 +459,33 @@ func TestErrorsAndExitCodes(t *testing.T) {
 func TestConfigSet(t *testing.T) {
 	e := newE2E(t)
 	var out bytes.Buffer
-	if code := cli.Run(context.Background(), []string{"config", "set", "--url", e.url + "/", "--token", e.token}, &out, &out); code != 0 {
+	if code := cli.Run(context.Background(), []string{"config", "set", "--url", e.url, "--token", e.token}, &out, &out); code != cli.ExitUsage {
+		t.Fatalf("config set --token must be refused: %d %s", code, out.String())
+	}
+	if code := cli.Run(context.Background(), []string{"config", "set", "--url", e.url + "/"}, &out, &out); code != 0 {
 		t.Fatalf("config set: %d %s", code, out.String())
 	}
 	st, err := os.Stat(os.Getenv("CARDB_CONFIG"))
 	if err != nil || st.Mode().Perm() != 0o600 {
 		t.Fatalf("config file mode: %v %v", st, err)
 	}
-	// Now the client works with no flags at all.
+	if b, _ := os.ReadFile(os.Getenv("CARDB_CONFIG")); strings.Contains(string(b), "token") {
+		t.Fatal("client config file holds a token")
+	}
+	// No token anywhere: 401 names where it looked.
+	out.Reset()
+	if code := cli.Run(context.Background(), []string{"stats"}, &out, &out); code != cli.ExitError || !strings.Contains(out.String(), "cardb init") {
+		t.Fatalf("stats without a token: %d %s", code, out.String())
+	}
+	// The token in the secrets backend (file backend under CARHUNT_HOME): the client works with no flags at all.
+	if err := (secrets.File{Dir: filepath.Join(os.Getenv("CARHUNT_HOME"), "secrets")}).Set("cardb_token", e.token); err != nil {
+		t.Fatal(err)
+	}
+	out.Reset()
+	if code := cli.Run(context.Background(), []string{"config", "show"}, &out, &out); code != 0 || strings.Contains(out.String(), e.token) ||
+		!strings.Contains(out.String(), "file:cardb_token") {
+		t.Fatalf("config show: %d %s", code, out.String())
+	}
 	out.Reset()
 	if code := cli.Run(context.Background(), []string{"stats", "--json"}, &out, &out); code != 0 {
 		t.Fatalf("stats via config file: %d %s", code, out.String())

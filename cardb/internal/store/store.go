@@ -23,26 +23,34 @@ import (
 type Kind int
 
 const (
-	KindInvalid    Kind = iota // 422
-	KindBadRequest             // 400
-	KindNotFound               // 404
-	KindConflict               // 409
-	KindTooLarge               // 413
+	KindInvalid      Kind = iota // 422
+	KindBadRequest               // 400
+	KindNotFound                 // 404
+	KindConflict                 // 409
+	KindTooLarge                 // 413
+	KindPrecondition             // 412 (stale car version)
 )
 
-// Error is a client-facing error.
+// Error is a client-facing error. Details are extra JSON fields of the error body (412 version/car, 422 price reason).
 type Error struct {
-	Kind Kind
-	Msg  string
+	Kind    Kind
+	Msg     string
+	Details map[string]any
 }
 
 func (e *Error) Error() string { return e.Msg }
 
-func invalidf(format string, a ...any) error  { return &Error{KindInvalid, fmt.Sprintf(format, a...)} }
-func notFoundf(format string, a ...any) error { return &Error{KindNotFound, fmt.Sprintf(format, a...)} }
-func conflictf(format string, a ...any) error { return &Error{KindConflict, fmt.Sprintf(format, a...)} }
+func invalidf(format string, a ...any) error {
+	return &Error{Kind: KindInvalid, Msg: fmt.Sprintf(format, a...)}
+}
+func notFoundf(format string, a ...any) error {
+	return &Error{Kind: KindNotFound, Msg: fmt.Sprintf(format, a...)}
+}
+func conflictf(format string, a ...any) error {
+	return &Error{Kind: KindConflict, Msg: fmt.Sprintf(format, a...)}
+}
 func badRequestf(format string, a ...any) error {
-	return &Error{KindBadRequest, fmt.Sprintf(format, a...)}
+	return &Error{Kind: KindBadRequest, Msg: fmt.Sprintf(format, a...)}
 }
 
 // IsKind reports whether err is a store *Error of the given kind.
@@ -74,9 +82,17 @@ func Open(dataDir string) (*Store, error) {
 	}
 	db.SetMaxOpenConns(1)
 	db.SetConnMaxIdleTime(0)
-	s := &Store{db: db, dataDir: dataDir, photosDir: filepath.Join(dataDir, "photos"), now: time.Now}
-	s.SetProfile(nil)
+	s := &Store{db: db, dataDir: dataDir, photosDir: filepath.Join(dataDir, "photos"), now: time.Now, profile: profile.Default(), rk: newRanker(profile.Default())}
+	// Version triggers are rebuilt around migrations so they match the final schema (version.go).
+	if err := dropVersionTriggers(db); err != nil {
+		db.Close()
+		return nil, err
+	}
 	if err := s.migrate(); err != nil {
+		db.Close()
+		return nil, err
+	}
+	if err := s.tx(context.Background(), func(tx *sql.Tx) error { return installVersionTriggers(tx) }); err != nil {
 		db.Close()
 		return nil, err
 	}
@@ -86,13 +102,15 @@ func Open(dataDir string) (*Store, error) {
 // Close closes the database.
 func (s *Store) Close() error { return s.db.Close() }
 
-// SetProfile sets the buyer profile (call before serving; not safe concurrently with requests).
-func (s *Store) SetProfile(p *profile.Profile) {
+// SetProfile sets the buyer profile and syncs its users into the database (call before serving; not safe
+// concurrently with requests).
+func (s *Store) SetProfile(p *profile.Profile) error {
 	if p == nil {
 		p = profile.Default()
 	}
 	s.profile = p
 	s.rk = newRanker(p)
+	return s.syncUsers(context.Background(), p)
 }
 
 // Profile returns the active buyer profile.

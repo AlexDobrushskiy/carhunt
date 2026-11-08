@@ -3,8 +3,6 @@ package store
 import (
 	"slices"
 	"testing"
-
-	"carhunt/cardb/internal/profile"
 )
 
 // builtin resolves families with the built-in table only (neutral profile).
@@ -182,15 +180,6 @@ func TestFamilyNames(t *testing.T) {
 	if names[0] != "Audi Q4" {
 		t.Errorf("names not sorted by make then family: %v", names[:3])
 	}
-}
-
-func mustProfile(t *testing.T, y string) *profile.Profile {
-	t.Helper()
-	p, err := profile.Parse([]byte(y))
-	if err != nil {
-		t.Fatal(err)
-	}
-	return p
 }
 
 // search.families override a built-in rule in place, add new ones ahead of their make's built-ins (with new make

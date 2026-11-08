@@ -10,18 +10,34 @@ info:
 
     Conventions
     - Auth: `Authorization: Bearer <token>` on every route except `/health`. Tokens are named
-      (e.g. `web`, `agents`); the token name is the default `author` of writes.
+      (`agents`, the owner's name, each viewer's name); the token name is the default `author` of writes. A token named
+      owner.name writes as the owner (`author_kind: owner`, full access); the web UI acts per user with that user's token.
+      The server keeps only hashes: tokens file lines `name:sha256:<hex of sha256(token)>` (legacy `name:token` still read),
+      default `<data dir>/tokens` written by `cardb init`, which stores the tokens themselves in the secrets backend.
     - `author` on writes: optional body field or `X-Author` header (agent role/session id, the owner's name, `import`).
-      Precedence: body `author` > `X-Author` header > token name. The web UI sends the owner's name (`owner.name`).
+      Precedence: body `author` > `X-Author` header > token name.
       `author_kind` = `owner` when author == owner name, `viewer` for a configured viewer, else `agent` (`import` for imports).
     - Users: the owner + optional viewers (`GET /profile` → `users`). A token whose name is a viewer is read-only except
-      for that viewer's own verdict. Verdicts are per user; car rows show the owner's verdict unless `?user=` is given.
-    - Concurrency: cars carry `version` (incremented on every car write). GET /cars/{car} sends `ETag: "<version>"`;
-      PATCH/status writes with `If-Match: "<version>"` (or body `version`) fail with 412 + the current car when stale.
-      Without If-Match the write applies (last writer wins), as before.
+      for that viewer's own verdict (403 otherwise) and always writes as itself (body/X-Author `author` ignored).
+      Verdicts are per user; car rows show the owner's verdict unless `?user=` is given (unknown user on a read → 400).
+    - Concurrency: cars carry `version`, an opaque counter that rises (by ≥ 1) on every write to the car or anything shown
+      on it (listings, prices, options, facts, photos, events, messages, notes, verdicts, aliases, duplicates, seller);
+      a sighting that only moves `last_seen_at` / `raw` is not a change. Compare it, never compute it.
+      GET /cars/{car} (and PATCH/status responses) send `ETag: "<version>"`; PATCH/status writes with
+      `If-Match: "<version>"` (bare `5` ok, `*` = any; or body `version`) fail with 412 + the current car when stale.
+      Without If-Match the write applies (last writer wins), as before. A malformed If-Match is 400.
     - Price sanity (upsert, PATCH /listings/{id}): a price that looks ×100 (cents), like a monthly/lease rate, or net of
       VAT is refused with 422 `{error, reason: price_x100|price_lease|price_net|price_range}` unless `force: true`;
-      forced prices are stored with `price_flags` and a `price_sanity_override` event.
+      forced prices are stored with `price_flags` and a `price_sanity_override` event (data {reason, reasons, price, listing_id}).
+      Rules (bounds from `search.price`: `min_eur` default 1 500, `cap_eur` default 2 000 000, `max_eur`):
+      price_range = ≤ 0, or > cap_eur with price/100 also implausible; price_x100 = > cap_eur with price/100 plausible,
+      or > 8× the model-family median of live unflagged listings (n ≥ 3), or (no median) > 8× max_eur;
+      price_lease = < min_eur, or monthly/lease wording in title/price_note (/mês, por mes, per month, mensal, monatlich,
+      mtl, par mois, al mese, leasing, renting, LOA, LLD, …) with a low price (< median/4, or < 10× min_eur without a median);
+      price_net = price_vat net, or net wording (+ IVA, excl. VAT, zzgl. MwSt, netto, excl. BTW, hors taxes, HT, sin IVA,
+      IVA não incluído, …) unless price_vat is gross/margin or gross wording (brutto, incl. VAT, IVA incluído, TTC,
+      IVA dedutível, …) is present. Re-sending a listing's stored price is not re-checked (replays stay idempotent);
+      a price that passes clears the listing's flags. Negative prices stay a plain 422.
       Tokens are only accepted in the `Authorization` header, never in the URL.
     - Timestamps: RFC 3339 UTC strings (`2026-11-01T14:05:00Z`). Money: integer euros.
     - `{car}` path param = numeric car id or any alias/slug (e.g. `pt-testcar-lisbon`, `C1`, `abroad-12`).
@@ -151,7 +167,16 @@ paths:
         Read-only fields of CarDetail are ignored; `good_deal` / `good_deal_note` are 422 (use PUT /cars/{car}/good-deal).
         `red_flags` / `open_questions` replace the whole list; prefer `red_flags_add` / `red_flags_remove` /
         `open_questions_add` / `open_questions_remove` (exact-text items, applied atomically, add is a no-op for an existing item).
-        `powertrain` is merged field by field (send `null` for a field to clear it).
+        `powertrain` is merged field by field (send `null` for a field to clear it; `"powertrain": null` clears all of it).
+        Fuel/gearbox are case-insensitive, stored lower case, and accept common ad words (elétrico/elektro/EV → bev,
+        plug-in → phev, híbrido/hybride → hev, gasolina/benzin/essence → petrol, gasóleo/gasoil → diesel, GPL → lpg,
+        GNV → cng; automático/automatik/DSG/auto → automatic, manuell/manuelle → manual) on every write and in the
+        `fuel` filter; an unknown value or powertrain key is 422. Flat
+        `battery_net_kwh` / `battery_gross_kwh` are still accepted (pre-v2 clients); other powertrain keys only nested.
+        The same flat battery keys are accepted on POST /listings/upsert and POST /cars (folded into powertrain,
+        fill-if-empty); a flat value that differs from the nested one in the same request is 422. Reads only nest.
+        `red_flags_*` ops: removals run before additions; empty items are 422; combining an op with the full list of the
+        same field is 422.
       parameters: [ { $ref: "#/components/parameters/ifMatch" } ]
       requestBody:
         required: true
@@ -337,7 +362,8 @@ paths:
         - landed = price + trip + registration + VAT reserve. Market home = car country == owner.home.country (unknown
           country counts as home). Distance = car distance (stored, else lat/lon estimate), else
           `landed_cost.default_distance_km[country]`, else great-circle to the country centroid × road_factor (+ risk).
-        - Peers: pool = live, priced, in scope (price cap aside), no VAT reserve, not closed/dropped, minus outliers;
+        - Peers: pool = live, priced (no price_flags), in scope (price cap aside), no VAT reserve, not closed/dropped,
+          minus outliers;
           ladder family+trim+year+km band (n ≥ 8) → +year (6) → +trim (3) → family (3), wider steps adjusted for
           year/km. fair = median of per-country medians (rounded to 50); value = 50 + 2·clamp(gap %, −15, 20).
         - fit = base_fit + weights.fit × Σ terms (options_wanted ± weight × option_unit, penalties, seller, home market,
@@ -534,6 +560,8 @@ paths:
       summary: Create or update a listing by URL (idempotent). Main entry point for agents/imports.
       description: |
         - URL is normalized (scheme/host lowercased, tracking params and fragment dropped, site ad id extracted).
+        - Different known make, model family or fuel (mhev is compatible with petrol/diesel/hev) means a different car:
+          never linked or proposed unless VIN or plate match.
         - New listing → dedupe against existing cars: a *certain* match (same VIN, same plate, same private-seller
           phone + same model, or ≥2 distinctive matching photos with agreeing make/model/specs on a car that is not closed — see
           DESIGN.md § Dedupe) attaches the listing to that car (`linked_by`); otherwise a new car
@@ -577,7 +605,7 @@ paths:
       responses:
         "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Listing" } } } }
     patch:
-      summary: Change listing status (live/removed/sold) or price (price sanity as on upsert)
+      summary: Change listing status (live/removed/sold) or price (price sanity as on upsert; a `price_vat` alone re-checks the stored price)
       requestBody:
         required: true
         content:
@@ -680,7 +708,7 @@ components:
     bearer: { type: http, scheme: bearer }
   parameters:
     car: { name: car, in: path, required: true, schema: { type: string }, description: "car id or alias" }
-    user: { name: user, in: query, schema: { type: string }, description: "whose verdict to show/filter/set (a GET /profile user name); default owner" }
+    user: { name: user, in: query, schema: { type: string }, description: "whose verdict to show/filter/set (a GET /profile user name, case-insensitive); default owner. Unknown: 400 on reads, 422 on verdict writes" }
     ifMatch: { name: If-Match, in: header, schema: { type: string }, description: "\"<version>\" from GET /cars/{car} ETag; stale → 412" }
   responses:
     Error:
@@ -722,7 +750,7 @@ components:
     EvidenceSource:
       type: string
       enum: [ad_text, ad_spec, photo, vin_pr_code, vin_decoder, seller_said, inspection, agent_inference, owner]
-      description: "`owner` = the human buyer said so (strongest); legacy `owner` is read as owner"
+      description: "`owner` = the human buyer said so (strongest). Default source when the author is the owner. Rows whose source equals the owner's name (EV-era data) are rewritten to `owner` at startup."
     PhotoSource: { type: string, enum: [ad, seller, inspection, other] }
     Channel:
       type: string
@@ -863,7 +891,7 @@ components:
         status: { $ref: "#/components/schemas/Status" }
         status_reason: { type: string, nullable: true }
         verdict: { $ref: "#/components/schemas/Verdict", description: "verdict of `?user=` (default owner)" }
-        verdicts: { type: object, additionalProperties: { $ref: "#/components/schemas/Verdict" }, description: "user name → verdict, every user who rated" }
+        verdicts: { type: object, additionalProperties: { $ref: "#/components/schemas/Verdict" }, description: "user name → verdict, every current user who rated (`{}` when none)" }
         version: { type: integer }
         needs_owner: { type: boolean }
         needs_owner_reason: { type: string, nullable: true }
@@ -1063,7 +1091,7 @@ components:
         listing_id: { type: integer, nullable: true }
         type:
           type: string
-          description: "known: created, status_change, price_change, listing_added, listing_removed, listing_relisted, spec_change, option_change, fact_change, verdict, good_deal (data {from, to, note}), vin_check, report, visit, call, merge, split, duplicate_proposed, note (written on note creation; data {note_id}), message_deleted / message_restored (data {message_id, channel, direction, at, dedupe_key, reason}) (custom types allowed)"
+          description: "known: created, status_change, price_change, listing_added, listing_removed, listing_relisted, spec_change, option_change, fact_change, verdict (data {user, from, to, note}; summary prefixed `<viewer>: ` for a viewer), good_deal (data {from, to, note}), vin_check, report, visit, call, merge, split, duplicate_proposed, note (written on note creation; data {note_id}), message_deleted / message_restored (data {message_id, channel, direction, at, dedupe_key, reason}), price_sanity_override (data {reason, reasons, price, listing_id}) (custom types allowed)"
         at: { type: string, format: date-time }
         author: { type: string }
         summary: { type: string, description: "human one-liner, e.g. 'price 34 600 → 33 900'" }
