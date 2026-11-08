@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Rendered by carhunt.contact.mailroute.launchd_plist(); re-render instead of editing. -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>{label}</string>
+  <key>ProgramArguments</key>
+  <array>
+{program_args}
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>CARHUNT_HOME</key><string>{carhunt_home}</string>
+    <key>PATH</key><string>{path}</string>
+  </dict>
+{schedule}
+  <key>StandardOutPath</key><string>{stdout}</string>
+  <key>StandardErrorPath</key><string>{stderr}</string>
+</dict>
+</plist>
