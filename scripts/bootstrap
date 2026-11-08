@@ -82,10 +82,11 @@ for t in brew agterm claude docker; do
 done
 
 step "Homebrew packages (go node@22 python@3.12 uv gitleaks jq shfmt)"
-node_major() { node -v 2>/dev/null | sed -E 's/^v([0-9]+).*/\1/'; }
+# web deps need Node >= 22.19 (undici 8)
+node_ok() { v=$(node -v 2>/dev/null | sed 's/^v//'); [ -n "$v" ] && [ "$(printf '%s\n' 22.19.0 "$v" | sort -V | head -1)" = 22.19.0 ]; }
 for pair in go:go node@22:node python@3.12:python3.12 uv:uv gitleaks:gitleaks jq:jq shfmt:shfmt; do
   f=${pair%%:*} b=${pair#*:}
-  if have "$b" && { [ "$b" != node ] || [ "$(node_major)" -ge 22 ]; }; then say "$f: ok ($(command -v "$b"))"
+  if have "$b" && { [ "$b" != node ] || node_ok; }; then say "$f: ok ($(command -v "$b"))"
   elif have brew && brew list --versions "$f" >/dev/null 2>&1; then say "$f: installed (brew; not on PATH?)"
   elif have brew || [ "$DRY" = 1 ]; then run brew install "$f"
   else warn "$f: no Homebrew, install it yourself"; fi
