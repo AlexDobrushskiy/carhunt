@@ -30,18 +30,9 @@ STRATEGIES = ("newest_id", "first_seen", "full")
 
 
 def strategy_for(site_meta: dict, disc_cfg: dict) -> str:
-    """Config `discover.cursor.<site>` (override) > site.yaml `cursor` > `first_seen`.
-
-    site.yaml speaks the sites vocabulary: `newest_first` + `key: site_ref` = `newest_id`,
-    `newest_first` + `key: created` = `first_seen`, `full` = `full`.
-    """
+    """Config `discover.cursor.<site>` (override) > site.yaml `cursor.strategy` > `first_seen`."""
     s = (disc_cfg.get("cursor") or {}).get(site_meta.get("site"))
-    if not s:
-        cur = site_meta.get("cursor") or {}
-        s = cur.get("strategy")
-        if s == "newest_first":
-            s = "first_seen" if cur.get("key") == "created" else "newest_id"
-    s = s or "first_seen"
+    s = s or (site_meta.get("cursor") or {}).get("strategy") or "first_seen"
     if s not in STRATEGIES:
         raise ValueError(f"unknown cursor strategy {s!r} (known: {', '.join(STRATEGIES)})")
     return s
