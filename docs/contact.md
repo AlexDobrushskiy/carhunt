@@ -166,6 +166,28 @@ contact:
 ```
 Site forms never get a phone number (phone fields are emptied before submit).
 
+**`contact.channels` as a plain list** (`[whatsapp, email, sites]`) = the channels allowed to send: `say` refuses any other (exit 10, rule `channel`; `sites` = every site channel), and `watch` polls that list (minus `sites`) when `watch.channels` is unset. The mapping form above only tunes channels and allows all. Why: a list that enforced nothing let a channel the owner left out still send.
+
+Other keys contact reads (defaults in `carhunt/contact/settings.py`, example values in `config.example.yaml`):
+
+| key | what |
+|---|---|
+| `blocked_statuses` | car statuses `say` refuses (default dropped, closed, bought); `--approved` overrides |
+| `require_active_agent` | caller's `AGTERM_SESSION_ID` must be its role's `active_agent` (default true) |
+| `duplicate_prefix` | refuse a text whose first N chars were already sent to this target (default 60) |
+| `allow_unlisted` | allow `--to` that isn't one of the seller's cardb contacts (default false) |
+| `opener.spec_pattern` | regex of specs refused in openers (km/kWh/kW/hp/€) |
+| `nudge.auto_reply_s` | a "reply" this soon after ours is an auto-greeting, not a human (default 15) |
+| `nudge.seller_hours` | which `seller_hours` profile nudges use (default dealer) |
+| `nudge.price_extra` / `nudge.no_extra` | extra regex alternatives for price talk / "no, sold" detection |
+| `phone_tz` / `country_tz` | dial prefix / ISO-2 → seller tz (seller-local windows); unknown → refused |
+| `whatsapp.wacli` | wacli binary path (env `CARHUNT_WACLI` wins; else PATH) |
+| `email.sent_label` | Gmail label put on our sent mail (default `email.label`) |
+| `email.verify_tries` / `email.verify_wait_s` | Sent-folder check after a send (default 3 × 5 s) |
+| `email.poll_overlap_s` / `email.poll_ignore` / `email.poll_limit` | watcher: re-read window (900 s), From substrings to skip, max messages per poll (200) |
+| `mailroute.addresses` | extra seller addresses always routed out of the inbox |
+| `mailroute.deep_at` | local time of the daily 60-day pass (default 04:10) |
+
 ## Gaps
 - Site thread/inbox selectors on mobile.de, kleinanzeigen, subito, wallapop, leboncoin, standvirtual and the OLX send box / CustoJusto ad form are built from the EV scripts but unconfirmed live: the first real read per site must confirm them, then pin them under `contact.sites.<site>.selectors`.
 - access must provide: leboncoin = its own profile on a FR exit (never the identity pool); coches.net = Camoufox with main-world eval; mobile.de/subito/kleinanzeigen = plain-chrome on an identity profile; CustoJusto/OLX logins live on the identity master.

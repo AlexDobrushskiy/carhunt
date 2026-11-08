@@ -16,7 +16,7 @@ from .channels import get as get_channel
 from .channels.base import DELIVERED, FAILED, Channel, ChannelError, Msg
 from .ledger import FAILED as L_FAILED
 from .ledger import SENT, UNKNOWN, Entry, Ledger, log_to_db
-from .settings import contact_settings
+from .settings import channel_enabled, contact_settings
 
 EXIT_SENT, EXIT_REFUSED, EXIT_FAILED, EXIT_UNKNOWN = 0, 10, 11, 12
 LOCK = "contact-send"
@@ -122,6 +122,8 @@ def run(*, channel: str, text: str, car: str | None = None, to: str | None = Non
         db = deps.Cardb.from_config(cfg)
     ledger = ledger or Ledger()
     text = text.strip()
+    if not channel_enabled(s, ch.name, ch.kind):
+        return Outcome(EXIT_REFUSED, guard.Decision(False, "channel", f"{ch.name} is not in contact.channels"))
 
     try:
         car_d = resolve_car(db, car)

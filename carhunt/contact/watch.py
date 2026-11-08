@@ -135,5 +135,12 @@ def run(args: Any) -> int:
 
 
 def _enabled(cfg: dict[str, Any]) -> list[str]:
-    w = ((cfg.get("contact") or {}).get("watch") or {}).get("channels")
-    return list(w) if w else ["whatsapp", "email"]
+    """contact.watch.channels, else the contact.channels list (minus `sites`: site inboxes are named one by one),
+    else whatsapp + email."""
+    c = cfg.get("contact") or {}
+    w = (c.get("watch") or {}).get("channels")
+    if w:
+        return list(w)
+    if isinstance(c.get("channels"), list):
+        return [x for x in c["channels"] if x != "sites"]
+    return ["whatsapp", "email"]

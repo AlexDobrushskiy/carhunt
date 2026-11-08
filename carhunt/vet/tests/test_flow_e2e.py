@@ -36,7 +36,7 @@ def srv(tmp_path):
     cfg["search"]["countries"] = ["PT", "ES"]
     (home / "config.yaml").write_text(yaml.safe_dump(cfg))
     ads = json.loads(ADS.read_text())
-    cheap = dict(ads[0], site_ref="e2e108", price=1200, vin="SYN00000000E2e108",  # below cardb min_eur: 422 price_lease
+    cheap = dict(ads[0], site_ref="e2e108", price=1200, vin="SYN00000000E2e108",  # under the shared price floor (1500)
                  phones=["+351 555 100 108"], created="2026-11-08T07:30:00+00:00")
     (tmp_path / "ads.json").write_text(json.dumps(ads + [cheap]))
     s = socket.socket()
@@ -85,7 +85,7 @@ def test_sweep_vet_ask_outreach_close_round_trip(srv):
     rep = json.loads(cli(srv, "sweep", "--sites", "fake", "--json", author="discover").stdout)
     site = rep["sites"][0]
     assert site["state"] == "ok" and site["new"] == 5, site
-    assert site["rejected"] == 1 and any("price_lease" in k for k in site["dropped"]), site   # real 422 {reason}
+    assert site["rejected"] == 0 and site["dropped"].get("price_sanity") == 1, site   # same floor as cardb: no 422
 
     cars = api(srv, "GET", "/cars?limit=100")["cars"]
     assert all(c["version"] >= 1 for c in cars)

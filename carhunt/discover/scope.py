@@ -12,7 +12,8 @@ from typing import Any
 
 from carhunt.discover.normalize import Listing, fold
 
-DEFAULT_PRICE_SANITY = {"min_eur": 1000, "max_eur": 250000}
+CARDB_MIN_EUR = 1500        # cardb's default price floor (search.price.min_eur unset): one floor for both
+DEFAULT_MAX_EUR = 250000    # parse-error ceiling (discover.price_sanity.max_eur)
 
 
 @dataclass(frozen=True)
@@ -149,16 +150,16 @@ def check(lst: Listing, cfg: dict, *, partial: bool = False) -> str | None:
         return f"km: {lst.km} > {search['km_max']}"
     if lst.km is not None and lst.km < 0:
         return "km: negative (parse error)"
-    sanity = {**DEFAULT_PRICE_SANITY, **(disc.get("price_sanity") or {})}
-    if lst.price is not None and not sanity["min_eur"] <= lst.price <= sanity["max_eur"]:
-        # ×100 / monthly-rate parse errors: 10 mobile.de prices were stored ×100 (2026-11-03)
-        return f"price_sanity: {lst.price} outside {sanity['min_eur']}–{sanity['max_eur']} (parse error until checked)"
-    pmax = (search.get("price") or {}).get("max_eur")
+    # Floor = search.price.min_eur (else cardb's default), the same number cardb's write check uses: a price under
+    # it is a monthly rate / deposit / parse error. Ceiling: ×100 parse errors (10 mobile.de prices, 2026-11-03).
+    price = search.get("price") or {}
+    floor = int(price.get("min_eur") or CARDB_MIN_EUR)
+    ceil = int((disc.get("price_sanity") or {}).get("max_eur") or DEFAULT_MAX_EUR)
+    if lst.price is not None and not floor <= lst.price <= ceil:
+        return f"price_sanity: {lst.price} outside {floor}–{ceil} (rate, deposit or parse error until checked)"
+    pmax = price.get("max_eur")
     if pmax and lst.price is not None and lst.price > int(pmax):
         return f"price: {lst.price} > {pmax}"
-    pmin = (search.get("price") or {}).get("min_eur")
-    if pmin and lst.price is not None and lst.price < int(pmin):
-        return f"price: {lst.price} < {pmin}"
     if (search.get("private_sellers_abroad") is False and home and lst.country and lst.country != home
             and lst.seller_type == "private"):
         return "seller: private seller abroad (search.private_sellers_abroad: false)"

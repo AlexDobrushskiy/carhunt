@@ -91,6 +91,14 @@ def merge(base: dict[str, Any], over: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
+def channel_enabled(s: dict[str, Any], name: str, kind: str) -> bool:
+    """`contact.channels` as a plain list = the channels allowed to send (`sites` = every site channel); no list = all.
+    Why enforce it: a list that silently allowed every channel would let an agent message on a channel the owner
+    left out (e.g. a site account not set up yet)."""
+    en = s.get("enabled")
+    return en is None or name in en or (kind == "site" and "sites" in en)
+
+
 def contact_settings(cfg: dict[str, Any]) -> dict[str, Any]:
     user = dict((cfg or {}).get("contact") or {})
     if isinstance(user.get("channels"), list):  # `channels: [whatsapp, email, …]` = enabled list, not settings
