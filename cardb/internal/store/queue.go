@@ -538,6 +538,7 @@ func parseTiers(vals []string, def []int) ([]int, error) {
 type QueueFilter struct {
 	Tier          []string // default 1,2
 	Spec          string   // "", "confirmed" or "unknown" (see specMatch)
+	User          string   // whose verdict counts as rated; "" = owner (resolved by the handler)
 	Limit, Offset int
 }
 
@@ -580,7 +581,7 @@ func (s *Store) Queue(ctx context.Context, f QueueFilter) (*api.Queue, error) {
 	var facts map[int64]*queueFacts
 	if err := s.tx(ctx, func(tx *sql.Tx) error {
 		var err error
-		if rows, err = buildSummaries(tx); err != nil {
+		if rows, err = buildSummaries(tx, f.User); err != nil {
 			return err
 		}
 		facts, err = loadQueueFacts(tx)

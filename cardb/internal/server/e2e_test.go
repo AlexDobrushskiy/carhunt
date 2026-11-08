@@ -910,9 +910,9 @@ func TestNotesCRUD(t *testing.T) {
 		t.Fatalf("mobile.de market = %v", car.Market)
 	}
 	var n1, n2 api.Note
-	c.as("owner").call("POST", fmt.Sprintf("/api/v1/cars/%d/notes", r.CarID), map[string]any{"text": "Ask about the heat pump"}, 201, &n1)
+	c.as("Owner").call("POST", fmt.Sprintf("/api/v1/cars/%d/notes", r.CarID), map[string]any{"text": "Ask about the heat pump"}, 201, &n1)
 	c.call("POST", fmt.Sprintf("/api/v1/cars/%d/notes", r.CarID), map[string]any{"text": "Seller replies slowly", "author": "import-wa"}, 201, &n2)
-	if n1.Author != "owner" || n1.AuthorKind != "owner" || n2.AuthorKind != "import" {
+	if n1.Author != "Owner" || n1.AuthorKind != "owner" || n2.AuthorKind != "import" {
 		t.Fatalf("author kinds = %q %q", n1.AuthorKind, n2.AuthorKind)
 	}
 	c.call("POST", fmt.Sprintf("/api/v1/cars/%d/notes", r.CarID), map[string]any{"text": "   "}, 422, nil)

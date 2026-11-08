@@ -100,12 +100,14 @@ func Open(dataDir string) (*Store, error) {
 // Close closes the database.
 func (s *Store) Close() error { return s.db.Close() }
 
-// SetProfile sets the buyer profile (call before serving; not safe concurrently with requests).
-func (s *Store) SetProfile(p *profile.Profile) {
+// SetProfile sets the buyer profile and syncs its users into the database (call before serving; not safe
+// concurrently with requests).
+func (s *Store) SetProfile(p *profile.Profile) error {
 	if p == nil {
 		p = profile.Default()
 	}
 	s.profile = p
+	return s.syncUsers(context.Background(), p)
 }
 
 // Profile returns the active buyer profile.

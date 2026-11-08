@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"io"
@@ -26,13 +25,18 @@ const tokenNameKey ctxKey = 0
 
 type handler struct {
 	st     *store.Store
-	tokens map[string]string // name → token
+	tokens []tokenEntry // sha256 of each accepted token
 	fetch  *http.Client
 }
 
-// NewHandler returns the full HTTP handler (API under /api/v1, plus /healthz). tokens maps name → bearer token.
+// NewHandler returns the full HTTP handler (API under /api/v1, plus /healthz). tokens maps name → bearer token
+// or "sha256:<hex>" of it. It panics on a malformed hash (Main validates tokens before).
 func NewHandler(st *store.Store, tokens map[string]string) http.Handler {
-	h := &handler{st: st, tokens: tokens, fetch: &http.Client{Timeout: photoFetchTimeout}}
+	entries, err := tokenEntries(tokens)
+	if err != nil {
+		panic(err)
+	}
+	h := &handler{st: st, tokens: entries, fetch: &http.Client{Timeout: photoFetchTimeout}}
 	mux := http.NewServeMux()
 	route := func(pattern string, fn func(w http.ResponseWriter, r *http.Request) error) {
 		mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
@@ -120,11 +124,7 @@ func (h *handler) auth(next http.Handler) http.Handler {
 		tok = strings.TrimSpace(tok)
 		name := ""
 		if tok != "" {
-			for n, t := range h.tokens {
-				if subtle.ConstantTimeCompare([]byte(tok), []byte(t)) == 1 {
-					name = n
-				}
-			}
+			name = matchToken(h.tokens, tok)
 		}
 		if name == "" {
 			w.Header().Set("WWW-Authenticate", `Bearer realm="cardb"`)
@@ -134,7 +134,15 @@ func (h *handler) auth(next http.Handler) http.Handler {
 		if lw, ok := w.(*logWriter); ok {
 			lw.token = name
 		}
-		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), tokenNameKey, name)))
+		ctx := context.WithValue(r.Context(), tokenNameKey, name)
+		if h.viewerToken(name) {
+			if !viewerAllowed(r) {
+				forbidden(w, "token "+name+" is a viewer: read-only except its own verdict")
+				return
+			}
+			ctx = context.WithValue(ctx, viewerKey, true)
+		}
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
@@ -235,8 +243,11 @@ func decode(w http.ResponseWriter, r *http.Request, v any) error {
 	return nil
 }
 
-// author picks body author → X-Author header → token name.
+// author picks body author → X-Author header → token name; a viewer token always writes as itself.
 func author(r *http.Request, body string) string {
+	if isViewer(r) {
+		return tokenName(r)
+	}
 	if a := strings.TrimSpace(body); a != "" {
 		return a
 	}
@@ -267,7 +278,11 @@ func (h *handler) health(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *handler) stats(w http.ResponseWriter, r *http.Request) error {
-	st, err := h.st.Stats(r.Context())
+	user, err := h.queryUser(r)
+	if err != nil {
+		return err
+	}
+	st, err := h.st.Stats(r.Context(), user)
 	if err != nil {
 		return err
 	}
@@ -281,7 +296,7 @@ func parseCarFilter(r *http.Request) (store.CarFilter, error) {
 		Q: q.Get("q"), Make: q.Get("make"), Model: q.Get("model"), Market: q.Get("market"),
 		Sort: q.Get("sort"), Order: q.Get("order"),
 		Drive: q["drive"], Country: q["country"], SellerType: q["seller_type"], Status: q["status"], Verdict: q["verdict"],
-		ModelFamily: q["model_family"], Tier: q["tier"], Fuel: q["fuel"],
+		ModelFamily: q["model_family"], Tier: q["tier"], Fuel: q["fuel"], User: q.Get("user"),
 	}
 	intp := func(name string, dst **int) error {
 		v := q.Get(name)
@@ -374,7 +389,7 @@ func (h *handler) createCar(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *handler) getCar(w http.ResponseWriter, r *http.Request) error {
-	out, err := h.st.GetCar(r.Context(), r.PathValue("car"))
+	out, err := h.st.GetCarFor(r.Context(), r.PathValue("car"), r.URL.Query().Get("user"))
 	if err != nil {
 		return err
 	}
@@ -550,27 +565,6 @@ func (h *handler) deleteNote(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func (h *handler) putVerdict(w http.ResponseWriter, r *http.Request) error {
-	var in api.VerdictInput
-	if err := decode(w, r, &in); err != nil {
-		return err
-	}
-	out, err := h.st.SetVerdict(r.Context(), r.PathValue("car"), in, author(r, in.Author))
-	if err != nil {
-		return err
-	}
-	writeJSON(w, http.StatusOK, out)
-	return nil
-}
-
-func (h *handler) deleteVerdict(w http.ResponseWriter, r *http.Request) error {
-	if err := h.st.ClearVerdict(r.Context(), r.PathValue("car"), author(r, "")); err != nil {
-		return err
-	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
-}
-
 func (h *handler) putGoodDeal(w http.ResponseWriter, r *http.Request) error {
 	// note: absent = keep (while staying on), "" or null = clear.
 	var in struct {
@@ -606,6 +600,10 @@ func (h *handler) putGoodDeal(w http.ResponseWriter, r *http.Request) error {
 func (h *handler) queue(w http.ResponseWriter, r *http.Request) error {
 	q := r.URL.Query()
 	f := store.QueueFilter{Tier: q["tier"], Spec: q.Get("spec")}
+	var err error
+	if f.User, err = h.queryUser(r); err != nil {
+		return err
+	}
 	for name, dst := range map[string]*int{"limit": &f.Limit, "offset": &f.Offset} {
 		if v := q.Get(name); v != "" {
 			n, err := strconv.Atoi(v)

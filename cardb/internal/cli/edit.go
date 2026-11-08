@@ -90,6 +90,7 @@ func cmdVerdict(e *env, args []string) error {
 	f := newFlags(e, "verdict")
 	note := f.String("note", "", "why")
 	clear := f.Bool("clear", false, "remove the verdict")
+	user := f.String("user", "", "whose verdict (a user from the profile; default: the token's user, else the owner)")
 	pos, err := f.parse(args)
 	if err != nil {
 		return err
@@ -100,7 +101,7 @@ func cmdVerdict(e *env, args []string) error {
 			return err
 		}
 	} else {
-		if err := needArgs("verdict", pos, 2, 2, "CAR up|maybe|down|clear [--note N]"); err != nil {
+		if err := needArgs("verdict", pos, 2, 2, "CAR up|maybe|down|clear [--note N] [--user U]"); err != nil {
 			return err
 		}
 		if val, err = normalizeVerdict(pos[1]); err != nil {
@@ -112,19 +113,19 @@ func cmdVerdict(e *env, args []string) error {
 		return err
 	}
 	if val == "" {
-		if err := cl.DeleteVerdict(e.ctx, pos[0]); err != nil {
+		if err := cl.DeleteVerdictFor(e.ctx, pos[0], *user); err != nil {
 			return err
 		}
-		return e.emit(map[string]any{"car": pos[0], "verdict": nil}, func(w io.Writer) {
+		return e.emit(map[string]any{"car": pos[0], "verdict": nil, "user": *user}, func(w io.Writer) {
 			fmt.Fprintf(w, "car %s: verdict cleared\n", pos[0])
 		})
 	}
-	v, err := cl.PutVerdict(e.ctx, pos[0], api.VerdictInput{Value: val, Note: *note})
+	v, err := cl.PutVerdict(e.ctx, pos[0], api.VerdictInput{Value: val, Note: *note, User: *user})
 	if err != nil {
 		return err
 	}
 	return e.emit(v, func(w io.Writer) {
-		fmt.Fprintf(w, "car %s: verdict %s %s", pos[0], verdictEmoji(&v), v.Value)
+		fmt.Fprintf(w, "car %s: %s's verdict %s %s", pos[0], v.User, verdictEmoji(&v), v.Value)
 		if v.Note != nil && *v.Note != "" {
 			fmt.Fprintf(w, " — %s", *v.Note)
 		}

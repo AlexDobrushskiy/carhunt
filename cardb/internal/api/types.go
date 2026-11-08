@@ -176,6 +176,9 @@ type CarSummary struct {
 	// Version increments on every car write (ETag / If-Match). PriceFlags = flags of the listing that gives Price.
 	Version    int64    `json:"version"`
 	PriceFlags []string `json:"price_flags,omitempty"`
+
+	// Verdicts = every user's verdict by user name; Verdict above = the selected user's (?user=, default owner).
+	Verdicts map[string]*Verdict `json:"verdicts"`
 }
 
 type CarList struct {
@@ -223,6 +226,8 @@ type CarDetail struct {
 	GoodDealAt   *time.Time `json:"good_deal_at"`
 	DealRank     *string    `json:"deal_rank"`
 	Version      int64      `json:"version"` // increments on every car write; ETag / If-Match
+	// Verdicts = every user's verdict by user name; Verdict = the selected user's (?user=, default owner).
+	Verdicts map[string]*Verdict `json:"verdicts"`
 }
 
 type Listing struct {
@@ -476,6 +481,7 @@ type NotePatch struct {
 }
 
 type Verdict struct {
+	User      string    `json:"user"`
 	Value     string    `json:"value"`
 	Note      *string   `json:"note"`
 	Author    string    `json:"author"`
@@ -485,6 +491,7 @@ type Verdict struct {
 type VerdictInput struct {
 	Value  string     `json:"value"`
 	Note   string     `json:"note,omitempty"`
+	User   string     `json:"user,omitempty"`
 	Author string     `json:"author,omitempty"`
 	At     *time.Time `json:"at,omitempty"`
 }

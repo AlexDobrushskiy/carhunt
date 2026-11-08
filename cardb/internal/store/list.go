@@ -25,6 +25,7 @@ type CarFilter struct {
 	PriceMin, PriceMax, DistanceKmMax *int
 	Country, SellerType, Status       []string
 	Verdict                           []string
+	User                              string // whose verdict `verdict` shows and the verdict filter uses ("" = owner)
 	Options                           []OptionFilter
 	NeedsOwner, HasDuplicates         *bool
 	GoodDeal                          *bool
@@ -144,8 +145,8 @@ type summaryRow struct {
 	activity float64
 }
 
-// buildSummaries computes CarSummary rows for every live car.
-func buildSummaries(tx *sql.Tx) ([]*summaryRow, error) {
+// buildSummaries computes CarSummary rows for every live car; Verdict = user's verdict ("" = the owner).
+func buildSummaries(tx *sql.Tx, user string) ([]*summaryRow, error) {
 	cars, err := loadLiveCars(tx)
 	if err != nil {
 		return nil, err
@@ -236,19 +237,11 @@ func buildSummaries(tx *sql.Tx) ([]*summaryRow, error) {
 		return nil, err
 	}
 
-	verdicts := map[int64]*api.Verdict{}
-	if err := eachRow(tx, "SELECT car_id, value, note, author, updated_at FROM verdicts", nil, func(sc scanner) error {
-		var carID int64
-		var v api.Verdict
-		var note sql.NullString
-		var at float64
-		if err := sc.Scan(&carID, &v.Value, &note, &v.Author, &at); err != nil {
-			return err
-		}
-		v.Note, v.UpdatedAt = strPtr(note), fromTS(at)
-		verdicts[carID] = &v
-		return nil
-	}); err != nil {
+	verdicts, err := loadAllVerdicts(tx)
+	if err != nil {
+		return nil, err
+	}
+	if user, err = verdictUser(tx, user); err != nil {
 		return nil, err
 	}
 
@@ -356,8 +349,9 @@ func buildSummaries(tx *sql.Tx) ([]*summaryRow, error) {
 			InteriorTone: specs.InteriorTone, WheelsIn: specs.WheelsIn, SellerType: "unknown", Status: c.Status,
 			StatusReason: strPtr(c.StatusReason), NeedsOwner: c.NeedsOwner, NeedsOwnerReason: strPtr(c.NeedsOwnerReason),
 			Summary: strPtr(c.Summary), Options: map[string]string{}, OptionSources: map[string]string{}, Sites: []string{}, CreatedAt: fromTS(c.CreatedAt),
-			Verdict: verdicts[c.ID], DuplicateCandidateCount: dupCount[c.ID], Version: c.Version,
+			Verdict: verdicts[c.ID].pick(user), DuplicateCandidateCount: dupCount[c.ID], Version: c.Version,
 		}
+		cs.Verdicts = verdicts[c.ID].orEmpty()
 		cs.ModelFamily, _, cs.ModelFamilyManual = c.family()
 		cs.GoodDeal, cs.GoodDealNote, cs.GoodDealBy, cs.GoodDealAt = c.GoodDeal, strPtr(c.GoodDealNote), strPtr(c.GoodDealBy), fromNullTS(c.GoodDealAt)
 		cs.DealRank = dealRanks[c.ID]
@@ -591,7 +585,7 @@ func (s *Store) ListCars(ctx context.Context, f CarFilter) (*api.CarList, error)
 	var rows []*summaryRow
 	err := s.tx(ctx, func(tx *sql.Tx) error {
 		var err error
-		rows, err = buildSummaries(tx)
+		rows, err = buildSummaries(tx, f.User)
 		return err
 	})
 	if err != nil {
@@ -666,15 +660,21 @@ func (s *Store) ModelFamilies(ctx context.Context) (*api.ModelFamilies, error) {
 	return out, err
 }
 
-// Stats handles GET /stats.
-func (s *Store) Stats(ctx context.Context) (*api.Stats, error) {
+// Stats handles GET /stats; by_verdict counts user's verdicts ("" = the owner; unknown → 400).
+func (s *Store) Stats(ctx context.Context, user string) (*api.Stats, error) {
 	st := &api.Stats{ByStatus: map[string]int{}, ByVerdict: map[string]int{"up": 0, "maybe": 0, "down": 0, "none": 0}}
 	for _, s := range api.Statuses {
 		st.ByStatus[s] = 0
 	}
 	err := s.tx(ctx, func(tx *sql.Tx) error {
+		u, err := userByName(tx, user)
+		if IsKind(err, KindInvalid) {
+			return badRequestf("%s", err.Error())
+		} else if err != nil {
+			return err
+		}
 		if err := eachRow(tx, `SELECT c.status, COALESCE(v.value, 'none'), c.needs_owner FROM cars c
-			LEFT JOIN verdicts v ON v.car_id = c.id WHERE c.merged_into IS NULL`, nil, func(sc scanner) error {
+			LEFT JOIN verdicts v ON v.car_id = c.id AND v.user_id = ? WHERE c.merged_into IS NULL`, []any{u.id}, func(sc scanner) error {
 			var status, verdict string
 			var needs int
 			if err := sc.Scan(&status, &verdict, &needs); err != nil {
