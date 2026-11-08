@@ -67,3 +67,38 @@ def new(site: str, user: str, *, overwrite: bool = False) -> str:
     _core.set_secret(u, user)
     _core.set_secret(p, new_password())
     return f"{u}, {p}"
+
+
+# ---------- CLI: carhunt creds new|status (prints secret NAMES only, never a value) ----------
+
+def _cmd_new(a) -> int:
+    import sys
+    user = sys.stdin.readline().strip() if a.user == "-" else a.user
+    try:
+        names_ = new(a.site, user, overwrite=a.overwrite)
+    except (ValueError, FileExistsError) as e:
+        print(f"creds: {e}", file=sys.stderr)
+        return 3
+    print(f"stored {names_} (password generated; type it with creds.login() inside the signup script)")
+    return 0
+
+
+def _cmd_status(a) -> int:
+    u, p = names(a.site)
+    ok = exists(a.site)
+    print(f"{a.site}: {'stored' if ok else 'missing'} ({u}, {p})")
+    return 0 if ok else 1
+
+
+def register_cli(sub) -> None:
+    p = sub.add_parser("creds", help="site account credentials (core secrets; values are never printed)")
+    p.set_defaults(_parser=p)
+    s = p.add_subparsers(dest="creds_cmd", metavar="<cmd>")
+    x = s.add_parser("new", help="generate + store a password for SITE's account (refuses to overwrite)")
+    x.add_argument("site", help="site id or domain, e.g. coches.net")
+    x.add_argument("--user", required=True, help="the account's login/email ('-' = read one line from stdin)")
+    x.add_argument("--overwrite", action="store_true", help="replace a stored password (loses the live login)")
+    x.set_defaults(func=_cmd_new)
+    x = s.add_parser("status", help="is a login stored for SITE? (exit 0 stored, 1 missing)")
+    x.add_argument("site")
+    x.set_defaults(func=_cmd_status)

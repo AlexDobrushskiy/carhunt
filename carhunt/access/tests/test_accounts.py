@@ -225,3 +225,55 @@ def test_creds_new_refuses_overwrite(env, monkeypatch):
         creds.new("coches.net", "buyer@example.com")
 
 
+
+
+# ---------- CLI wrappers (carhunt email-code / carhunt creds) ----------
+
+def _carhunt(*argv):
+    from carhunt import cli
+    return cli.main(list(argv))
+
+
+def test_cli_email_code_prints_only_the_code(env, monkeypatch, capsys):
+    now = time.time()
+    fake = FakeGmail([_mail("m1", now - 30, text="Bonjour. Votre code : 555123. Ref 77.")])
+    monkeypatch.setattr(ec, "_urllib_transport", fake)
+    assert _carhunt("email-code", "oncefix", "--since", "5m", "--timeout", "0") == 0
+    out = capsys.readouterr()
+    assert out.out == "555123\n" and REFRESH not in out.out + out.err
+    assert fake.query.startswith("from:(oncefix.example.invalid) after:")
+
+
+def test_cli_email_code_link_and_timeout(env, monkeypatch, capsys):
+    now = time.time()
+    fake = FakeGmail([_mail("m1", now - 30, html='<a href="https://oncefix.example.invalid/confirm?t=SYN1">ok</a>')])
+    monkeypatch.setattr(ec, "_urllib_transport", fake)
+    assert _carhunt("email-code", "oncefix", "--since", str(now - 60), "--timeout", "0",
+                    "--link", r"https://oncefix\.example\.invalid/confirm\S+") == 0
+    assert capsys.readouterr().out == "https://oncefix.example.invalid/confirm?t=SYN1\n"
+    assert _carhunt("email-code", "oncefix", "--timeout", "0", "--pattern", r"(\d{8})") == 1   # no 8-digit code
+    assert capsys.readouterr().out == ""
+
+
+def test_cli_email_code_gmail_not_set_up(carhunt_home, capsys):
+    assert _carhunt("email-code", "oncefix", "--timeout", "0") == 2
+    assert "Gmail not set up" in capsys.readouterr().err
+
+
+def test_cli_creds_new_never_prints_the_password(env, capsys):
+    assert _carhunt("creds", "status", "www.oncefix.example.invalid") == 1
+    capsys.readouterr()
+    assert _carhunt("creds", "new", "www.oncefix.example.invalid", "--user", "buyer@example.invalid") == 0
+    out = capsys.readouterr().out
+    user, pw = creds.login("oncefix.example.invalid")
+    assert user == "buyer@example.invalid" and pw not in out and "site_oncefix_example_invalid_pass" in out
+    assert _carhunt("creds", "new", "oncefix.example.invalid", "--user", "other@example.invalid") == 3  # no overwrite
+    assert creds.login("oncefix.example.invalid") == (user, pw)
+    assert _carhunt("creds", "status", "oncefix.example.invalid") == 0
+
+
+def test_cli_creds_new_user_from_stdin(env, monkeypatch, capsys):
+    import io
+    monkeypatch.setattr(sys, "stdin", io.StringIO("stdin@example.invalid\n"))
+    assert _carhunt("creds", "new", "oncefix.example.invalid", "--user", "-") == 0
+    assert creds.login("oncefix.example.invalid")[0] == "stdin@example.invalid"

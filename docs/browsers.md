@@ -25,10 +25,32 @@ Code: `browsers/bin/` (shell tools), `browsers/` (MCP + launchd templates), `car
 | `carhunt proxy test <CC>` | exit IP country + type through the configured provider (no credentials printed) |
 | `carhunt sms policy <site>` · `rent --site D --country CC --service ID [--pool P] [--dry-run]` | rented one-time numbers (policy below; exit 3 = refused) |
 | `carhunt captcha solve (--plain\|--lane\|--identity[-x]\|--cdp URL) [--url P] [--target T]` · `stats` | local solver |
-| `carhunt pace take <site> <kind> [--via CC] [--wait]` · `status [site]` · `reset-day <site> [kind]` | shared ledger + day caps; `kind` ∈ `load phone send login`; exit 3 = refused (`retry_at` in the JSON) |
+| `carhunt pace take <site> <kind> [--via CC] [--wait]` · `status [site]` · `reset-day <site> [kind]` | shared ledger + day caps; `kind` ∈ `load api phone send login`; exit 3 = refused (`retry_at` in the JSON) |
+| `carhunt creds new <site> --user U\|- [--overwrite]` · `status <site>` | generate + store a site password (`site_<domain>_user/_pass`); prints secret names only; refuses to overwrite (exit 3) |
+| `carhunt email-code <site> [--since EPOCH\|10m] [--timeout S] [--pattern RE \| --link RE] [--query Q]` | wait for the site's one-time code (or confirm link) in Gmail; prints only that; exit 1 = none in time, 2 = Gmail not set up |
 | `carhunt doctor` | includes browser checks (Chrome, Node, servers up, ports free, Ollama if captcha on, proxy/SMS secrets if enabled) |
 
-Python: `access.session.tab(route, country=, site=)`, `access.pace.acquire(site, kind)`, `access.proxy.get(country, sticky_minutes)`, `access.creds.login(site)` / `creds.new(site, email)`, `access.accounts.wait_code(site, since=)` / `wait_link(site, since=, pattern=)`, `access.accounts.sms.policy(site)` / `rent(country, service, site=)` / `wait_code(rental)`. Errors: `Blocked(signature)`, `PaceExceeded(retry_at)`, `ProxyUnavailable`, `LeaseBusy`.
+Python: `access.session.tab(route, country=, site=, fresh=)`, `access.pace.acquire(site, kind, via=)`, `access.jar.get(domain, name)` (read-only), `access.proxy.get(country, sticky_minutes)`, `access.creds.login(site)` / `creds.new(site, email)`, `access.accounts.wait_code(site, since=)` / `wait_link(site, since=, pattern=)`, `access.accounts.sms.policy(site)` / `rent(country, service, site=)` / `wait_code(rental)`. Errors: `Blocked(signature)`, `PaceExceeded(retry_at)`, `ProxyUnavailable`, `LeaseBusy`.
+
+### `session.tab` handle
+| | |
+|---|---|
+| browser routes | a Playwright sync Page: unknown attributes (locator, keyboard, context, url, content, wait_for_timeout, on…) go to the page; available after the first `goto` (plain-chrome/identity launch on that URL) |
+| `goto(url, wait_until=, timeout=ms, paced=True)` | returns the HTTP status (0 = none); with `site`: takes a `load` slot (waits ≤180 s for a gap) and raises `Blocked` on a wall; `paced=False` when the caller already took the slot (sites' Net) |
+| `fetch(url, …)` | in-page fetch (site's own API with the tab's cookies), paced + block-checked like goto |
+| http route | goto / content / html / fetch / url / wait_for_timeout only |
+| `fresh=True` | throwaway profile (plain-chrome without country); lane/camoufox/http are throwaway anyway; identity/geo refuse |
+| camoufox | `main_world_eval` on: `page.evaluate("mw:…")` runs in the page's own JS world (coches.net XHR patch) |
+
+### Pace ledger (`access.pace`)
+| | |
+|---|---|
+| key | site.yaml `site` id, whatever the caller's spelling (dir name, domain, host) — one budget per site |
+| `via=CC` | proxied request: own rate budget (`<site>@cc`), same day caps |
+| `load` | site.yaml `pace{min_gap_s, max_loads_per_hour, max_loads_per_run, max_loads_per_day}` |
+| `api` | JSON read, not a page load: `pace.api_min_gap_s` (default `min_gap_s`), `pace.max_api_per_hour`; no load caps (coches gateway ≥12 s ran clean while pages were capped at 2/h) |
+| `phone` `send` `login` | `caps{<kind>_per_day, <kind>_per_hour, <kind>_min_gap_s}` |
+| defaults | `pace` 12 s / 30 h / 60 run only for a site without a `pace` section; `caps` phone 5 · send 10 · login 3 per day unless the site sets them |
 
 ## Install (macOS, Apple Silicon)
 | need | how | why |
@@ -70,14 +92,14 @@ Ports and labels are chosen not to collide with a typical personal setup on 8931
 - Free VPNs (VPN Gate) and datacenter VPN ranges: don't (flagged on first load / soft-blocked messaging, 11-02/05).
 
 ## SMS provider
-- Only for sites that verify a phone **once** at signup and accept rented numbers. Enforced by `carhunt sms policy|rent --site`: allowed only when the site's `account.verification` is `sms-once`; `sms-every-login` or unknown → refused (fail closed).
+- Only for sites that verify a phone **once** at signup and accept rented numbers. Enforced by `carhunt sms policy|rent --site`: allowed only when the site's `account.verification` is `sms-once`; `sms-own` (owner's own number), `sms-every-login` or unknown → refused (fail closed).
 - Proven: SMSPool (adapter `smspool`, prepaid balance). Choose the pool by per-service success rate (cheap pools return recycled numbers).
 - Site kinds: **verify-once, domestic-only** (e.g. leboncoin: FR mobile) → rent; **accept foreign numbers** (e.g. subito) → use your own; **SMS 2FA every login** (marktplaats/2dehands) → never rent, use your own or skip; **IP-gated activation** (kleinanzeigen) → open the link on mobile data.
 
 ## Site accounts (generic)
-1. Check the site row (`account.needed_for`, `verification`).
-2. From an identity copy (or the site's `geo` browser if the account must live on a country IP): sign up with `accounts.email` (+ `accounts.gmail.plus_address`), password from `creds.new(<domain>, <email>)` (never printed).
-3. Codes: `accounts.wait_code(site, since=t0)`; phone-only codes → one batched ask to the owner.
+1. Check the site row (`account.needed_for`, `verification` ∈ `none email email-link email-code google sms-once sms-own sms-every-login`, `note`, `mail_from`).
+2. From an identity copy (or the site's `geo` browser if the account must live on a country IP): sign up with `accounts.email` (+ `accounts.gmail.plus_address`), password from `carhunt creds new <site> --user <email>` / `creds.new` (never printed).
+3. Codes: take `t0=$(date +%s)` before triggering the mail, then `carhunt email-code <site> --since $t0` (or `accounts.wait_code(site, since=t0)`); phone-only codes → one batched ask to the owner.
 4. Set real name (+ photo where the web allows) — helps with private sellers.
 5. Record any quirk (no SMS recovery, IP-bound, app-only fields) in the site's `site.yaml` notes.
 
