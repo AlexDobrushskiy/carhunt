@@ -6,6 +6,22 @@ Built from a real 13-day used-EV hunt across 8 EU countries. Every rule keeps it
 
 Private repository, all rights reserved.
 
+## What it looks like
+
+All data below is synthetic ([credits, how they were made](docs/img/CREDITS.md)).
+
+![Phone web UI: car list, car page, "To rate" queue](docs/img/web-overview.png)
+*Web UI on a phone: cars ranked by landed price vs peers, the hero car's page with verdicts and ads on 3 sites, the "To rate" queue.*
+
+![Car page details: options with evidence, powertrain, seller chat, ads and timeline](docs/img/web-details.png)
+*Car page: every option carries its source, battery facts, the WhatsApp thread the agent runs, price history across ads, the timeline.*
+
+![Four Claude Code agents in an agterm dashboard](docs/img/agents.png)
+*Agents at work in agterm: overseer status for the owner, sweep result, vet evidence table, outreach draft refused by the send guard (quiet window).*
+
+![Terminal: sweep, ranked queue, guarded send](docs/img/terminal.png)
+*The same from the CLI: `carhunt sweep`, `cardb queue`, `carhunt say --dry-run`.*
+
 ## Requirements
 
 | what | needed for |
