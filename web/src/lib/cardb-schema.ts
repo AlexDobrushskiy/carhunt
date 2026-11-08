@@ -160,17 +160,17 @@ export interface paths {
                     good_deal?: boolean;
                     /** @description Canonical family (GET /model-families), case/diacritics-insensitive exact match; repeatable, comma lists ok; `none` = unmapped. ORed within, ANDed with other filters (independent of the `model` substring filter). 400 on an unknown name. */
                     model_family?: string[];
-                    /** @description "To rate" tier 1|2|3 (see GET /queue); repeatable, comma lists ok (`tier=1,2`), `T1` ok. ORed within, ANDed with other filters. 400 on another value. */
+                    /** @description "To rate" tier (GET /profile `tiers`; see GET /queue); repeatable, comma lists ok (`tier=1,2`), `T1` ok. ORed within, ANDed with other filters. 400 on a tier the profile does not define. */
                     tier?: string[];
                     /** @description home = country equals owner.home.country */
                     market?: "home" | "abroad";
                     /** @description powertrain.fuel, repeatable; missing fuel counts as unknown */
                     fuel?: components["schemas"]["Fuel"][];
-                    /** @description whose verdict to show/filter/set (a GET /profile user name); default owner */
+                    /** @description whose verdict to show/filter/set (a GET /profile user name, case-insensitive); default owner. Unknown: 400 on reads, 422 on verdict writes */
                     user?: components["parameters"]["user"];
-                    /** @description deal_rank: `T<tier>-<n>` by (tier, n); unparseable values after parseable ones and missing last, in both orders */
+                    /** @description deal_rank: `T<tier>-<n>` by (tier, n); unparseable values after parseable ones and missing last, in both orders. score: the queue score (GET /queue) of every car; no price = missing, last in both orders */
                     sort?: "last_activity" | "price" | "km" | "year" | "distance_km" | "created" | "status" | "model" | "deal_rank" | "score";
-                    /** @description default desc for last_activity/created/year, asc otherwise */
+                    /** @description default desc for last_activity/created/year/score, asc otherwise */
                     order?: "asc" | "desc";
                     limit?: number;
                     offset?: number;
@@ -241,7 +241,7 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
-                    /** @description whose verdict to show/filter/set (a GET /profile user name); default owner */
+                    /** @description whose verdict to show/filter/set (a GET /profile user name, case-insensitive); default owner. Unknown: 400 on reads, 422 on verdict writes */
                     user?: components["parameters"]["user"];
                 };
                 header?: never;
@@ -312,7 +312,16 @@ export interface paths {
          *     Read-only fields of CarDetail are ignored; `good_deal` / `good_deal_note` are 422 (use PUT /cars/{car}/good-deal).
          *     `red_flags` / `open_questions` replace the whole list; prefer `red_flags_add` / `red_flags_remove` /
          *     `open_questions_add` / `open_questions_remove` (exact-text items, applied atomically, add is a no-op for an existing item).
-         *     `powertrain` is merged field by field (send `null` for a field to clear it).
+         *     `powertrain` is merged field by field (send `null` for a field to clear it; `"powertrain": null` clears all of it).
+         *     Fuel/gearbox are case-insensitive, stored lower case, and accept common ad words (elétrico/elektro/EV → bev,
+         *     plug-in → phev, híbrido/hybride → hev, gasolina/benzin/essence → petrol, gasóleo/gasoil → diesel, GPL → lpg,
+         *     GNV → cng; automático/automatik/DSG/auto → automatic, manuell/manuelle → manual) on every write and in the
+         *     `fuel` filter; an unknown value or powertrain key is 422. Flat
+         *     `battery_net_kwh` / `battery_gross_kwh` are still accepted (pre-v2 clients); other powertrain keys only nested.
+         *     The same flat battery keys are accepted on POST /listings/upsert and POST /cars (folded into powertrain,
+         *     fill-if-empty); a flat value that differs from the nested one in the same request is 422. Reads only nest.
+         *     `red_flags_*` ops: removals run before additions; empty items are 422; combining an op with the full list of the
+         *     same field is 422.
          */
         patch: {
             parameters: {
@@ -763,7 +772,7 @@ export interface paths {
         put: {
             parameters: {
                 query?: {
-                    /** @description whose verdict to show/filter/set (a GET /profile user name); default owner */
+                    /** @description whose verdict to show/filter/set (a GET /profile user name, case-insensitive); default owner. Unknown: 400 on reads, 422 on verdict writes */
                     user?: components["parameters"]["user"];
                 };
                 header?: never;
@@ -797,7 +806,7 @@ export interface paths {
         delete: {
             parameters: {
                 query?: {
-                    /** @description whose verdict to show/filter/set (a GET /profile user name); default owner */
+                    /** @description whose verdict to show/filter/set (a GET /profile user name, case-insensitive); default owner. Unknown: 400 on reads, 422 on verdict writes */
                     user?: components["parameters"]["user"];
                 };
                 header?: never;
@@ -927,15 +936,27 @@ export interface paths {
         /**
          * "To rate" queue: cars `user` (default owner) has not rated that pass the profile's hard filters, ranked
          * @description Eligible = no verdict from `user`; status not closed/dropped/bought; at least one live listing; and every
-         *     `search` hard filter of the profile: `year_min`, `price.max_eur`, `km_max`, `countries`, `exclude_regions`
-         *     (+ `exclude_places`), `powertrain`, and each `hard_filters` rule (field min/max, fact words, flags). A missing
-         *     value passes (shown as `? year` etc. in `why`). `GET /profile` lists the effective rules.
+         *     `search` hard filter of the profile: `year_min`, `price.max_eur` (+ `price.min_eur`), `km_max`, `countries`,
+         *     `exclude_regions` (ISO 3166-2, matched on the city; a known car country must be the region's) + `exclude_places`,
+         *     `powertrain` (fuels), and each `hard_filters` rule: `field` min/max; `fact`/`facts` + min/max (first number),
+         *     `words` (folded whole words) or `mentions_country` (country names in EU languages), or truthy; `flag` = a truthy
+         *     fact of that name or a `price_flags` entry of the car's price listing. A missing value passes (shown as `? year`
+         *     etc. in `why`). `GET /profile` lists the effective rules.
          *
-         *     Tier = first `search.models` entry whose family + `when` conditions match (else `search.default_tier`, default 3).
-         *     Score (see DESIGN.md "Ranking"): peer-group fair landed price (median of per-country medians) → value;
-         *     option/age/km/seller fit; missing-evidence and red-flag risk; `score = w.value·value·fit − w.risk·risk`.
-         *     Order: tier asc; good_deal first; deal_rank (`T<tier>-<n>`, parsed, unparseable, missing); score desc;
-         *     landed asc (missing last); created_at desc; id desc.
+         *     Tier = first `search.models` entry whose family + `when` conditions match (else `search.default_tier`).
+         *     Ranking (DESIGN.md "Ranking"; every constant is a `search.ranking` key):
+         *     - landed = price + trip + registration + VAT reserve. Market home = car country == owner.home.country (unknown
+         *       country counts as home). Distance = car distance (stored, else lat/lon estimate), else
+         *       `landed_cost.default_distance_km[country]`, else great-circle to the country centroid × road_factor (+ risk).
+         *     - Peers: pool = live, priced (no price_flags), in scope (price cap aside), no VAT reserve, not closed/dropped,
+         *       minus outliers;
+         *       ladder family+trim+year+km band (n ≥ 8) → +year (6) → +trim (3) → family (3), wider steps adjusted for
+         *       year/km. fair = median of per-country medians (rounded to 50); value = 50 + 2·clamp(gap %, −15, 20).
+         *     - fit = base_fit + weights.fit × Σ terms (options_wanted ± weight × option_unit, penalties, seller, home market,
+         *       age, km, history facts): weights.fit scales the terms around base_fit, never base_fit itself.
+         *     - risk = Σ missing-evidence / warning points; `score = weights.value·value·fit − weights.risk·risk`.
+         *     Order: tier asc; good_deal first; deal_rank (`T<tier>-<n>`, parsed, unparseable, missing); score desc
+         *     (missing last); landed asc (missing last); created_at desc; id desc.
          */
         get: {
             parameters: {
@@ -944,7 +965,7 @@ export interface paths {
                     tier?: string[];
                     /** @description profile `must_have` options: confirmed = all yes; unknown = none is no, at least one unknown. Applies to total and counts too. 400 on another value or when the profile has no must_have. */
                     spec?: "confirmed" | "unknown";
-                    /** @description whose verdict to show/filter/set (a GET /profile user name); default owner */
+                    /** @description whose verdict to show/filter/set (a GET /profile user name, case-insensitive); default owner. Unknown: 400 on reads, 422 on verdict writes */
                     user?: components["parameters"]["user"];
                     limit?: number;
                     offset?: number;
@@ -964,6 +985,7 @@ export interface paths {
                         "application/json": components["schemas"]["Queue"];
                     };
                 };
+                /** @description bad tier/spec/user, or spec without search.must_have */
                 400: components["responses"]["Error"];
             };
         };
@@ -1545,6 +1567,8 @@ export interface paths {
         /**
          * Create or update a listing by URL (idempotent). Main entry point for agents/imports.
          * @description - URL is normalized (scheme/host lowercased, tracking params and fragment dropped, site ad id extracted).
+         *     - Different known make, model family or fuel (mhev is compatible with petrol/diesel/hev) means a different car:
+         *       never linked or proposed unless VIN or plate match.
          *     - New listing → dedupe against existing cars: a *certain* match (same VIN, same plate, same private-seller
          *       phone + same model, or ≥2 distinctive matching photos with agreeing make/model/specs on a car that is not closed — see
          *       DESIGN.md § Dedupe) attaches the listing to that car (`linked_by`); otherwise a new car
@@ -1669,7 +1693,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Change listing status (live/removed/sold) or price (price sanity as on upsert) */
+        /** Change listing status (live/removed/sold) or price (price sanity as on upsert; a `price_vat` alone re-checks the stored price) */
         patch: {
             parameters: {
                 query?: never;
@@ -2032,7 +2056,7 @@ export interface components {
         /** @enum {string} */
         OptionValue: "yes" | "no" | "unknown";
         /**
-         * @description `owner` = the human buyer said so (strongest); legacy `owner` is read as owner
+         * @description `owner` = the human buyer said so (strongest). Default source when the author is the owner. Rows whose source equals the owner's name (EV-era data) are rewritten to `owner` at startup.
          * @enum {string}
          */
         EvidenceSource: "ad_text" | "ad_spec" | "photo" | "vin_pr_code" | "vin_decoder" | "seller_said" | "inspection" | "agent_inference" | "owner";
@@ -2222,7 +2246,7 @@ export interface components {
             status_reason?: string | null;
             /** @description verdict of `?user=` (default owner) */
             verdict?: components["schemas"]["Verdict"];
-            /** @description user name → verdict, every user who rated */
+            /** @description user name → verdict, every current user who rated (`{}` when none) */
             verdicts?: {
                 [key: string]: components["schemas"]["Verdict"];
             };
@@ -2482,7 +2506,7 @@ export interface components {
             id?: number;
             car_id?: number;
             listing_id?: number | null;
-            /** @description known: created, status_change, price_change, listing_added, listing_removed, listing_relisted, spec_change, option_change, fact_change, verdict, good_deal (data {from, to, note}), vin_check, report, visit, call, merge, split, duplicate_proposed, note (written on note creation; data {note_id}), message_deleted / message_restored (data {message_id, channel, direction, at, dedupe_key, reason}) (custom types allowed) */
+            /** @description known: created, status_change, price_change, listing_added, listing_removed, listing_relisted, spec_change, option_change, fact_change, verdict (data {user, from, to, note}; summary prefixed `<viewer>: ` for a viewer), good_deal (data {from, to, note}), vin_check, report, visit, call, merge, split, duplicate_proposed, note (written on note creation; data {note_id}), message_deleted / message_restored (data {message_id, channel, direction, at, dedupe_key, reason}), price_sanity_override (data {reason, reasons, price, listing_id}) (custom types allowed) */
             type?: string;
             /** Format: date-time */
             at?: string;
@@ -2655,9 +2679,9 @@ export interface components {
             score: number | null;
             /** @description 50 + 2·clamp(gap_pct, −15, 20) (20…90); 50 when there is no peer group */
             value: number | null;
-            /** @description search.fit: base per family + option weights + age/km/seller/history terms (3 decimals) */
+            /** @description base_fit (search.models entry, else ranking.fit.base_default) + weights.fit × Σ terms (options_wanted, penalties, seller, home market, age, km, history facts); 3 decimals */
             fit: number;
-            /** @description missing evidence + unknown must-haves + thin peer group + red flags + model risk (2 decimals) */
+            /** @description ranking.risk points: unknown must-have/top wanted options, no VIN/service/owners/accidents/health fact, distance unknown, reseller, VAT reserve, thin peers, wide spread, model risk, red flags, forced price (2 decimals) */
             risk: number;
             /** @description top contributors, e.g. `no VIN +0.8` */
             risk_reasons?: string[];
@@ -2679,11 +2703,11 @@ export interface components {
              * @example 8.4
              */
             price_gap_pct: number | null;
-            /** @description numeric `trim_score` fact if present, else Σ search.options_wanted weights (yes +w, no −w) */
+            /** @description numeric `trim_score` fact if present, else Σ search.options_wanted weights (yes +w, no −w) − penalty weights hit (1 decimal) */
             trim_score: number;
             /** @enum {string} */
             trim_score_source: "fact" | "options";
-            /** @description one line (≤ 160 chars): good-deal note, else known wanted options, gap and unknowns */
+            /** @description one line (≤ 160 chars): good-deal note, else wanted options known yes/no (by weight), penalties hit, gap vs fair_basis, unknown must-haves and core fields */
             why: string;
         };
         ModelFamilies: {
@@ -2758,8 +2782,8 @@ export interface components {
                 home?: {
                     city?: string;
                     country?: string;
-                    lat?: number;
-                    lon?: number;
+                    lat?: number | null;
+                    lon?: number | null;
                 };
             };
             users: {
@@ -2792,6 +2816,10 @@ export interface components {
             };
             /** @description canonical family names (built-in table + search.families + search.models) */
             families?: string[];
+            /** @description effective search.ranking (peers, landed_cost, vat_reserve, fit, risk) with defaults applied */
+            ranking?: Record<string, never>;
+            /** @description config problems that did not stop the server (unknown keys, unknown option names) */
+            warnings?: string[];
         };
     };
     responses: {
@@ -2839,7 +2867,7 @@ export interface components {
     parameters: {
         /** @description car id or alias */
         car: string;
-        /** @description whose verdict to show/filter/set (a GET /profile user name); default owner */
+        /** @description whose verdict to show/filter/set (a GET /profile user name, case-insensitive); default owner. Unknown: 400 on reads, 422 on verdict writes */
         user: string;
         /** @description "<version>" from GET /cars/{car} ETag; stale → 412 */
         ifMatch: string;
