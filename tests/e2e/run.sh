@@ -25,7 +25,8 @@ if [ -z "${_E2E_INNER:-}" ]; then
   # Node: E2E_NODE_BIN, else Homebrew's keg-only node@22, else the newest nvm Node, else node on PATH (each >= 22.19)
   NODE_BIN=
   cands=("${E2E_NODE_BIN:-}")
-  command -v brew >/dev/null && cands+=("$(brew --prefix node@22 2>/dev/null)/bin")   # version-checked below
+  keg="$(command -v brew >/dev/null && brew --prefix node@22 2>/dev/null || true)/bin"
+  "$keg/node" -v 2>/dev/null | grep -q '^v22\.' && cands+=("$keg")   # only a real Node 22 (opt link can be stale)
   for d in $(ls -d "$REAL_HOME"/.nvm/versions/node/v*/bin 2>/dev/null | sort -rV); do cands+=("$d"); done
   command -v node >/dev/null && cands+=("$(dirname "$(command -v node)")")
   for d in "${cands[@]}"; do [ -n "$d" ] && node_ok "$d" && { NODE_BIN=$d; break; }; done
