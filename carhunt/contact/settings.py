@@ -8,7 +8,6 @@ import copy
 from typing import Any
 
 DEFAULTS: dict[str, Any] = {
-    "variant": "home",  # home (private sellers, home market) | abroad (dealers abroad)
     # No sends at all (owner tz). Why: nobody answers at night; night sends look like a bot.
     "quiet_hours": "01:30-08:10",
     # First messages only in this window, seller-local time (tz by phone prefix / car country).

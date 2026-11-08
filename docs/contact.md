@@ -107,10 +107,9 @@ Not shipped: marktplaats.nl / 2dehands (no sender ever worked; messaging needs a
 - Email `--to` forms: `addr` (replies into the latest thread with that address, else new thread: needs `--subject`), `addr#THREAD`, `#THREAD`. Errors before the request are retried ×3; after it, Sent is checked by Message-ID, never re-sent.
 
 ## Config (`contact:` section — for config.example.yaml)
-Replaces the skeleton's `caps:` key. Every key has a default (`carhunt/contact/settings.py`); set only what differs.
+Replaces the skeleton's `caps:` key. Every key has a default (`carhunt/contact/settings.py`); set only what differs. Home vs abroad is the role name (`outreach-home` | `outreach-abroad`, picked at launch), not a config key.
 ```yaml
 contact:
-  variant: home                 # home (private sellers, home market) | abroad (dealers abroad): picks the role-brief section
   quiet_hours: "01:30-08:10"    # owner tz, no sends at all
   opener_window: "09:30-21:30"  # seller-local
   seller_hours:                 # seller-local; nudges + channels with seller_hours: true

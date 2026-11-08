@@ -1,5 +1,5 @@
 {
-  "_comment": "Merge `hooks` into ~/.claude/settings.json (render with `carhunt browser mcp-config --hooks`, which fills __REPO__). Identity lease: one holder per identity browser, released after idle; Claude Code only (Codex/opencode have no hooks, so no lease there).",
+  "_comment": "`carhunt hooks install` merges `hooks` into the agent-only settings $CARHUNT_HOME/claude/settings.json (passed to agents via `claude --settings`; never ~/.claude/settings.json). Preview: `carhunt browser mcp-config --hooks` (fills __REPO__). Identity lease: one holder per identity browser, released after idle; Claude Code only (Codex/opencode have no hooks, so no lease there).",
   "hooks": {
     "PreToolUse": [
       {"matcher": "mcp__ch-identity(-[a-h])?__.*",

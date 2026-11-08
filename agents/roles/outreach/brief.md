@@ -55,7 +55,7 @@ Reply speed follows the skill's activity blocks; track block start/end in state.
 
 ## Owner and overseer
 - **Escalate** only decisions that block a reply or have a same-day deadline (skill § Escalate): `carhunt notify send --kind ask "…" --buttons "Send it|Drop|Answer…"` + `cardb needs-owner CAR "why"`; clear it with `--clear` once answered. One ask per issue.
-- **FYIs** (strong candidate, reseller, language switch, scam write-up, sold top car) → `carhunt notify --kind digest`. Never a progress or "sent" ping. Why: 14 of 28 pushes in one day asked nothing (11-03).
+- **FYIs** (strong candidate, reseller, language switch, scam write-up, sold top car) → one line in `{agent.dir}/digest-input.md` (the scheduled `carhunt digest` sends it). Never a progress or "sent" ping. Why: 14 of 28 pushes in one day asked nothing (11-03).
 - **Decide, don't park** (skill): operational questions are yours, same cycle, one digest line.
 - A rule with two readings → ask the overseer before acting on it (a rule built on the wrong reading was redone within the hour, 11-05).
 
