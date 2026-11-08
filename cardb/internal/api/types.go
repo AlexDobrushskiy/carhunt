@@ -3,9 +3,32 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"time"
 )
+
+// CarRef is a car id or alias on input; a JSON number id is accepted as well as a string
+// (clients hold ids as numbers: `car_id` in every response).
+type CarRef string
+
+func (r *CarRef) UnmarshalJSON(b []byte) error {
+	b = bytes.TrimSpace(b)
+	if len(b) > 0 && b[0] != '"' && !bytes.Equal(b, []byte("null")) {
+		var n json.Number
+		if err := json.Unmarshal(b, &n); err != nil {
+			return err
+		}
+		*r = CarRef(n.String())
+		return nil
+	}
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+	*r = CarRef(s)
+	return nil
+}
 
 var Statuses = []string{"new", "to_contact", "contacted", "talking", "ready_to_visit", "visited", "closed", "dropped", "bought"}
 
@@ -275,7 +298,7 @@ type ListingUpsert struct {
 	Force         bool                   `json:"force,omitempty"`     // store a price that fails the sanity check (flagged)
 	ListingStatus string                 `json:"listing_status,omitempty"`
 	SeenAt        *time.Time             `json:"seen_at,omitempty"`
-	Car           string                 `json:"car,omitempty"`
+	Car           CarRef                 `json:"car,omitempty"`
 	Slug          string                 `json:"slug,omitempty"`
 	Aliases       []string               `json:"aliases,omitempty"`
 	Summary       string                 `json:"summary,omitempty"`
@@ -430,7 +453,8 @@ type MessageDuplicate struct {
 }
 
 type MessageInput struct {
-	Car         string       `json:"car,omitempty"`
+	Car         CarRef       `json:"car,omitempty"`
+	CarID       *int64       `json:"car_id,omitempty"` // alias of car (the Message shape); car wins
 	ListingURL  string       `json:"listing_url,omitempty"`
 	Counterpart string       `json:"counterpart,omitempty"`
 	Channel     string       `json:"channel"`

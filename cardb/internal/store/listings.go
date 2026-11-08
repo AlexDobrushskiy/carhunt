@@ -412,7 +412,7 @@ func (s *Store) UpsertListing(ctx context.Context, in api.ListingUpsert, photos 
 			res.ListingCreated = true
 			var linkedBy string
 			if in.Car != "" {
-				if carID, err = resolveCar(tx, in.Car); err != nil {
+				if carID, err = resolveCar(tx, string(in.Car)); err != nil {
 					return err
 				}
 				linkedBy = "car_param"
@@ -623,9 +623,15 @@ func (s *Store) GetListing(ctx context.Context, id int64) (*api.Listing, error) 
 }
 
 // FindListings handles GET /listings.
-func (s *Store) FindListings(ctx context.Context, rawURL, site, status string) ([]api.Listing, error) {
+// siteRef matches the stored listing.site_ref, which cardb derives from the URL (it can differ from a
+// site's internal data id, e.g. StandVirtual / OLX).
+func (s *Store) FindListings(ctx context.Context, rawURL, site, siteRef, status string) ([]api.Listing, error) {
 	where := []string{"1 = 1"}
 	var args []any
+	if siteRef = strings.TrimSpace(siteRef); siteRef != "" {
+		where = append(where, "site_ref = ?")
+		args = append(args, siteRef)
+	}
 	if rawURL != "" {
 		nu, err := NormalizeURL(rawURL)
 		if err != nil {
