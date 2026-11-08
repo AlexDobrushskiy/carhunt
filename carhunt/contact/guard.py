@@ -109,7 +109,7 @@ def norm_target(to: str, kind: str) -> str:
     if kind == "chat":
         return digits(to)
     if kind == "email":
-        return to.strip().lower()
+        return to.strip().lower().partition("#")[0]  # 'addr#thread' → addr
     return to.strip()
 
 

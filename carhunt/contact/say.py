@@ -112,10 +112,11 @@ def thread_from_cardb(db: deps.Cardb | None, car: dict[str, Any] | None, channel
 
 def run(*, channel: str, text: str, car: str | None = None, to: str | None = None, mode: str = guard.REPLY,
         dry_run: bool = False, cfg: dict[str, Any] | None = None, db: deps.Cardb | None = None,
-        ch: Channel | None = None, ledger: Ledger | None = None, use_db: bool = True) -> Outcome:
+        ch: Channel | None = None, ledger: Ledger | None = None, use_db: bool = True,
+        channel_opts: dict[str, Any] | None = None) -> Outcome:
     cfg = cfg if cfg is not None else deps.load_config()
     s = contact_settings(cfg)
-    ch = ch or get_channel(channel, cfg)
+    ch = ch or get_channel(channel, cfg, **(channel_opts or {}))
     if db is None and use_db:
         db = deps.Cardb.from_config(cfg)
     ledger = ledger or Ledger()

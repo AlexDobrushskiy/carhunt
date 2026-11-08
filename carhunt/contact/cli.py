@@ -27,8 +27,10 @@ def _say(a: argparse.Namespace) -> int:
     else:
         text = a.text or ""
     mode = guard.OPENER if a.opener else guard.NUDGE if a.nudge else guard.APPROVED if a.approved else guard.REPLY
+    opts = {k: v for k, v in (("subject", a.subject), ("new_thread", a.new_thread or None),
+                              ("attach", a.attach or None)) if v}
     o = say.run(channel=a.channel, text=text, car=a.car, to=a.to, mode=mode, dry_run=a.dry_run,
-                use_db=not a.no_db)
+                use_db=not a.no_db, channel_opts=opts)
     say.print_outcome(o, a.json, a.dry_run)
     return o.code
 
@@ -42,15 +44,17 @@ def _watch(a: argparse.Namespace) -> int:
 def _mailroute(a: argparse.Namespace) -> int:
     from . import deps, mailroute
 
-    cfg = deps.load_config()
-    if a.filters:
-        print(mailroute.filters_xml(cfg, mailroute.known_addresses(cfg) if hasattr(mailroute, "known_addresses") else []))
-        return 0
-    if a.launchd:
-        print(mailroute.launchd_plist(cfg))
-        return 0
     from .gmail import Gmail
     from .ledger import Ledger
+
+    cfg = deps.load_config()
+    if a.filters:
+        k = mailroute.known(cfg, db=deps.Cardb.from_config(cfg), ledger=Ledger())
+        print(mailroute.filters_xml(cfg, sorted(k["addrs"])))
+        return 0
+    if a.launchd:
+        print(mailroute.launchd_plist(cfg, deep=a.deep))
+        return 0
 
     res = mailroute.run_once(cfg, gmail=Gmail.from_config(cfg), db=deps.Cardb.from_config(cfg), ledger=Ledger(),
                              window=a.window, dry_run=a.dry_run)
@@ -102,6 +106,9 @@ def register(sub: Any) -> None:
     p.add_argument("--nudge", action="store_true", help="the one follow-up after our unanswered message")
     p.add_argument("--approved", action="store_true", help="owner approved this exact text")
     p.add_argument("--dry-run", action="store_true", help="guard decision + payload; nothing leaves the machine")
+    p.add_argument("--subject", help="email: subject for a new thread")
+    p.add_argument("--new-thread", action="store_true", help="email: start a new thread")
+    p.add_argument("--attach", action="append", help="email: file to attach (repeatable)")
     p.add_argument("--no-db", action="store_true", help="don't use cardb (tests)")
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=_say)
@@ -120,6 +127,7 @@ def register(sub: Any) -> None:
     p.add_argument("--dry-run", action="store_true")
     p.add_argument("--filters", action="store_true", help="print Gmail filter XML for import")
     p.add_argument("--launchd", action="store_true", help="print a launchd plist (every 3 min)")
+    p.add_argument("--deep", action="store_true", help="with --launchd: the daily 60-day pass")
     p.set_defaults(func=_mailroute)
 
     p = sub.add_parser("ledger", help="show the send ledger / reconcile it into cardb")
