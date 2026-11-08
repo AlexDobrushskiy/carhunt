@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "carhunt"
+version = "0.1.0"
+description = "Find, vet, contact and buy a used car with Claude Code agents"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "Proprietary" }
+# core runtime deps are always installed: every CLI group needs config + secrets
+dependencies = ["pyyaml>=6", "jsonschema>=4.20", "requests>=2.31"]
+
+[project.optional-dependencies]
+core = ["pyyaml>=6", "jsonschema>=4.20", "requests>=2.31"]
+browsers = ["playwright", "camoufox", "opencv-python-headless", "pillow", "numpy"]
+sites = ["cryptography", "beautifulsoup4"]
+discover = ["imagehash", "pillow"]
+contact = ["google-api-python-client", "google-auth-oauthlib"]
+vet = ["markdown"]
+dev = ["pytest>=8", "pytest-cov", "ruff"]
+all = ["carhunt[core,browsers,sites,discover,contact,vet]"]
+
+[project.scripts]
+carhunt = "carhunt.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["carhunt*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.json", "*.yaml", "*.md"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --import-mode=importlib"
+markers = ["macos: needs macOS (Keychain)"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = ["B008"]
