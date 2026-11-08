@@ -1,0 +1,3 @@
+# Synthetic fixture for carhunt/access tests (not a real site).
+name: sesscap.example.invalid
+pace: {min_gap_s: 0, per_hour: 1, max_loads_per_run: 100}
