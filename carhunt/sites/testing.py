@@ -38,14 +38,14 @@ class FakeNet:
                 return Response(200, url, str(ans))
         raise AssertionError(f"FakeNet: no route for {url}")
 
-    def gate(self, kind: str = "load") -> None:
-        if kind == "load":
+    def gate(self, kind: str = "load", *, country: str | None = None) -> None:
+        if kind == "load" and not country:
             self.loads += 1
 
     def get(self, url: str, *, kind: str = "load", ad_id: str | None = None, check: bool = True,
-            follow: bool = True, **_: Any) -> Response:
-        self.gate(kind)
-        self.calls.append(("http", kind, url))
+            follow: bool = True, country: str | None = None, **_: Any) -> Response:
+        self.gate(kind, country=country)
+        self.calls.append((f"http@{country}" if country else "http", kind, url))
         r = self._answer(url)
         if follow and r.location and 300 <= r.status < 400:
             r = Response(200, url, self._answer(r.location).text, final_url=r.location)

@@ -55,6 +55,7 @@
         "gone_redirect": {"type": "string"},
         "gone_text": {"type": "string"},
         "sold_text": {"type": "string"},
+        "proxy_country": {"type": "string", "pattern": "^[A-Z]{2}$", "description": "priority checks via this exit when the home pace budget is used up"},
         "evidence": {"type": "string"}
       }
     },

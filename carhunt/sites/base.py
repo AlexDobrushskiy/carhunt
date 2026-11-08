@@ -106,12 +106,13 @@ class BaseSite:
         endpoint (pace kind `phone`, day cap from site.yaml); never used in tests or dry runs."""
         return list(ad.phones)
 
-    def is_live(self, url: str) -> Liveness:
-        """Default: one read without following redirects, classified by `carhunt.sites.live` + site.yaml markers."""
+    def is_live(self, url: str, *, country: str | None = None) -> Liveness:
+        """Default: one read without following redirects, classified by `carhunt.sites.live` + site.yaml markers.
+        `country`: check through that country's proxy exit (site.yaml `liveness.proxy_country`)."""
         if not self.meta.get("liveness", {}).get("supported", True):
             raise Unsupported(f"{self.id}: no liveness check")
         from carhunt.sites import live
-        return live.check(self, url)
+        return live.check(self, url, country=country)
 
     def close(self) -> None:
         self.net.close()

@@ -133,9 +133,11 @@ class Net:
         self._page: Any = None
 
     # --- pacing ------------------------------------------------------------
-    def gate(self, kind: str = "load") -> None:
-        """Take a slot before the request (a 403 still costs the slot: the site counted it)."""
-        if kind == "load" and self.max_loads and self.loads >= int(self.max_loads):
+    def gate(self, kind: str = "load", *, country: str | None = None) -> None:
+        """Take a slot before the request (a 403 still costs the slot: the site counted it).
+        A country route has its own exit IP, so it is paced on its own ledger key (`<site>@<CC>`)."""
+        key = f"{self.site}@{country}" if country else self.site
+        if kind == "load" and not country and self.max_loads and self.loads >= int(self.max_loads):
             raise PaceExceeded(self.site, kind, reason=f"max_loads_per_run={self.max_loads}")
         try:
             from carhunt.access import pace as shared
@@ -145,7 +147,7 @@ class Net:
             deadline = time.monotonic() + MAX_PACE_WAIT_S
             while True:
                 try:
-                    shared.acquire(self.site, kind)
+                    shared.acquire(key, kind)
                     break
                 except PaceExceeded as e:
                     if e.retry_at is None:
@@ -160,7 +162,7 @@ class Net:
             if wait > 0:
                 time.sleep(wait)
         self._last = time.monotonic()
-        if kind == "load":
+        if kind == "load" and not country:
             self.loads += 1
 
     def _proxy(self, country: str | None) -> str | None:
@@ -176,7 +178,7 @@ class Net:
     def get(self, url: str, *, kind: str = "load", accept: str = HTML, follow: bool = True, ad_id: str | None = None,
             headers: dict[str, str] | None = None, country: str | None = None, data: bytes | None = None,
             method: str | None = None, check: bool = True) -> Response:
-        self.gate(kind)
+        self.gate(kind, country=country)
         h = {"Accept": accept, "Accept-Language": self.meta.get("accept_language", "en-US,en;q=0.8")}
         h.update(headers or {})
         r = http(url, headers=h, follow=follow, proxy=self._proxy(country), data=data, method=method)

@@ -71,19 +71,20 @@ def to_liveness(site: str, url: str, verdict: str, signal: str, moved: str | Non
     return Liveness("unknown", signal)
 
 
-def check(site: BaseSite, url: str) -> Liveness:
-    """Default is_live: one read-only GET without following redirects (HTTP route) or one in-tab fetch."""
+def check(site: BaseSite, url: str, *, country: str | None = None) -> Liveness:
+    """Default is_live: one read-only GET without following redirects (HTTP route, or via a `country` exit) or
+    one in-tab fetch (browser routes)."""
     rules = site.meta.get("liveness") or {}
     aid = site.ad_id(url)
-    if site.meta.get("route", "http") == "http":
-        r: Response = site.net.get(url, follow=False, check=False, ad_id=aid)
+    if country or site.meta.get("route", "http") == "http":
+        r: Response = site.net.get(url, follow=False, check=False, ad_id=aid, country=country)
         final = r.location
     else:
         r = site.net.browser_get(url, mode=rules.get("mode", "fetch"), check=False, ad_id=aid)
         final = r.final_url
     v, sig = classify(url, r.status, final, hint_of(r.text, aid, rules), rules=rules, ad_id=site.ad_id)
     if v == "follow" and final:   # AS24 308: same ad, new slug → check the new URL once
-        r2 = site.net.get(final, follow=False, check=False, ad_id=aid)
+        r2 = site.net.get(final, follow=False, check=False, ad_id=aid, country=country)
         v, sig2 = classify(final, r2.status, r2.location, hint_of(r2.text, aid, rules), rules=rules, ad_id=site.ad_id)
         return to_liveness(site.id, url, "unknown" if v == "follow" else v, f"moved→{sig2}", moved=final)
     return to_liveness(site.id, url, v, sig)
