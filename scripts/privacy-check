@@ -1,0 +1,214 @@
+#!/usr/bin/env python3
+"""Block private data from entering the repo.
+
+Checks (in order):
+  1. gitleaks, if installed (secrets: tokens, keys).
+  2. External denylist: one term per line, case-insensitive substring
+     (real names, numbers, hosts...). Lives OUTSIDE the repo; matches are
+     reported by line number in the denylist, never by the term itself.
+  3. Built-in regexes: phones, emails, IBANs, VINs, API-key shapes,
+     absolute home paths.
+
+Modes:
+  privacy-check            staged changes (pre-commit hook default)
+  privacy-check --all      every tracked + untracked-not-ignored file
+  privacy-check --history  every commit (diffs + messages) on all refs
+  privacy-check FILE...    the given files
+  privacy-check --message F  a commit message file (commit-msg hook)
+
+Denylist path: $CARHUNT_DENYLIST, else ~/.config/carhunt/privacy-denylist.txt.
+Allow a line: put `privacy-check: allow` on it (use for synthetic fixtures only).
+Synthetic values that always pass: VINs starting with "SYN", phones with
+"555" after the country code or made of 0s, IBANs of all 0s, emails on example.* / *.test /
+*.invalid / localhost.
+"""
+import os
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+ALLOW_MARK = "privacy-check: allow"
+SKIP_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".pdf",
+                 ".woff", ".woff2", ".ttf", ".zip", ".gz", ".sum"}
+SKIP_NAMES = {"go.sum", "package-lock.json", "pnpm-lock.yaml", "uv.lock"}
+SELF = "scripts/privacy-check"
+
+PATTERNS = [
+    ("phone", re.compile(r"(?<![\w.])\+\d{1,3}[ .-]?\(?\d{2,4}\)?(?:[ .-]?\d{2,4}){2,4}(?!\w)")),
+    ("email", re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")),
+    ("iban", re.compile(r"\b[A-Z]{2}\d{2}(?: ?[A-Z0-9]{4}){3,7}(?: ?[A-Z0-9]{1,4})?\b")),
+    ("vin", re.compile(r"\b(?=[A-HJ-NPR-Z0-9]*\d)(?=[A-HJ-NPR-Z0-9]*[A-HJ-NPR-Z])[A-HJ-NPR-Z0-9]{17}\b")),
+    ("anthropic-key", re.compile(r"sk-ant-[A-Za-z0-9_-]{20,}")),
+    ("openai-key", re.compile(r"\bsk-(?:proj-)?[A-Za-z0-9_-]{32,}")),
+    ("github-token", re.compile(r"\b(?:ghp|gho|ghs|ghu|ghr)_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{40,}")),
+    ("aws-key", re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
+    ("google-key", re.compile(r"\bAIza[0-9A-Za-z_-]{35}\b")),
+    ("google-oauth-secret", re.compile(r"\bGOCSPX-[A-Za-z0-9_-]{20,}")),
+    ("slack-token", re.compile(r"\bxox[abposr]-[A-Za-z0-9-]{10,}")),
+    ("telegram-bot-token", re.compile(r"\b\d{8,10}:[A-Za-z0-9_-]{35}\b")),
+    ("jwt", re.compile(r"\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}")),
+    ("private-key", re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----")),
+    ("home-path", re.compile(r"/(?:Users|home)/(?!runner\b|user\b|you\b|me\b|<)[a-z][a-z0-9._-]+/")),
+]
+
+EMAIL_OK = re.compile(r"@(?:[\w.-]+\.)?(?:example\.(?:com|org|net)|[\w-]+\.test|[\w-]+\.invalid|localhost)\b"
+                      r"|^git@github\.com$|noreply", re.I)
+
+
+def synthetic(kind: str, value: str) -> bool:
+    if kind == "email":
+        return bool(EMAIL_OK.search(value))
+    if kind == "vin":
+        return value.startswith("SYN")
+    if kind == "phone":
+        digits = re.sub(r"\D", "", value)
+        return "555" in digits[:6] or set(digits[3:]) <= {"0"} or len(digits) < 9
+    if kind == "iban":
+        return set(re.sub(r"\D", "", value)[2:]) <= {"0"}
+    return False
+
+
+def load_denylist():
+    path = Path(os.environ.get("CARHUNT_DENYLIST",
+                               "~/.config/carhunt/privacy-denylist.txt")).expanduser()
+    if not path.is_file():
+        return path, []
+    terms = []
+    for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        t = line.strip()
+        if t and not t.startswith("#"):
+            terms.append((n, t.lower()))
+    return path, terms
+
+
+def git(*args, check=True) -> str:
+    return subprocess.run(["git", *args], capture_output=True, text=True,
+                          check=check).stdout
+
+
+def scan_text(label: str, text: str, terms, findings):
+    for i, line in enumerate(text.splitlines(), 1):
+        if ALLOW_MARK in line:
+            continue
+        low = line.lower()
+        for n, t in terms:
+            if t in low:
+                findings.append(f"{label}:{i}: denylist term #{n}")
+        for kind, rx in PATTERNS:
+            for m in rx.finditer(line):
+                if not synthetic(kind, m.group(0)):
+                    findings.append(f"{label}:{i}: {kind}")
+                    break
+
+
+def skip(path: str) -> bool:
+    p = Path(path)
+    return path == SELF or p.name in SKIP_NAMES or p.suffix.lower() in SKIP_SUFFIXES
+
+
+def staged_items():
+    names = git("diff", "--cached", "--name-only", "--diff-filter=ACMR", "-z").split("\0")
+    for name in filter(None, names):
+        if skip(name):
+            continue
+        # Only added lines matter; scanning the staged blob would also be fine
+        # but diff lines keep reports focused on what this commit introduces.
+        diff = git("diff", "--cached", "-U0", "--", name)
+        added = "\n".join(l[1:] for l in diff.splitlines()
+                          if l.startswith("+") and not l.startswith("+++"))
+        yield name + " (staged)", added
+    # Names themselves can leak (e.g. fixtures named after a seller).
+    yield "<staged file names>", "\n".join(filter(None, names))
+
+
+def tree_items(files=None):
+    if files is None:
+        files = git("ls-files", "-co", "--exclude-standard", "-z").split("\0")
+    for name in filter(None, files):
+        if skip(name) or not Path(name).is_file():
+            continue
+        try:
+            yield name, Path(name).read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+    yield "<file names>", "\n".join(filter(None, files))
+
+
+def history_items():
+    for sha in git("rev-list", "--all").split():
+        msg = git("log", "-1", "--format=%an <%ae>%n%cn <%ce>%n%B", sha)
+        yield f"commit {sha[:10]} message", msg
+        patch = git("show", "--format=", "-U0", "--no-color", sha)
+        cur = "?"
+        added = []
+        for l in patch.splitlines():
+            if l.startswith("+++ b/"):
+                if added and not skip(cur):
+                    yield f"commit {sha[:10]} {cur}", "\n".join(added)
+                cur, added = l[6:], []
+            elif l.startswith("+") and not l.startswith("+++"):
+                added.append(l[1:])
+        if added and not skip(cur):
+            yield f"commit {sha[:10]} {cur}", "\n".join(added)
+
+
+def run_gitleaks(mode: str) -> bool:
+    if not shutil.which("gitleaks"):
+        print("privacy-check: gitleaks not installed (brew install gitleaks) - regex+denylist only",
+              file=sys.stderr)
+        return True
+    base = ["gitleaks", "--no-banner", "--redact", "--log-level", "error"]
+    if mode == "staged":
+        cmd = base[:1] + ["git", "--pre-commit", "--staged"] + base[1:]
+    elif mode == "history":
+        cmd = base[:1] + ["git"] + base[1:]
+    else:
+        cmd = base[:1] + ["dir", "."] + base[1:]
+    r = subprocess.run(cmd)
+    return r.returncode == 0
+
+
+def main(argv):
+    root = git("rev-parse", "--show-toplevel").strip()
+    os.chdir(root)
+    if argv[:1] == ["--message"]:
+        path, terms = load_denylist()
+        findings = []
+        scan_text("commit message", Path(argv[1]).read_text(encoding="utf-8"), terms, findings)
+        for f in findings:
+            print("privacy-check: " + f, file=sys.stderr)
+        return 1 if findings else 0
+    if "--history" in argv:
+        mode, items = "history", history_items()
+    elif "--all" in argv:
+        mode, items = "all", tree_items()
+    elif argv:
+        mode, items = "files", tree_items(argv)
+    else:
+        mode, items = "staged", staged_items()
+
+    path, terms = load_denylist()
+    if not terms:
+        print(f"privacy-check: no denylist at {path} - set CARHUNT_DENYLIST "
+              "(see docs/privacy.md)", file=sys.stderr)
+
+    findings = []
+    for label, text in items:
+        scan_text(label, text, terms, findings)
+    leaks_ok = run_gitleaks(mode)
+
+    if findings:
+        print("privacy-check: possible private data:", file=sys.stderr)
+        for f in dict.fromkeys(findings):
+            print("  " + f, file=sys.stderr)
+        print(f"Fix it, or mark a synthetic line with '{ALLOW_MARK}'.", file=sys.stderr)
+    if findings or not leaks_ok:
+        return 1
+    print(f"privacy-check: clean ({mode})")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

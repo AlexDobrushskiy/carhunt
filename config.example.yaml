@@ -1,0 +1,95 @@
+# carhunt config — copy to $CARHUNT_HOME/config.yaml (bootstrap does this) and edit.
+# Worked example: a buyer in Portugal looking for a used electric SUV in PT + 7 EU countries.
+# Secrets are never written here: use `secret:NAME` and `carhunt secret set NAME`.
+# Section owners: see docs/design.md. Builders extend their section; core validates the schema.
+
+owner:
+  name: owner                 # shown in cardb/web as the human ("needs owner", author)
+  languages: [en, pt]         # languages the owner reads; sellers are answered in theirs
+  tz: Europe/Lisbon
+  home: {city: Lisbon, country: PT, lat: 38.72, lon: -9.14}
+
+search:                       # buyer profile: read by cardb (queue/ranking) and discover (scope)
+  countries: [PT, ES, FR, DE, BE, NL, LU, IT]
+  private_sellers_abroad: false   # abroad = dealers only (real-owner test is hard remotely)
+  exclude_regions: [PT-20, PT-30, ES-CN]   # islands: transport cost + paperwork
+  price: {max_eur: 40000, gross: true}     # always compare gross (incl. VAT)
+  year_min: 2021
+  km_max: 80000
+  powertrain: [BEV]
+  models:                     # make/model families; tier 1 = first to contact
+    - {make: Volkswagen, model: "ID.4", tier: 1}
+    - {make: Skoda, model: Enyaq, tier: 1}
+    - {make: Audi, model: "Q4 e-tron", tier: 2}
+    - {make: BMW, model: iX1, tier: 2}
+    - {make: Toyota, model: bZ4X, tier: 3}
+  hard_filters:
+    - {fact: battery_net_kwh, min: 70}
+    - {flag: lease_transfer, exclude: true}
+    - {flag: damaged, exclude: true}
+  options_wanted:             # key: weight (keys = cardb option vocabulary)
+    heat_pump: 3
+    pano: 2
+    camera_360: 1
+    power_tailgate: 1
+    heated_seats: 1
+  weights: {value: 1.0, fit: 1.0, risk: 1.0}
+
+cardb:
+  url: http://127.0.0.1:8484
+  token: secret:cardb_token
+  data_dir: ~/.carhunt/cardb
+
+secrets:
+  backend: keychain           # keychain | op | file   (env CARHUNT_SECRET_<NAME> always wins)
+
+notify:
+  backend: none               # telegram | stdout | none
+  telegram: {bot_token: secret:telegram_bot_token, chat_id: secret:telegram_chat_id}
+  quiet_hours: "21:30-09:30"  # pushes during these hours go silent or wait
+  digests: ["09:30", "20:00"]
+
+browsers:
+  chrome_app: /Applications/Google Chrome.app
+  identity_pool: 4            # logged-in profile copies (identity-a…d)
+  lanes: 4                    # logged-out MCP lanes (pw-lane-a…d)
+  captcha: {enabled: false}   # local solver needs Ollama + a VLM (GBs)
+
+net:
+  proxy:
+    provider: none            # decodo | none
+    credentials: secret:proxy_credentials
+
+accounts:
+  sms: {provider: none, api_key: secret:sms_api_key}
+  gmail: {oauth_client: secret:gmail_oauth_client, token: secret:gmail_token, plus_address: cars}
+
+sites:
+  enabled: [autoscout24, mobile.de, standvirtual.com, olx.pt, kleinanzeigen.de, leboncoin.fr, coches.net, wallapop.com, subito.it, marktplaats.nl]
+
+discover:
+  windows: {morning: "07:00-09:00", afternoon: "14:00-16:00"}
+
+contact:
+  channels: [whatsapp, email, site]
+  quiet_hours: "01:30-08:10"  # no sends at all
+  opener_window: "09:30-21:30"   # first messages only (seller-local time)
+  caps: {whatsapp: {per_hour: 12, openers_per_day: 15, min_gap_s: 180}}
+  persona: {signoff: "", payment_line: "Payment at handover by bank transfer, no deposit."}
+
+vet:
+  destination_country: PT     # registration/import guide used: knowledge/import/<dest>.md
+
+orchestrate:
+  session_backend: agterm
+  agent_cli: claude           # claude | codex
+  handover_ctx_pct: 50
+  schedule:
+    sweep: "07:00"
+    unpause: "08:10"
+    digest: ["09:30", "20:00"]
+    pause: "23:00"
+    learning: "23:15"
+
+privacy:
+  denylist: ~/.config/carhunt/privacy-denylist.txt

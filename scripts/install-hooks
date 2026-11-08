@@ -1,0 +1,12 @@
+#!/bin/sh
+# Wire scripts/privacy-check into git hooks (shared by all worktrees of this clone).
+set -e
+hooks=$(git rev-parse --git-path hooks)
+mkdir -p "$hooks"
+printf '#!/bin/sh\nexec "$(git rev-parse --show-toplevel)/scripts/privacy-check"\n' > "$hooks/pre-commit"
+printf '#!/bin/sh\nexec "$(git rev-parse --show-toplevel)/scripts/privacy-check" --message "$1"\n' > "$hooks/commit-msg"
+chmod +x "$hooks/pre-commit" "$hooks/commit-msg"
+echo "hooks installed in $hooks"
+[ -f "${CARHUNT_DENYLIST:-$HOME/.config/carhunt/privacy-denylist.txt}" ] \
+  || echo "note: no denylist yet - create ~/.config/carhunt/privacy-denylist.txt (see docs/privacy.md)"
+command -v gitleaks >/dev/null || echo "note: install gitleaks for secret scanning (brew install gitleaks)"

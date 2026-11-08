@@ -1,0 +1,65 @@
+# --- private / generated: never commit (see docs/privacy.md) ---
+config.yaml
+config.local.yaml
+.env
+.env.*
+!.env.example
+/secrets/
+*.secret
+*.key
+*.pem
+*.p12
+credentials*.json
+token*.json
+client_secret*.json
+cookies*.json
+storage_state*.json
+# runtime data
+/data/
+/var/
+/state/
+/runs/
+/logs/
+*.log
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+evdb-data/
+photos/
+screenshots/
+*.png
+*.jpg
+*.jpeg
+*.webp
+!docs/img/**
+!web/public/**
+!**/testdata/**
+!**/fixtures/**
+# browser profiles + session stores
+browser_profiles/
+/profiles/
+.wacli/
+user-data-dir/
+# agent session state (lives in $CARHUNT_HOME, not the repo)
+agents/*/state.json
+agents/*/log.md
+agents/*/inbox*.jsonl
+# toolchains
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.astro/
+dist/
+build/
+/bin/
+cardb/bin/
+coverage/
+playwright-report/
+test-results/
+.DS_Store
+.idea/
+.vscode/
