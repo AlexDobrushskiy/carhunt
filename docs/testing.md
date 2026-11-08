@@ -52,10 +52,10 @@ E2E_KEEP_GOING=1 E2E_PATCH=/tmp/fix.diff tests/e2e/run.sh   # try an uncommitted
 | `bootstrap2` | the same command again | re-runs are safe: the config, the cardb tokens and the agent `settings.json` stay the same |
 | `cardb` | `cardb serve` on a free port, `cardb.url` set in the config | the host binary serves; the port is configurable |
 | `compose` | (`E2E_COMPOSE=1`) `docker compose up --build cardb` on another free port | the image builds and passes its health check |
-| `doctor` | `carhunt doctor --json` | no `fail`; only the allowed warns (below) |
 | `sweep` | `carhunt sweep --sites fake --max 5` then `cardb ls` | discover → sites (fixture plugin) → cardb writes: ≥ 1 car |
 | `web-suite` | `npm run e2e` in `web/` with `CARDB_BIN` = the built cardb | the web's own Playwright suite (throwaway cardb + synthetic seed) |
-| `web-live` | build the web and start it on the swept cardb, with tokens from `carhunt secret exec` | `/health` responds, and a page shows the swept car |
+| `web-live` | build the web and start it on the swept cardb, with tokens from `carhunt secret exec` | `/health` responds, a page shows the swept car; sets `web.url` for doctor if the schema allows it |
+| `doctor` | `carhunt doctor --json` with cardb and web up | no `fail`; only the allowed warns (below) |
 | `say` | `carhunt say --channel whatsapp --car N --opener --dry-run`, with a stub `wacli` that logs its calls | guard decision + payload (exit 0 or 10); the stub logs no `send` |
 | `evidence` | `carhunt evidence N` and `--write-asks` | vet reads cardb (exit 0 = visit-ready, 4 = items missing) and writes an `ask` event |
 | `agent` | `carhunt agent launch e2e-dummy` (a user-local role, a stub `claude` that writes a marker), then `carhunt agent close` | a real agterm session starts with `CARHUNT_AGENT`/`CARHUNT_HOME`/`CARDB_AUTHOR` and closes; none is left open |
@@ -72,6 +72,7 @@ E2E_KEEP_GOING=1 E2E_PATCH=/tmp/fix.diff tests/e2e/run.sh   # try an uncommitted
 | `access: mcp servers` | the browser MCP servers run under launchd, which the e2e skips |
 | `access: identity master` | the owner's one-time site logins (`pw-identity login`) are manual |
 | `orchestrate.schedule` | the launchd day schedule is skipped in the e2e |
+| `web` | only while the config schema has no `web.url`: the e2e web runs on a free port that doctor can't be told about |
 
 Any other warn, or any fail, fails the step.
 

@@ -281,7 +281,9 @@ step_doctor() {
   carhunt doctor >"$LOGS/doctor.txt" 2>&1 || rc=$?
   carhunt doctor --json >"$LOGS/doctor.json" 2>/dev/null || true
   cat "$LOGS/doctor.txt"
-  venv python - "$LOGS/doctor.json" "${DOCTOR_ALLOWED_WARN[@]}" <<'PY'
+  local allowed=("${DOCTOR_ALLOWED_WARN[@]}")
+  [ "${WEB_URL_SET:-1}" = 1 ] || allowed+=("web")   # web runs on a free port the config can't name yet
+  venv python - "$LOGS/doctor.json" "${allowed[@]}" <<'PY'
 import json, sys
 rows = json.load(open(sys.argv[1]))
 allowed = tuple(sys.argv[2:])
@@ -337,7 +339,11 @@ step_web_live() {  # this web on the swept cardb: /health + the list page shows 
   done
   [ -n "$found" ] || die "no web page shows the swept model '$model' (tried /, /queue, /cars/$CAR_ID)"
   info "swept car '$model' visible on $found"
-  rm -rf "$CLONE/web/dist"   # holds Astro's per-build server key
+  # point doctor's web check at this port: config web.url, if the schema accepts it yet (else doctor's web warn is allowed)
+  cp "$CH/config.yaml" "$W/state/config.bak"
+  printf '\nweb:\n  url: http://127.0.0.1:%s\n' "$port" >>"$CH/config.yaml"
+  if carhunt config validate >/dev/null 2>&1; then setstate WEB_URL_SET 1; info "config web.url = 127.0.0.1:$port"
+  else cp "$W/state/config.bak" "$CH/config.yaml"; setstate WEB_URL_SET 0; info "config schema has no web.url yet: doctor's web warn allowed"; fi
 }
 
 step_say() {  # dry run decides and shows the payload; wacli is a logging stub that would record any send
@@ -426,10 +432,10 @@ run_step bootstrap  "scripts/bootstrap ${BOOT_FLAGS[*]}"             step_bootst
 run_step bootstrap2 "bootstrap again (idempotent)"                   step_bootstrap_again
 run_step cardb      "cardb serve on a free port"                     step_cardb
 run_step compose    "docker compose cardb on a free port (optional)" step_compose
-run_step doctor     "carhunt doctor: no fail, only allowed warns"    step_doctor
 run_step sweep      "carhunt sweep --sites fake --max 5 → cardb"     step_sweep
 run_step web-suite  "web Playwright suite (npm run e2e)"             step_web_suite
 run_step web-live   "web on the swept cardb: /health + car page"     step_web_live
+run_step doctor     "carhunt doctor (all up): no fail, allowed warns" step_doctor
 run_step say        "carhunt say --dry-run (no send possible)"       step_say
 run_step evidence   "carhunt evidence (+ --write-asks)"              step_evidence
 run_step agent      "carhunt agent launch in agterm, then close"     step_agent
