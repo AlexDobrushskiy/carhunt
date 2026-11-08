@@ -54,7 +54,7 @@ discover.windows.* discover.max_loads_per_site discover.max_pages discover.detai
 discover.cursor.* discover.price_sanity.max_eur discover.thin.min_photos
 discover.thin.min_info discover.heuristics discover.distance.geocoder discover.distance.router
 discover.distance.user_agent
-contact.variant contact.quiet_hours contact.opener_window contact.seller_hours.*.* contact.blocked_statuses
+contact.quiet_hours contact.opener_window contact.seller_hours.*.* contact.blocked_statuses
 contact.duplicate_prefix contact.allow_unlisted contact.require_active_agent
 contact.limits.[].name contact.limits.[].channels contact.limits.[].kind contact.limits.[].per_channel
 contact.limits.[].min_gap_s contact.limits.[].per contact.limits.[].max contact.limits.[].reserve.role
@@ -72,6 +72,7 @@ contact.mailroute.domains contact.mailroute.never_touch contact.mailroute.freema
 contact.mailroute.deep_at contact.watch.channels contact.persona.aliases contact.persona.*
 contact.sites.*.selectors.box contact.sites.*.selectors.persona_fields
 vet.destination_country vet.max_open_asks
+web.url
 orchestrate.session_backend orchestrate.mailbox orchestrate.workspace orchestrate.agent_cli
 orchestrate.agent_args.claude orchestrate.agent_args.codex orchestrate.handover_ctx_pct orchestrate.cycle_minutes
 orchestrate.digest_strong_cars orchestrate.schedule.* orchestrate.schedule_commands.*
@@ -159,7 +160,8 @@ def test_module_defaults_fit_the_schema():
 
     orch = {k: dict(v) for k, v in ORCH.items()}
     orch["notify"].pop("digests", None)  # dead key (nothing reads it; schedule.digest does the job)
-    data = {**orch, "owner": {**orch["owner"], "tz": "UTC"}, "contact": {**orch["contact"], **CONTACT},
+    contact = {k: v for k, v in CONTACT.items() if k != "variant"}  # dead: the role name sets {variant}
+    data = {**orch, "owner": {**orch["owner"], "tz": "UTC"}, "contact": {**orch["contact"], **contact},
             "browsers": browsers}
     assert config.validate(data) == []
 

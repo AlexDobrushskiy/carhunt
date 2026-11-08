@@ -1543,12 +1543,6 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "variant": {
-          "enum": [
-            "home",
-            "abroad"
-          ]
-        },
         "quiet_hours": {
           "$ref": "#/$defs/window"
         },
@@ -2070,6 +2064,17 @@
               }
             }
           }
+        }
+      }
+    },
+    "web": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "type": "string",
+          "pattern": "^https?://",
+          "description": "web UI base; `carhunt doctor` checks <url>/health (default http://127.0.0.1:4321)"
         }
       }
     }

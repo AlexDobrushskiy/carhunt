@@ -82,6 +82,9 @@ search:                       # buyer profile: cardb (queue, ranking) + discover
     landed_cost:
       default_distance_km: {PT: 250, ES: 800, FR: 1500, other: 2000}   # example; country → km when a car has no distance
 
+web:
+  url: http://127.0.0.1:4321  # web UI (deploy/compose.yaml); `carhunt doctor` checks /health
+
 browsers:
   chrome_app: /Applications/Google Chrome.app
   lanes: 4                    # logged-out lanes ch-lane-a… (one isolated MCP server)
@@ -138,7 +141,6 @@ discover:
   distance: {geocoder: nominatim, router: null, user_agent: "carhunt/1.0 (you@example.com)"}   # geocoder none = offline
 
 contact:
-  variant: home               # home (private sellers, home market) | abroad (dealers abroad): picks the brief section
   quiet_hours: "01:30-08:10"  # owner tz: no sends at all
   opener_window: "09:30-21:30"   # seller-local: first messages only
   seller_hours:               # seller-local; nudges + channels with seller_hours: true
