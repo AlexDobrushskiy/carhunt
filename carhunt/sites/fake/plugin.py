@@ -1,7 +1,9 @@
 """Synthetic site: bundled fixture ads, no network. For discover/integrator e2e tests.
 
 Env knobs: CARHUNT_FAKE_SITES_FIXTURES = path to an ads.json of the same shape (default: bundled);
-CARHUNT_FAKE_SITES_BLOCK = comma list of actions (search, ad, live) that raise Blocked, to test stop-at-first-block.
+CARHUNT_FAKE_SITES_BLOCK = comma list of actions (search, ad, live) that raise Blocked, to test stop-at-first-block;
+CARHUNT_FAKE_PHOTO_BASE = http(s) base a test serves the fixture images from (e.g. a local http.server): photo URLs
+become <base>/img/<name>. Unset → no photos: cardb downloads every photo URL, and fake.example.invalid would 422.
 Fixture `state`: live | removed (404) | soft (redirect to a list page) | blocked; `live_price` = the price
 liveness sees now (simulates a price drop).
 """
@@ -17,6 +19,13 @@ from carhunt.sites.extract import year_of
 from carhunt.sites.model import Card, Liveness, RawAd, SearchQuery, Seller
 
 BASE = "https://fake.example.invalid"
+
+
+def _photos(a: dict) -> list[str]:
+    base = (os.environ.get("CARHUNT_FAKE_PHOTO_BASE") or "").rstrip("/")
+    if not base:
+        return []
+    return [base + u.removeprefix(BASE) for u in a.get("photos") or []]
 
 
 class _NoNet:
@@ -70,7 +79,7 @@ class Plugin(BaseSite):
                        first_registration=a.get("first_registration"), make=a.get("make"), model=a.get("model"),
                        version=a.get("version"), fuel=a.get("fuel"), power_kw=a.get("power_kw"), seller_type=st,
                        location=a.get("location"), country=a.get("country"),
-                       thumb=(a.get("photos") or [None])[0], created=a.get("created"))
+                       thumb=(_photos(a) or [None])[0], created=a.get("created"))
 
     def _find(self, url: str) -> dict:
         ref = self.ad_id(url)
@@ -91,7 +100,7 @@ class Plugin(BaseSite):
                                         "power_kw", "drive", "battery_kwh", "vin", "description", "location",
                                         "country", "created", "first_registration")}
         return RawAd(url=url, site=self.id, site_ref=a["site_ref"], year=year_of(a.get("first_registration")),
-                     equipment=a.get("equipment") or [], photos=a.get("photos") or [], phones=a.get("phones") or [],
+                     equipment=a.get("equipment") or [], photos=_photos(a), phones=a.get("phones") or [],
                      seller=Seller(**{k: v for k, v in s.items() if k in Seller.__dataclass_fields__}),
                      raw=a, **fields)
 
