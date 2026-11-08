@@ -111,7 +111,7 @@ Keys live in `config.example.yaml` (`browsers`, `net`, `accounts`, `sites.overri
 | `net.proxy.{provider, credentials, gateway, echo_url}` | `access.proxy` | sticky session = 30 min (Decodo's max); per site: `sites.overrides.<site>.proxy.sticky_minutes` or site.yaml `proxy.sticky_minutes` |
 | `net.geo.<cc>.{tz, locale}` | `access.geo` | geo browser TZ/locale |
 | `accounts.{email, sms, gmail}` | `accounts.*` | Gmail: read-only OAuth |
-| `sites.overrides.<site>.{pace, caps, account, proxy, …}` | `access.pace`, sites | one level deep per section; key names as in site.yaml (`pace.max_loads_per_hour`, …) |
+| `sites.overrides.<site>.{pace, caps, account, proxy, …}` | `access.pace`, sites | one level deep per section; key names as in site.yaml. Tighten only: site.yaml numbers are measured ceilings, e.g. `mobile.de: {pace: {min_gap_s: 20, max_loads_per_hour: 20}}` (measured: 12 s, 403 after ~41 loads) |
 
 ## macOS-only bits
 APFS clones (`cp -c`) for Agent Chrome + pool seeding · `codesign` ad-hoc re-sign · launchd jobs · `open -g` + window positioning for plain-chrome · Keychain secrets backend · `--use-mock-keychain`. Linux would need systemd units, a non-clone Chrome path and plain copies.

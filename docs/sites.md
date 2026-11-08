@@ -45,7 +45,7 @@ Per-site walls, pace numbers with their why, quirks: `carhunt/sites/<pkg>/README
 - `carhunt.sites.base`: `get(id)`, `ids()`, `metas()`, `for_url(url)`; `Gone`, `Unsupported`; `Blocked`/`PaceExceeded` re-exported from `carhunt.access.errors`.
 - `Site`: `search(SearchQuery) -> Iterator[Card]`, `ad(url) -> RawAd`, `phone(ad, reveal=False) -> list[str]`, `is_live(url) -> Liveness`, `owns(url)`, `ad_id(url)`, `close()`.
 - `carhunt.sites.model`: `SearchQuery` (one make/model per query), `Card`, `RawAd` (+`Seller`), `Liveness`. Plugins parse; discover normalises (VAT, scope, options).
-- Tests: `carhunt.sites.testing.FakeNet` (canned answers, no network); `CARHUNT_FAKE_SITES=1` registers the synthetic `fake` site (`CARHUNT_FAKE_SITES_FIXTURES=<ads.json>`, `CARHUNT_FAKE_SITES_BLOCK=search,ad,live`).
+- Tests: `carhunt.sites.testing.FakeNet` (canned answers, no network); `CARHUNT_FAKE_SITES=1` registers the synthetic `fake` site (`CARHUNT_FAKE_SITES_FIXTURES=<ads.json>`, `CARHUNT_FAKE_SITES_BLOCK=search,ad,live`, `CARHUNT_FAKE_PHOTO_BASE=<local image server>`; unset = no photos, since cardb downloads every photo URL).
 
 ## Cursors and price changes
 - `site.yaml cursor.strategy` (read by discover, `carhunt/discover/cursor.py`): `newest_id` = newest first, numeric `site_ref` grows → stop at the stored max; `first_seen` = newest first with opaque ids (AS24 UUIDs) → stop at last run's first organic id / its created time; `full` = page the whole filtered set every run (coches.net relevance order, olx.pt ignores sort, unmeasured sites).
