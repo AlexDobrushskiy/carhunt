@@ -18,7 +18,7 @@ import (
 
 type specField struct {
 	flag    string
-	key     string // JSON key
+	key     string // JSON key; "powertrain.x" nests under powertrain
 	kind    string // str | int | float
 	help    string
 	aliases []string
@@ -31,8 +31,14 @@ var specFields = []specField{
 	{flag: "body", key: "body", kind: "str", help: "body/seat note"},
 	{flag: "reg", key: "reg_date", kind: "str", help: "first registration YYYY-MM[-DD] (MM/YYYY accepted)", aliases: []string{"reg-date"}},
 	{flag: "km", key: "km", kind: "int", help: "odometer km"},
-	{flag: "battery-net", key: "battery_net_kwh", kind: "float", help: "net battery kWh"},
-	{flag: "battery-gross", key: "battery_gross_kwh", kind: "float", help: "gross battery kWh"},
+	{flag: "fuel", key: "powertrain.fuel", kind: "str", help: strings.Join(api.Fuels, "|")},
+	{flag: "battery-net", key: "powertrain.battery_net_kwh", kind: "float", help: "net (usable) battery kWh"},
+	{flag: "battery-gross", key: "powertrain.battery_gross_kwh", kind: "float", help: "gross battery kWh"},
+	{flag: "engine-cc", key: "powertrain.engine_cc", kind: "int", help: "engine displacement, cc"},
+	{flag: "gearbox", key: "powertrain.gearbox", kind: "str", help: strings.Join(api.Gearboxes, "|")},
+	{flag: "wltp-range", key: "powertrain.wltp_range_km", kind: "int", help: "WLTP electric range, km"},
+	{flag: "wltp-consumption", key: "powertrain.wltp_consumption", kind: "float", help: "WLTP consumption, kWh/100 km (BEV) or l/100 km"},
+	{flag: "co2", key: "powertrain.co2_g_km", kind: "int", help: "CO2, g/km"},
 	{flag: "power-kw", key: "power_kw", kind: "float", help: "power kW"},
 	{flag: "drive", key: "drive", kind: "str", help: "fwd|rwd|awd|unknown"},
 	{flag: "seats", key: "seats", kind: "int", help: "seats"},
@@ -91,7 +97,7 @@ func (v specVals) collect(f *flags) (map[string]any, error) {
 		if err != nil {
 			return nil, err
 		}
-		out[sf.key] = val
+		putPath(out, sf.key, val)
 	}
 	return out, nil
 }
@@ -146,6 +152,16 @@ func parseSpecValue(sf specField, raw string) (any, error) {
 		return c, nil
 	case "vin", "plate":
 		return strings.ToUpper(raw), nil
+	case "powertrain.fuel", "powertrain.gearbox":
+		allowed := api.Fuels
+		if sf.key == "powertrain.gearbox" {
+			allowed = api.Gearboxes
+		}
+		v := strings.ToLower(raw)
+		if !slices.Contains(allowed, v) {
+			return nil, usageErrorf("--%s: %q is not one of %s", sf.flag, raw, strings.Join(allowed, "|"))
+		}
+		return v, nil
 	}
 	return raw, nil
 }

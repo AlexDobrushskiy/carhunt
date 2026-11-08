@@ -16,6 +16,10 @@ var (
 	OptionValues    = []string{"yes", "no", "unknown"}
 	EvidenceSources = []string{"ad_text", "ad_spec", "photo", "vin_pr_code", "vin_decoder", "seller_said", "inspection", "agent_inference", "owner"}
 	PhotoSources    = []string{"ad", "seller", "inspection", "other"}
+	Fuels           = []string{"bev", "phev", "hev", "mhev", "petrol", "diesel", "lpg", "cng", "hydrogen", "unknown"}
+	Gearboxes       = []string{"manual", "automatic", "unknown"}
+	PriceVats       = []string{"gross", "net", "margin", "unknown"} // gross = incl. VAT (what cardb stores)
+	PriceFlags      = []string{"price_x100", "price_lease", "price_net", "price_range"}
 	OptionKeys      = []string{"pano", "pano_opening", "power_tailgate", "electric_seats", "memory_seats", "heated_seats", "ventilated_seats", "premium_audio", "hud", "camera_360", "adaptive_cruise", "heat_pump", "towbar", "matrix_led", "keyless", "massage_seats", "rear_recline", "air_suspension", "adaptive_dampers"}
 )
 
@@ -40,6 +44,7 @@ type Stats struct {
 
 // CarSpecs are the canonical vehicle fields. Pointers: nil = unknown / not sent.
 // Powertrain: fuel/drive-train facts, every field optional (nil = unknown). Stored as flat car columns.
+// PATCH merges it field by field (a raw `"powertrain": {"engine_cc": null}` clears one field).
 type Powertrain struct {
 	Fuel            *string  `json:"fuel,omitempty"` // bev phev hev mhev petrol diesel lpg cng hydrogen unknown
 	BatteryNetKwh   *float64 `json:"battery_net_kwh,omitempty"`
@@ -103,6 +108,12 @@ type CarPatch struct {
 	SellerID    *int64     `json:"seller_id,omitempty"`
 	ModelFamily *string    `json:"model_family,omitempty"` // manual override; send null in a raw patch to go back to auto
 	At          *time.Time `json:"at,omitempty"`           // event/updated time; default now (imports pass the original time)
+	// Exact-text list edits, applied atomically against the current lists (can't be combined with a full replace).
+	RedFlagsAdd         []string `json:"red_flags_add,omitempty"`
+	RedFlagsRemove      []string `json:"red_flags_remove,omitempty"`
+	OpenQuestionsAdd    []string `json:"open_questions_add,omitempty"`
+	OpenQuestionsRemove []string `json:"open_questions_remove,omitempty"`
+	Version             *int64   `json:"version,omitempty"` // same as If-Match: stale → 412
 }
 
 type CarSummary struct {
@@ -162,6 +173,9 @@ type CarSummary struct {
 	// RemovedListingCount = listings with status removed. Tier = "To rate" tier 1|2|3 (see GET /queue).
 	RemovedListingCount int `json:"removed_listing_count"`
 	Tier                int `json:"tier"`
+	// Version increments on every car write (ETag / If-Match). PriceFlags = flags of the listing that gives Price.
+	Version    int64    `json:"version"`
+	PriceFlags []string `json:"price_flags,omitempty"`
 }
 
 type CarList struct {
@@ -208,6 +222,7 @@ type CarDetail struct {
 	GoodDealBy   *string    `json:"good_deal_by"`
 	GoodDealAt   *time.Time `json:"good_deal_at"`
 	DealRank     *string    `json:"deal_rank"`
+	Version      int64      `json:"version"` // increments on every car write; ETag / If-Match
 }
 
 type Listing struct {
@@ -220,6 +235,8 @@ type Listing struct {
 	Status       string          `json:"status"`
 	Price        *int            `json:"price"`
 	PriceNote    *string         `json:"price_note"`
+	PriceVat     string          `json:"price_vat"`   // gross|net|margin|unknown
+	PriceFlags   []string        `json:"price_flags"` // set when the price was forced past the sanity check
 	PriceHistory []PricePoint    `json:"price_history"`
 	SellerID     *int64          `json:"seller_id"`
 	FirstSeenAt  time.Time       `json:"first_seen_at"`
@@ -241,6 +258,8 @@ type ListingUpsert struct {
 	Title         string                 `json:"title,omitempty"`
 	Price         *int                   `json:"price,omitempty"`
 	PriceNote     string                 `json:"price_note,omitempty"`
+	PriceVat      string                 `json:"price_vat,omitempty"` // gross|net|margin|unknown
+	Force         bool                   `json:"force,omitempty"`     // store a price that fails the sanity check (flagged)
 	ListingStatus string                 `json:"listing_status,omitempty"`
 	SeenAt        *time.Time             `json:"seen_at,omitempty"`
 	Car           string                 `json:"car,omitempty"`
@@ -273,6 +292,8 @@ type ListingPatch struct {
 	Status    string `json:"status,omitempty"`
 	Price     *int   `json:"price,omitempty"`
 	PriceNote string `json:"price_note,omitempty"`
+	PriceVat  string `json:"price_vat,omitempty"`
+	Force     bool   `json:"force,omitempty"`
 	Author    string `json:"author,omitempty"`
 }
 
@@ -520,10 +541,11 @@ type QueueItem struct {
 }
 
 type StatusInput struct {
-	Status string     `json:"status"`
-	Reason string     `json:"reason,omitempty"`
-	Author string     `json:"author,omitempty"`
-	At     *time.Time `json:"at,omitempty"`
+	Status  string     `json:"status"`
+	Reason  string     `json:"reason,omitempty"`
+	Version *int64     `json:"version,omitempty"` // same as If-Match: stale → 412
+	Author  string     `json:"author,omitempty"`
+	At      *time.Time `json:"at,omitempty"`
 }
 
 type Seller struct {

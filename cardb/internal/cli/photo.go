@@ -342,7 +342,7 @@ func photoRm(e *env, args []string) error {
 
 const listingUsage = `usage:
   cardb listing show ID
-  cardb listing set ID [--status live|removed|sold|unknown] [--price N] [--price-note T]`
+  cardb listing set ID [--status live|removed|sold|unknown] [--price N] [--price-note T] [--price-vat gross|net|margin] [--force]`
 
 func cmdListing(e *env, args []string) error {
 	sub, rest, err := subUsage(e, "listing", listingUsage, args)
@@ -377,6 +377,8 @@ func cmdListing(e *env, args []string) error {
 		status := f.String("status", "", "live|removed|sold|unknown")
 		price := f.String("price", "", "price, integer euros")
 		priceNote := f.String("price-note", "", "price note")
+		priceVat := f.String("price-vat", "", "gross|net|margin (gross = incl. VAT; cardb stores gross)")
+		force := f.Bool("force", false, "store a price that fails the sanity check (×100, lease, net); it gets flagged")
 		pos, err := f.parse(rest)
 		if err != nil {
 			return err
@@ -388,7 +390,10 @@ func cmdListing(e *env, args []string) error {
 		if err != nil {
 			return err
 		}
-		p := api.ListingPatch{Status: *status, PriceNote: *priceNote}
+		p := api.ListingPatch{Status: *status, PriceNote: *priceNote, Force: *force}
+		if p.PriceVat, err = parsePriceVat(*priceVat); err != nil {
+			return err
+		}
 		if *status != "" && !contains(api.ListingStatuses, *status) {
 			return usageErrorf("--status: want %s", strings.Join(api.ListingStatuses, "|"))
 		}
@@ -399,7 +404,7 @@ func cmdListing(e *env, args []string) error {
 			}
 			p.Price = &n
 		}
-		if p.Status == "" && p.Price == nil && p.PriceNote == "" {
+		if p.Status == "" && p.Price == nil && p.PriceNote == "" && p.PriceVat == "" {
 			return usageErrorf("listing set: nothing to change")
 		}
 		cl, err := e.client()

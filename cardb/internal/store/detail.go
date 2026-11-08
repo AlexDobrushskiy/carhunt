@@ -17,7 +17,7 @@ func itoa(n int64) string { return strconv.FormatInt(n, 10) }
 func placeholders(n int) string { return strings.TrimSuffix(strings.Repeat("?, ", n), ", ") }
 
 const listingSelect = `SELECT id, car_id, url, site, site_ref, title, status, price, price_note, seller_id,
-	first_seen_at, last_seen_at, removed_at, raw FROM listings`
+	first_seen_at, last_seen_at, removed_at, raw, price_vat, price_flags FROM listings`
 
 func loadListings(tx *sql.Tx, where string, args ...any) ([]api.Listing, error) {
 	rows, err := tx.Query(listingSelect+" WHERE "+where+" ORDER BY first_seen_at, id", args...)
@@ -32,11 +32,13 @@ func loadListings(tx *sql.Tx, where string, args ...any) ([]api.Listing, error) 
 		var price, sellerID sql.NullInt64
 		var first, last float64
 		var removed sql.NullFloat64
+		var flags string
 		if err := rows.Scan(&l.ID, &l.CarID, &l.URL, &l.Site, &siteRef, &title, &l.Status, &price, &priceNote,
-			&sellerID, &first, &last, &removed, &raw); err != nil {
+			&sellerID, &first, &last, &removed, &raw, &l.PriceVat, &flags); err != nil {
 			rows.Close()
 			return nil, err
 		}
+		l.PriceFlags = parseList(flags)
 		l.SiteRef, l.Title, l.PriceNote = strPtr(siteRef), strPtr(title), strPtr(priceNote)
 		l.Price, l.SellerID = intPtr(price), int64Ptr(sellerID)
 		l.FirstSeenAt, l.LastSeenAt, l.RemovedAt = fromTS(first), fromTS(last), fromNullTS(removed)
@@ -98,31 +100,12 @@ type priceInfo struct {
 	FirstPrice *int
 	Points     int
 	LastSeen   float64
+	Flags      []string
 }
 
 // derivePrice: min price over live listings, else the most recently seen listing's price.
 func derivePrice(ls []priceInfo) (price *int, note *string, drop *int, primary *string) {
-	var best *priceInfo
-	for i := range ls {
-		l := &ls[i]
-		if !l.Live || l.Price == nil {
-			continue
-		}
-		if best == nil || *l.Price < *best.Price || (*l.Price == *best.Price && l.LastSeen > best.LastSeen) {
-			best = l
-		}
-	}
-	if best == nil {
-		for i := range ls {
-			l := &ls[i]
-			if l.Price == nil {
-				continue
-			}
-			if best == nil || l.LastSeen > best.LastSeen {
-				best = l
-			}
-		}
-	}
+	best := pricedListing(ls)
 	if best != nil {
 		p := *best.Price
 		price, note = &p, best.Note
@@ -148,11 +131,37 @@ func derivePrice(ls []priceInfo) (price *int, note *string, drop *int, primary *
 	return
 }
 
+// pricedListing is the listing that gives the car's price (see derivePrice), nil if none has a price.
+func pricedListing(ls []priceInfo) *priceInfo {
+	var best *priceInfo
+	for i := range ls {
+		l := &ls[i]
+		if !l.Live || l.Price == nil {
+			continue
+		}
+		if best == nil || *l.Price < *best.Price || (*l.Price == *best.Price && l.LastSeen > best.LastSeen) {
+			best = l
+		}
+	}
+	if best == nil {
+		for i := range ls {
+			l := &ls[i]
+			if l.Price == nil {
+				continue
+			}
+			if best == nil || l.LastSeen > best.LastSeen {
+				best = l
+			}
+		}
+	}
+	return best
+}
+
 func priceInfos(ls []api.Listing) []priceInfo {
 	out := make([]priceInfo, 0, len(ls))
 	for _, l := range ls {
 		pi := priceInfo{URL: l.URL, Live: l.Status == "live", Price: l.Price, Note: l.PriceNote,
-			Points: len(l.PriceHistory), LastSeen: ts(l.LastSeenAt)}
+			Points: len(l.PriceHistory), LastSeen: ts(l.LastSeenAt), Flags: l.PriceFlags}
 		if len(l.PriceHistory) > 0 {
 			fp := l.PriceHistory[0].Price
 			pi.FirstPrice = &fp
@@ -441,6 +450,7 @@ func carDetail(tx *sql.Tx, id int64) (*api.CarDetail, error) {
 		OpenQuestions:    car.OpenQuestions,
 		CreatedAt:        fromTS(car.CreatedAt),
 		UpdatedAt:        fromTS(car.UpdatedAt),
+		Version:          car.Version,
 	}
 	if d.Aliases, err = carAliases(tx, id); err != nil {
 		return nil, err

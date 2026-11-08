@@ -829,9 +829,9 @@ func photoFiles(t *testing.T, dir string) []string {
 func TestDeleteCar(t *testing.T) {
 	c := newServer(t)
 	u := fmt.Sprintf("https://example.invalid/e2e-%d", time.Now().UnixNano())
-	junk := c.upsert(map[string]any{"url": u, "make": "Junk", "model": "Ad", "price": 1000, "km": 1000, "reg_date": "2024-01", "city": "Porto",
+	junk := c.upsert(map[string]any{"url": u, "make": "Junk", "model": "Ad", "price": 9000, "km": 1000, "reg_date": "2024-01", "city": "Porto",
 		"seller": map[string]any{"type": "dealer", "name": "Junk Motors", "contacts": []map[string]any{{"kind": "phone", "value": "955 999 000"}}}})
-	c.upsert(map[string]any{"url": u, "price": 900})
+	c.upsert(map[string]any{"url": u, "price": 8900})
 	keep := c.upsert(map[string]any{"url": "https://www.olx.pt/d/anuncio/keep-IDkeep1.html", "make": "Junk", "model": "Ad", "km": 1100, "reg_date": "2024-01", "city": "Porto"})
 	if len(keep.DuplicateCandidates) != 1 {
 		t.Fatalf("setup: expected a duplicate proposal, got %+v", keep.DuplicateCandidates)

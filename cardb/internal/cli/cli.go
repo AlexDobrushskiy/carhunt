@@ -67,8 +67,8 @@ func init() {
 		{"show", "CAR", "full card: specs, seller, listings + price history, options, facts, verdict, notes, timeline, chat", cmdShow},
 		{"ls", "[filters]", "list/filter cars (table; --json raw)", cmdLs},
 		{"queue", "[--tier 1,2] [--tier 3] [--spec confirmed|unknown] [--limit N] [--offset N]", "\"To rate\" queue: unrated cars passing the hard filters, by tier / deal / trim / price gap", cmdQueue},
-		{"set", "CAR [--km N --vin V …] [--clear FIELD]", "update car fields (only given fields change)", cmdSet},
-		{"status", "CAR STATUS [--reason R]", "set status: " + strings.Join(statusList(), " "), cmdStatus},
+		{"set", "CAR [--km N --fuel F …] [--red-flag-add T] [--clear FIELD] [--if-version N]", "update car fields (only given fields change)", cmdSet},
+		{"status", "CAR STATUS [--reason R] [--if-version N]", "set status: " + strings.Join(statusList(), " "), cmdStatus},
 		{"needs-owner", "CAR REASON | CAR --clear", "flag/unflag a car for the owner's attention", cmdNeedsOwner},
 		{"verdict", "CAR up|maybe|down|clear [--note N]", "the owner's verdict (also 👍 🤔 👎, like/dislike)", cmdVerdict},
 		{"deal", "CAR on|off [--note N] [--at T]", "flag/unflag a good deal (also yes/no, true/false, ✓/✗); --note \"\" clears the note", cmdDeal},
@@ -233,15 +233,22 @@ func (e *env) fail(err error) int {
 			code = ExitNotFound
 		}
 	}
+	msg, extra := apiFailure(err)
+	if msg == "" {
+		msg = err.Error()
+	}
 	if e.json {
-		out := map[string]any{"error": err.Error(), "exit_code": code}
+		out := map[string]any{"error": msg, "exit_code": code}
 		if status != 0 {
 			out["status"] = status
+		}
+		for k, v := range extra {
+			out[k] = v
 		}
 		b, _ := json.Marshal(out)
 		fmt.Fprintln(e.stderr, string(b))
 	} else {
-		fmt.Fprintf(e.stderr, "cardb: %v\n", err)
+		fmt.Fprintf(e.stderr, "cardb: %s\n", msg)
 		if code == ExitUsage {
 			fmt.Fprintln(e.stderr, "run `cardb help` or `cardb help COMMAND` for usage")
 		}

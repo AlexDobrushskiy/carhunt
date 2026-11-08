@@ -30,6 +30,7 @@ type CarFilter struct {
 	GoodDeal                          *bool
 	ModelFamily                       []string // canonical names or "none" (unmapped); ORed
 	Tier                              []string // "1"|"2"|"3", comma lists ok; ORed
+	Fuel                              []string // powertrain.fuel, comma lists ok; ORed; no fuel = unknown
 	Market                            string
 	Sort, Order                       string
 	Limit, Offset                     int
@@ -105,6 +106,9 @@ func (f *CarFilter) validate() error {
 		return err
 	}
 	f.tiers = tiers
+	if f.Fuel, err = normFuelFilter(f.Fuel); err != nil {
+		return err
+	}
 	if f.Sort == "" {
 		f.Sort = "last_activity"
 	}
@@ -170,14 +174,18 @@ func buildSummaries(tx *sql.Tx) ([]*summaryRow, error) {
 	listings := map[int64][]lst{}
 	if err := eachRow(tx, `SELECT l.car_id, l.url, l.site, COALESCE(l.title, ''), l.status, l.price, l.price_note, l.last_seen_at,
 		(SELECT p.price FROM price_points p WHERE p.listing_id = l.id ORDER BY p.at, p.id LIMIT 1),
-		(SELECT COUNT(*) FROM price_points p WHERE p.listing_id = l.id)
+		(SELECT COUNT(*) FROM price_points p WHERE p.listing_id = l.id), l.price_flags
 		FROM listings l ORDER BY l.first_seen_at, l.id`, nil, func(sc scanner) error {
 		var carID int64
 		var l lst
 		var price, first sql.NullInt64
 		var note sql.NullString
-		if err := sc.Scan(&carID, &l.URL, &l.site, &l.title, &l.status, &price, &note, &l.LastSeen, &first, &l.Points); err != nil {
+		var flags string
+		if err := sc.Scan(&carID, &l.URL, &l.site, &l.title, &l.status, &price, &note, &l.LastSeen, &first, &l.Points, &flags); err != nil {
 			return err
+		}
+		if fl := parseList(flags); len(fl) > 0 {
+			l.Flags = fl
 		}
 		l.Live, l.Price, l.Note, l.FirstPrice = l.status == "live", intPtr(price), strPtr(note), intPtr(first)
 		listings[carID] = append(listings[carID], l)
@@ -348,7 +356,7 @@ func buildSummaries(tx *sql.Tx) ([]*summaryRow, error) {
 			InteriorTone: specs.InteriorTone, WheelsIn: specs.WheelsIn, SellerType: "unknown", Status: c.Status,
 			StatusReason: strPtr(c.StatusReason), NeedsOwner: c.NeedsOwner, NeedsOwnerReason: strPtr(c.NeedsOwnerReason),
 			Summary: strPtr(c.Summary), Options: map[string]string{}, OptionSources: map[string]string{}, Sites: []string{}, CreatedAt: fromTS(c.CreatedAt),
-			Verdict: verdicts[c.ID], DuplicateCandidateCount: dupCount[c.ID],
+			Verdict: verdicts[c.ID], DuplicateCandidateCount: dupCount[c.ID], Version: c.Version,
 		}
 		cs.ModelFamily, _, cs.ModelFamilyManual = c.family()
 		cs.GoodDeal, cs.GoodDealNote, cs.GoodDealBy, cs.GoodDealAt = c.GoodDeal, strPtr(c.GoodDealNote), strPtr(c.GoodDealBy), fromNullTS(c.GoodDealAt)
@@ -387,6 +395,9 @@ func buildSummaries(tx *sql.Tx) ([]*summaryRow, error) {
 			hay = append(hay, l.title, l.URL)
 		}
 		cs.Price, cs.PriceNote, cs.PriceDrop, cs.PrimaryURL = derivePrice(pis)
+		if b := pricedListing(pis); b != nil {
+			cs.PriceFlags = b.Flags
+		}
 		if pa := photos[c.ID]; pa != nil {
 			cs.PhotoCount, cs.CoverPhotoID = pa.count, pa.cover
 		}
@@ -517,6 +528,9 @@ func (f *CarFilter) match(r *summaryRow) bool {
 		return false
 	}
 	if len(f.tiers) > 0 && !slices.Contains(f.tiers, c.Tier) {
+		return false
+	}
+	if !fuelMatch(c, f.Fuel) {
 		return false
 	}
 	if len(f.ModelFamily) > 0 {
