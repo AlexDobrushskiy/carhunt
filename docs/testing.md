@@ -4,7 +4,7 @@
 
 | suite | command | needs |
 |---|---|---|
-| Python (all modules) | `.venv/bin/pytest -p no:cacheprovider` (repo root; ~3 min) | `.venv` from `scripts/bootstrap` |
+| Python (all modules) | `.venv/bin/pytest -p no:cacheprovider` (repo root; ~3 min) | `.venv` from `scripts/bootstrap`; Playwright Chromium (`.venv/bin/python -m playwright install chromium`, bootstrap does it) or the page-driving tests (contact `test_sites`, access) skip; Go for the real-cardb tests (conftest builds it) |
 | cardb (Go) | `cd cardb && go test ./...` (or `make -C cardb test`) | Go 1.26+ |
 | web (vitest) | `cd web && npm ci && npm test` | Node 22.12+ |
 | web (Playwright) | `cd web && npm run e2e` | Go or `CARDB_BIN`; Chromium for Playwright (`npx playwright install chromium`) |
@@ -36,7 +36,7 @@ E2E_KEEP_GOING=1 E2E_PATCH=/tmp/fix.diff tests/e2e/run.sh   # try an uncommitted
 | `E2E_SKIP` | none | comma list of step ids to skip |
 | `E2E_KEEP_GOING` | `0` | `1` = run every step after a failure (later steps may fail as a consequence) |
 | `E2E_COMPOSE` | `0` | `1` = also build and run cardb with docker compose (own project, port and image names; removed after) |
-| `E2E_CACHES` | `warm` | `cold` = don't share the Go/uv/npm/Playwright caches (a true first-time machine; slow) |
+| `E2E_CACHES` | `warm` | share the Go/uv/npm/Playwright caches (a missing Chromium revision is downloaded into the real `~/Library/Caches/ms-playwright` once); `cold` = a true first-time machine (slow) |
 | `E2E_NODE_BIN` | `~/.nvm/versions/node/v22.16.0/bin` | Node 22+ bin dir (else the `node` on `PATH` if it is 22+) |
 | `E2E_TMP` | `/tmp` | base of the work dir: keep it short, since the agterm socket path must stay under 104 bytes |
 | `KEEP` | `0` | `1` = keep the work dir (clone, `HOME`, logs in `logs/`) |
@@ -48,8 +48,8 @@ E2E_KEEP_GOING=1 E2E_PATCH=/tmp/fix.diff tests/e2e/run.sh   # try an uncommitted
 | `clone` | `git clone` + checkout (+ patches) | the committed tree is complete: nothing depends on the dev's untracked files |
 | `home` | temp `HOME`, scrubbed env, guard stubs for `security` and `launchctl` writes | no `CLAUDE_CONFIG_DIR` / `CARHUNT_*` / tokens leak in |
 | `bootstrap-dry` | `scripts/bootstrap --dry-run …` | the dry run only prints its plan: `HOME` stays unchanged |
-| `bootstrap` | `scripts/bootstrap --yes --skip-mcp --skip-browsers-launchd --skip-compose --skip-schedule` | venv, `carhunt`/`cardb` on `PATH`, cardb build + init (file secrets), config, folder trust, guard hooks, statusline, browsers/install (Agent Chrome clone) |
-| `bootstrap2` | the same command again | re-runs are safe: the config, the cardb tokens and `settings.json` stay the same |
+| `bootstrap` | `scripts/bootstrap --yes --skip-mcp --skip-browsers-launchd --skip-compose --skip-schedule` | venv, `carhunt`/`cardb` on `PATH`, Playwright Chromium, cardb build + init (file secrets), config, folder trust, guard hooks + statusline in `$CARHUNT_HOME/claude/settings.json` (and none in `~/.claude`), browsers/install (Agent Chrome clone) |
+| `bootstrap2` | the same command again | re-runs are safe: the config, the cardb tokens and the agent `settings.json` stay the same |
 | `cardb` | `cardb serve` on a free port, `cardb.url` set in the config | the host binary serves; the port is configurable |
 | `compose` | (`E2E_COMPOSE=1`) `docker compose up --build cardb` on another free port | the image builds and passes its health check |
 | `doctor` | `carhunt doctor --json` | no `fail`; only the allowed warns (below) |
@@ -59,7 +59,7 @@ E2E_KEEP_GOING=1 E2E_PATCH=/tmp/fix.diff tests/e2e/run.sh   # try an uncommitted
 | `say` | `carhunt say --channel whatsapp --car N --opener --dry-run`, with a stub `wacli` that logs its calls | guard decision + payload (exit 0 or 10); the stub logs no `send` |
 | `evidence` | `carhunt evidence N` and `--write-asks` | vet reads cardb (exit 0 = visit-ready, 4 = items missing) and writes an `ask` event |
 | `agent` | `carhunt agent launch e2e-dummy` (a user-local role, a stub `claude` that writes a marker), then `carhunt agent close` | a real agterm session starts with `CARHUNT_AGENT`/`CARHUNT_HOME`/`CARDB_AUTHOR` and closes; none is left open |
-| `isolation` | always runs | no blocked Keychain or launchd write was attempted; the real `carhunt.*` launchd labels and `~/.claude/settings.json` are unchanged |
+| `isolation` | always runs | no blocked Keychain or launchd write was attempted; the real `carhunt.*` launchd labels and Claude Code `settings.json` (`~/.claude` and `$CLAUDE_CONFIG_DIR`) are unchanged |
 
 ### Expected doctor warns (allow-list in `run.sh`)
 

@@ -46,6 +46,7 @@ SH
     "HOME=$W/home" "USER=${USER:-$(id -un)}" "LOGNAME=${LOGNAME:-$(id -un)}" "SHELL=${SHELL:-/bin/zsh}"
     "TERM=${TERM:-dumb}" "LANG=${LANG:-en_US.UTF-8}" "TMPDIR=${TMPDIR:-/tmp}"
     "PATH=$W/stubs:$W/home/.local/bin:$NODE_BIN:$PATH"
+    "_E2E_REAL_CLAUDE_DIR=${CLAUDE_CONFIG_DIR:-$REAL_HOME/.claude}"
     "_E2E_INNER=1" "_E2E_WORK=$W" "_E2E_SELF=$SELF" "_E2E_REAL_HOME=$REAL_HOME" "_E2E_REAL_LAUNCHCTL=$REAL_LAUNCHCTL"
     "CARHUNT_SECRETS_BACKEND=file" "CARHUNT_FAKE_SITES=1"
   )
@@ -185,7 +186,7 @@ step_home() {
   node -v | grep -q '^v2[2-9]\|^v[3-9][0-9]' || die "node $(node -v) on PATH; need 22+"
   # Baselines for the isolation step: real launchd labels and the real Claude settings.
   "$_E2E_REAL_LAUNCHCTL" list | awk '{print $3}' | grep '^carhunt\.' | sort >"$W/state/launchd.before" || true
-  setstate REAL_SETTINGS_SUM "$(cksum_of "$REAL_HOME/.claude/settings.json")"
+  setstate REAL_SETTINGS_SUM "$(cksum_of "$REAL_HOME/.claude/settings.json")$(cksum_of "$_E2E_REAL_CLAUDE_DIR/settings.json")"
   info "HOME=$HOME  CARHUNT_HOME=$CH  node $(node -v)  go $(go env GOVERSION 2>/dev/null || echo -)"
 }
 
@@ -210,7 +211,8 @@ step_bootstrap() {
   "$CLONE/scripts/bootstrap" "${BOOT_FLAGS[@]}" 2>&1 | tee "$LOGS/bootstrap.log"
   local f
   for f in "$CLONE/.venv/bin/carhunt" "$CLONE/cardb/bin/cardb" "$CH/config.yaml" "$CH/cardb/tokens" \
-    "$HOME/.local/bin/carhunt" "$HOME/.claude.json" "$HOME/.claude/settings.json" "$CH/secrets/cardb_token"; do
+    "$HOME/.local/bin/carhunt" "$HOME/.local/bin/cardb" "$HOME/.claude.json" "$CH/claude/settings.json" \
+    "$CH/secrets/cardb_token"; do
     [ -e "$f" ] || die "bootstrap did not create $f"
   done
   [ "$(stat -f %Lp "$CH")" = 700 ] || die "$CH is not mode 700"
@@ -219,11 +221,16 @@ import json, os, sys
 p = json.load(open(sys.argv[1])).get("projects", {})
 sys.exit(0 if p.get(os.path.realpath(sys.argv[2]), {}).get("hasTrustDialogAccepted") is True else 1)
 PY
-  grep -q carhunt "$HOME/.claude/settings.json" || die "no carhunt hooks in ~/.claude/settings.json"
-  grep -q '"statusLine"' "$HOME/.claude/settings.json" || die "statusLine not set"
+  # guard hooks + statusline live in the agent settings (claude --settings); the user's own settings stay untouched
+  grep -q carhunt "$CH/claude/settings.json" || die "no carhunt hooks in \$CARHUNT_HOME/claude/settings.json"
+  grep -q '"statusLine"' "$CH/claude/settings.json" || die "statusLine not set in the agent settings"
+  [ ! -e "$HOME/.claude/settings.json" ] || die "bootstrap wrote ~/.claude/settings.json"
+  venv python -c 'from playwright.sync_api import sync_playwright as p
+import os, sys
+with p() as pw: sys.exit(0 if os.path.exists(pw.chromium.executable_path) else 1)' || die "Playwright Chromium not installed"
   setstate CONFIG_SUM "$(cksum_of "$CH/config.yaml")"
   setstate TOKENS_SUM "$(cksum_of "$CH/cardb/tokens")"
-  setstate SETTINGS_SUM "$(cksum_of "$HOME/.claude/settings.json")"
+  setstate SETTINGS_SUM "$(cksum_of "$CH/claude/settings.json")"
 }
 
 step_bootstrap_again() {
@@ -231,7 +238,7 @@ step_bootstrap_again() {
   tail -3 "$LOGS/bootstrap2.log"
   [ "$(cksum_of "$CH/config.yaml")" = "$CONFIG_SUM" ] || die "re-run changed config.yaml"
   [ "$(cksum_of "$CH/cardb/tokens")" = "$TOKENS_SUM" ] || die "re-run rotated the cardb tokens"
-  [ "$(cksum_of "$HOME/.claude/settings.json")" = "$SETTINGS_SUM" ] || die "re-run changed ~/.claude/settings.json"
+  [ "$(cksum_of "$CH/claude/settings.json")" = "$SETTINGS_SUM" ] || die "re-run changed the agent settings.json"
 }
 
 step_cardb() {
@@ -407,8 +414,9 @@ step_isolation() {  # nothing outside the temp HOME was touched
   if [ -s "$LOGS/blocked.log" ]; then cat "$LOGS/blocked.log"; die "blocked calls to the real Keychain / launchd"; fi
   "$_E2E_REAL_LAUNCHCTL" list | awk '{print $3}' | grep '^carhunt\.' | sort >"$W/state/launchd.after" || true
   diff "$W/state/launchd.before" "$W/state/launchd.after" || die "carhunt.* launchd jobs changed"
-  [ "$(cksum_of "$REAL_HOME/.claude/settings.json")" = "$REAL_SETTINGS_SUM" ] || die "real ~/.claude/settings.json changed"
-  info "no Keychain / launchd writes; real launchd labels and ~/.claude/settings.json unchanged"
+  [ "$(cksum_of "$REAL_HOME/.claude/settings.json")$(cksum_of "$_E2E_REAL_CLAUDE_DIR/settings.json")" = "$REAL_SETTINGS_SUM" ] \
+    || die "the real Claude Code settings.json changed"
+  info "no Keychain / launchd writes; real launchd labels and Claude Code settings.json unchanged"
 }
 
 run_step clone      "git clone into a temp dir"                      step_clone

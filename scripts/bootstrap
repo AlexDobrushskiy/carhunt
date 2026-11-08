@@ -6,13 +6,15 @@ set -euo pipefail
 usage() {
   cat <<'USAGE'
 usage: scripts/bootstrap [--dry-run] [--yes] [--skip-mcp] [--skip-browsers-launchd] [--skip-browsers]
-                         [--skip-compose] [--skip-schedule] [--extras all|core,...]
+                         [--skip-compose] [--skip-schedule] [--skip-playwright] [--extras all|core,...]
   --dry-run                print every step and the commands it would run; change nothing
   --yes                    no questions (MCP registration counts as "yes" unless --skip-mcp)
   --skip-mcp               don't register MCP servers with Claude Code
   --skip-browsers-launchd  don't install the browsers' launchd jobs
   --skip-browsers          skip browsers/install entirely (no Agent Chrome clone, no npm ci in browsers/)
   --skip-compose           don't start cardb + web with docker compose
+  --skip-playwright        don't download Playwright's Chromium (~250 MB; unit tests that drive a page then skip,
+                           the web e2e can't run)
   --skip-schedule          don't install the carhunt.* launchd day schedule (carhunt schedule install)
   --extras LIST            pip extras to install (default: all)
 env: CARHUNT_HOME (default ~/.carhunt), CLAUDE_CONFIG_DIR (default ~/.claude), CARHUNT_BIN_DIR (default ~/.local/bin)
@@ -20,7 +22,7 @@ env: CARHUNT_HOME (default ~/.carhunt), CLAUDE_CONFIG_DIR (default ~/.claude), C
 USAGE
 }
 
-DRY=0 YES=0 SKIP_MCP=0 SKIP_LAUNCHD=0 SKIP_BROWSERS=0 SKIP_COMPOSE=0 SKIP_SCHEDULE=0 EXTRAS=all
+DRY=0 YES=0 SKIP_MCP=0 SKIP_LAUNCHD=0 SKIP_BROWSERS=0 SKIP_COMPOSE=0 SKIP_SCHEDULE=0 SKIP_PW=0 EXTRAS=all
 while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run) DRY=1 ;;
@@ -30,6 +32,7 @@ while [ $# -gt 0 ]; do
     --skip-browsers) SKIP_BROWSERS=1 ;;
     --skip-compose) SKIP_COMPOSE=1 ;;
     --skip-schedule) SKIP_SCHEDULE=1 ;;
+    --skip-playwright) SKIP_PW=1 ;;
     --extras) shift; EXTRAS=${1:?--extras needs a value} ;;
     -h|--help) usage; exit 0 ;;
     *) echo "unknown option: $1" >&2; usage >&2; exit 2 ;;
@@ -44,7 +47,7 @@ CLAUDE_DIR=${CLAUDE_CONFIG_DIR:-$HOME/.claude}
 BIN_DIR=${CARHUNT_BIN_DIR:-$HOME/.local/bin}
 VENV=$REPO/.venv
 CARHUNT=$VENV/bin/carhunt
-TOTAL=18 N=0 WARNED=0
+TOTAL=19 N=0 WARNED=0
 
 step() { N=$((N + 1)); printf '\n[%d/%d] %s\n' "$N" "$TOTAL" "$1"; }
 say() { printf '    %s\n' "$*"; }
@@ -114,6 +117,21 @@ else warn "cardb/Makefile not found: db module not installed, skipped"; fi
 step "Web UI dependencies (npm ci in web/)"
 if [ -f "$REPO/web/package-lock.json" ]; then run npm ci --prefix "$REPO/web"
 else warn "web/package-lock.json not found: web module not installed, skipped"; fi
+
+step "Playwright Chromium (python + web Playwright versions; tests and the web e2e drive it)"
+# Agents browse with Agent Chrome over CDP; this Chromium is for tests (contact/access page tests, web e2e).
+# `install` is idempotent: a present revision is skipped. Each Playwright version pins its own revision.
+if [ "$SKIP_PW" = 1 ]; then say "skipped (--skip-playwright; later: .venv/bin/python -m playwright install chromium)"
+else
+  if [ -x "$VENV/bin/python" ] && "$VENV/bin/python" -c "import playwright" 2>/dev/null; then
+    run "$VENV/bin/python" -m playwright install chromium
+  elif [ "$DRY" = 1 ]; then say "would run: $VENV/bin/python -m playwright install chromium"
+  else warn "python playwright not installed (extras?): skipped"; fi
+  if [ -x "$REPO/web/node_modules/.bin/playwright" ]; then
+    run "$REPO/web/node_modules/.bin/playwright" install chromium
+  elif [ "$DRY" = 1 ]; then say "would run: web/node_modules/.bin/playwright install chromium"
+  else warn "web Playwright not installed (npm ci in web/ failed?): skipped"; fi
+fi
 
 step "Run-data home $CH (mode 700)"
 if [ -d "$CH" ]; then say "exists"; else run mkdir -p "$CH"; fi
@@ -205,7 +223,7 @@ else warn "no .venv python: folder trust skipped (run claude once in $CH)"; fi
 
 HOOK_ARGS=()
 [ "$YES" = 1 ] && HOOK_ARGS+=(--yes)
-step "Agent guard hooks (carhunt hooks install)"
+step "Agent guard hooks (carhunt hooks install → $CH/claude/settings.json; your ~/.claude is not touched)"
 if [ "$DRY" = 1 ]; then say "would run: carhunt hooks install --dry-run (if the orchestrate module is installed)"
 elif [ -x "$CARHUNT" ] && "$CARHUNT" hooks --help >/dev/null 2>&1; then
   run "$CARHUNT" hooks install ${HOOK_ARGS[@]+"${HOOK_ARGS[@]}"} || warn "hooks not installed (re-run: carhunt hooks install)"
