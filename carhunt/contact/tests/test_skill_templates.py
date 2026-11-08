@@ -23,13 +23,14 @@ PLACEHOLDER = re.compile(r"\{([^{}\s]*)\}")
 VALID_NAME = re.compile(r"^(owner|contact|search)(\.[a-z0-9_]+)+$")
 # Brace tokens allowed although they are not config placeholders. Keep empty unless a template
 # really needs one; each entry needs a comment saying why.
-WHITELIST: set[str] = set()
+WHITELIST: set[str] = {
+    "variant",  # set by `carhunt agent launch outreach-home|outreach-abroad` (role suffix), not config
+}
 
 # Keys the templates use that config.example.yaml doesn't carry yet (integrator adds them to the
 # `contact` section). Values = the EV run, generalized.
 CONFIG_ADDITIONS = {
     "contact": {
-        "variant": "home",
         "persona": {
             "home": "Lisbon, Portugal",
             "family_line": "for myself and my family",
@@ -141,7 +142,7 @@ def test_brief_has_both_variants() -> None:
     text = BRIEF.read_text()
     assert "### If you are the home-market agent" in text
     assert "### If you are the abroad agent" in text
-    assert "{contact.variant}" in text
+    assert "{variant}" in text
 
 
 EMAIL = re.compile(r"[\w.+-]+@([\w-]+\.)+[a-z]{2,}", re.I)
