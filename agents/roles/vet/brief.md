@@ -23,7 +23,7 @@ Role `vet`. Car `{car}` in cardb (VIN `{vin}`, seller country `{country}`, desti
 3. What can't be read online → an `ask` (dealer printout or a photo of the warranty screen in the brand app beats emailing a brand inbox).
 
 ## 3. Document verification  → facts per document, `<key>_conflict` on mismatch
-Read every page yourself (not another agent's summary). Method + spec table (✅doc / 📄ad / ❓ / ❌): `knowledge/buy/doc-verify.md`. Cross-check VIN on every page, km sequence, dates, issuer, edit marks. "Accident-free" ≠ no repaint: ask plainly. Battery evidence ranking: `knowledge/battery-soh.md` (write `soh="<value> (<evidence type>, <date>)":<source>`).
+Read every page yourself (not another agent's summary). Method + spec table (✅doc / 📄ad / ❓ / ❌): `knowledge/buy/doc-verify.md`. Cross-check VIN on every page, km sequence, dates, issuer, edit marks. "Accident-free" ≠ no repaint: ask plainly. Battery evidence ranking: `knowledge/battery-soh.md` (write `battery_soh="<value> (<evidence type>, <date>)":<source>`; fact key per powertrain = cardb `ranking.health_facts`).
 
 ## 4. Options from photos  → `cardb opt`
 For option keys `{options}`: backfill the full gallery first (the DB often holds 1 photo while the ad has 30). Use direct interior cues (switch panels, memory buttons, tailgate button, glass roof) from `knowledge/pr-codes-vag.md` §5–6; exterior proxies are weak. Strict: clearly visible → yes/no with `source_ref` = photo #; otherwise `unknown`. VW group: ask for the PR-code sticker photo (7-language ask in §4) and decode with `carhunt vin prcodes`. Batch mode (many cars): one sub-agent per chunk of ≤20 cars, same rules, results merged by you.

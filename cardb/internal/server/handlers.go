@@ -768,7 +768,7 @@ func (h *handler) upsertListing(w http.ResponseWriter, r *http.Request) error {
 
 func (h *handler) findListings(w http.ResponseWriter, r *http.Request) error {
 	q := r.URL.Query()
-	out, err := h.st.FindListings(r.Context(), q.Get("url"), q.Get("site"), q.Get("status"))
+	out, err := h.st.FindListings(r.Context(), q.Get("url"), q.Get("site"), q.Get("site_ref"), q.Get("status"))
 	if err != nil {
 		return err
 	}

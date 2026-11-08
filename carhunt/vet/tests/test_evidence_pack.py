@@ -116,3 +116,19 @@ def test_render_mentions_state():
     st = ep.assess(car())
     out = ep.render(st)
     assert "visit-ready: no" in out and "Registration document" in out
+
+
+def test_battery_soh_is_the_health_fact_and_asks_name_their_fact():
+    f = [x for x in facts(REQUIRED_FACTS) if x["key"] != "soh"]
+    st = ep.assess(car(facts=f + facts(["battery_soh"], "94 % (dealer cert, 2026-11)")))
+    assert st.visit_ready
+    st = ep.run(StubDB(car()), "7")
+    assert st.asks[0]["data"]["fact"] == "registration_doc"
+
+
+def test_unknown_fuel_stays_conservative_and_lowercase_cardb_fuel_works():
+    f = [x for x in facts(REQUIRED_FACTS) if x["key"] != "soh"]
+    assert "battery_health" in ep.assess(car(powertrain={"fuel": "unknown"}, facts=f)).missing
+    assert "battery_health" in ep.assess(car(powertrain={"fuel": "bev"}, facts=f)).missing
+    assert ep.assess(car(powertrain={"fuel": "petrol"}, facts=f)).visit_ready
+    assert ep.fuel_of({"powertrain": {"battery_net_kwh": 77}}) == "BEV"

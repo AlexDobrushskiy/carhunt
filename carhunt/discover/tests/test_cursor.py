@@ -59,3 +59,15 @@ def test_strategy_resolution():
     assert strategy_for({"site": "s", "cursor": {"strategy": "full"}}, {}) == "full"
     assert strategy_for({"site": "s"}, {"cursor": {"s": "newest_id"}}) == "newest_id"
     assert strategy_for({"site": "s"}, {}) == "first_seen"
+    # sites vocabulary (site.schema.json): newest_first + key
+    assert strategy_for({"site": "s", "cursor": {"strategy": "newest_first", "key": "site_ref"}}, {}) == "newest_id"
+    assert strategy_for({"site": "s", "cursor": {"strategy": "newest_first", "key": "created"}}, {}) == "first_seen"
+    # config override wins over site.yaml
+    assert strategy_for({"site": "s", "cursor": {"strategy": "full"}}, {"cursor": {"s": "newest_id"}}) == "newest_id"
+
+
+def test_every_site_yaml_cursor_resolves():
+    from carhunt.sites import base
+
+    for sid, meta in base.metas().items():
+        assert strategy_for(meta, {}) in ("newest_id", "first_seen", "full"), sid

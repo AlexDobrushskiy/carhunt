@@ -10,11 +10,12 @@ Talk to sellers without getting banned, double-messaging or leaking: every messa
 | `carhunt watch [--channels a,b] [--once\|--until-new] [--interval 60] [--agent ROLE]` | new seller messages → cardb (verbatim) + `$CARHUNT_HOME/agents/ROLE/inbox.jsonl` + one JSON line on stdout | 0 · 2 if stdout is /dev/null |
 | `carhunt mailroute [--window 3d] [--dry-run] [--filters] [--launchd]` | car mail out of the inbox by address/domain/thread; Gmail filter XML; launchd plist | 0 |
 | `carhunt ledger [show\|reconcile] [--limit N] [--since T]` | show sends; re-post every row to cardb (idempotent) | 0 |
-| `carhunt asks [list\|close] [--car ID] [--ask-id E --answer T]` | open vet asks; close with `ask_answered` | 0 |
+| `carhunt asks [list\|close] [--car ID] [--ask-id E \| --topic T] [--answer A] [--no-fact]` | open vet/buy asks (cars in to_contact…visited); close one with `ask_answered` | 0 · 1 nothing open · 2 usage |
 
 - `--to` defaults to the car's contact for that channel (WhatsApp/phone, email, or the car's live listing URL on that site).
 - `--dry-run` reads only local sources (wacli's local DB, cardb), prints the guard decision and the would-send payload. Nothing leaves the machine.
 - Exit 10: read the reason, fix or wait. Time the next send from the ledger (`carhunt ledger`), never `sleep N` (EV: 3 refused retries from blind sleeps, 2026-11-03).
+- Asks (vet ↔ outreach contract): an `ask` event carries `data.topic` + `data.fact`. Fold it into your next message (one question per message), then `carhunt asks close --car C --topic T --answer "<what the seller said>"` (or `"refused: …"`). Close writes `ask_answered` with `data {ask_event, topic}` and fills the ask's fact (source `seller_said`) unless the car already has a real value. Why: vet decides "have" from facts; a close without the fact = vet re-asks, and a re-ask got us called scammers (11-01).
 - Exit 12: the message may have gone out. Check the channel (chat, Sent folder) before any re-send (EV: 4 duplicate emails after network errors, 2026-11-05).
 
 ## Guard rules (order) and why
