@@ -1,6 +1,6 @@
 # web — phone-first UI over cardb
 
-Astro 5 SSR + React islands + Tailwind 4, Node 22. A pure cardb API consumer: no own storage. Code: `web/`.
+Astro 7 SSR + React islands + Tailwind 4, Node 22. A pure cardb API consumer: no own storage. Code: `web/`.
 
 ## Commands (in `web/`)
 
@@ -85,6 +85,11 @@ Specs (`e2e/web.spec.ts`): list → fuel filter → car page (powertrain block, 
 secrets:
   cardb_web_tokens: {file: "${CARHUNT_HOME:-~/.carhunt}/cardb/web-tokens"}   # name:token per line, 0600
 ```
+
+## Dependencies
+
+- Top-level versions are pinned exactly; `npm audit` was 0 on 2026-11-08 after moving off the Astro 5 line (1 critical + 5 high in the runtime graph). `vite` is a direct dev dependency so vitest and Astro share one Vite 8.
+- Engines: Node ≥ 22.12 (the image pins 22.23.4).
 
 ## Gaps
 

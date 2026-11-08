@@ -1,6 +1,6 @@
 # web
 
-Phone-first UI over cardb (Astro 5 SSR + React islands + Tailwind 4, Node 22). Owner: web.
+Phone-first UI over cardb (Astro 7 SSR + React islands + Tailwind 4, Node 22). Owner: web.
 Full doc: [docs/web.md](../docs/web.md).
 
 ```sh
