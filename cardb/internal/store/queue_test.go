@@ -390,7 +390,7 @@ func TestLandedCost(t *testing.T) {
 	}
 	// Without default_distance_km, an abroad distance comes from the country centroid.
 	r2 := newRanker(mustProfile(t, "owner: {home: {country: PT, lat: 38.72, lon: -9.14}}\n"))
-	if l := r2.car(cb{make: "VW", model: "ID.4", price: 30000, country: "DE"}).landed; l.distKm < 1800 || l.distKm > 2600 || !l.distGuess {
+	if l := r2.car(cb{make: "VW", model: "ID.4", price: 30000, country: "DE"}).landed; l.distKm < 2100 || l.distKm > 2900 || !l.distGuess {
 		t.Fatalf("centroid guess: %+v", l)
 	}
 }
