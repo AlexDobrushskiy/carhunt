@@ -7,6 +7,9 @@ Rules (why):
 - removed at once on 404/410 or the site's own gone marker; a redirect to a list page is a *soft* signal → removed
   only on the 2nd soft signal ≥1 h after the first (milanuncios redirects live ads now and then, 11-04).
 - never on a block/timeout/unknown: a block says nothing about the ad (an ad-hoc check once removed 2 live cars).
+- a live page also yields the current asking price (same page, no extra load): a change is written as a minimal
+  upsert {url, price} → cardb's price history + price_change event. Newest-first sweeps never revisit known ads,
+  so price drops are caught here (EV run: weekly price re-check of liked cars). Net prices are skipped (cardb = gross).
 - the first block stops that site for the run (more loads only deepen the ban).
 - relists only what this tool removed: removals by agents/owner are deliberate and left alone.
 - a site out of pace budget stops for this run; with `--proxy-priority`, priority listings go through the site's
@@ -43,7 +46,7 @@ class DB(Protocol):
     def cars(self) -> dict[int, dict]: ...
     def patch_status(self, listing_id: int, status: str) -> None: ...
     def event(self, car_id: int, listing_id: int, summary: str, key: str, data: dict) -> None: ...
-    def sighting(self, url: str) -> None: ...
+    def sighting(self, url: str, price: int | None = None) -> None: ...
 
 
 class CardbAdapter:
@@ -77,8 +80,12 @@ class CardbAdapter:
     def event(self, car_id: int, listing_id: int, summary: str, key: str, data: dict) -> None:
         self.c.event(car_id, "ad_check", summary, data=data, key=key, listing=listing_id)
 
-    def sighting(self, url: str) -> None:
-        self.c.upsert_listing({"url": url, "author": WHO})
+    def sighting(self, url: str, price: int | None = None) -> None:
+        """Minimal upsert: bumps last_seen; with a price, cardb appends price history + a price_change event."""
+        body: dict[str, Any] = {"url": url, "author": WHO}
+        if price is not None:
+            body["price"] = price
+        self.c.upsert_listing(body)
 
 
 def connect_db() -> DB:
@@ -131,7 +138,8 @@ class State:
         with self.lock:
             r = self.c.execute("SELECT last_at, verdict, signal, soft_n, soft_first, removed_by_us FROM checks "
                                "WHERE listing_id=?", (lid,)).fetchone()
-        return dict(zip(["last_at", "verdict", "signal", "soft_n", "soft_first", "removed_by_us"], r)) if r else {}
+        keys = ["last_at", "verdict", "signal", "soft_n", "soft_first", "removed_by_us"]
+        return dict(zip(keys, r, strict=True)) if r else {}
 
     def put(self, lid: int, **kw: Any) -> None:
         with self.lock:
@@ -150,8 +158,17 @@ def verdict_of(lv: Liveness) -> str:
     return lv.state   # live | unknown
 
 
-def apply(db: DB, st: State, lst: dict, verdict: str, signal: str, *, dry: bool, now: float | None = None) -> str | None:
-    """Apply one verdict. Returns the action: removed | relisted | soft | seen | None."""
+def new_price(lst: dict, price: int | None, is_net: bool | None) -> int | None:
+    """The page's price when it differs from cardb's. Net (ex-VAT) prices are skipped: cardb stores gross."""
+    if price is None or is_net or not lst.get("price"):
+        return None
+    return price if int(price) != int(lst["price"]) else None
+
+
+def apply(db: DB, st: State, lst: dict, verdict: str, signal: str, *, dry: bool, now: float | None = None,
+          price: int | None = None) -> str | None:
+    """Apply one verdict. Returns the action: removed | relisted | soft | seen | price | None.
+    `price` = a changed asking price seen on the live page (written with the sighting)."""
     lid, car = lst["id"], lst["car_id"]
     s = st.get(lid)
     now = now if now is not None else time.time()
@@ -161,11 +178,13 @@ def apply(db: DB, st: State, lst: dict, verdict: str, signal: str, *, dry: bool,
         st.put(lid, soft_n=0, soft_first=None)
         if lst["status"] == "live":
             if not dry:
-                db.sighting(lst["url"])
-            return "seen"
+                db.sighting(lst["url"], price)
+            return "price" if price is not None else "seen"
         if lst["status"] == "removed" and s.get("removed_by_us"):
             if not dry:
                 db.patch_status(lid, "live")
+                if price is not None:
+                    db.sighting(lst["url"], price)
                 db.event(car, lid, f"{lst['site']} ad is back online", f"liveness:{lid}:back:{day}", data)
                 st.put(lid, removed_by_us=0)
             return "relisted"
@@ -203,9 +222,10 @@ class Run:
     def over(self) -> bool:
         return bool(self.until and time.time() >= self.until)
 
-    def note(self, site: str, lst: dict, verdict: str, signal: str, act: str | None, prio: int) -> None:
+    def note(self, site: str, lst: dict, verdict: str, signal: str, act: str | None, prio: int,
+             price: int | None = None) -> None:
         rec = {"at": now_iso(), "listing": lst["id"], "car": lst["car_id"], "site": site, "verdict": verdict,
-               "signal": signal, "action": act, "prio": prio, "url": lst["url"]}
+               "signal": signal, "action": act, "prio": prio, "url": lst["url"], "price": price}
         with self.lock:
             s = self.stats.setdefault(site, {"checked": 0})
             s["checked"] += 1
@@ -224,14 +244,20 @@ class Run:
             self.stats.setdefault(site, {"checked": 0})["stopped"] = why[:160]
         print(f"[{time.strftime('%H:%M:%S')}] {site}: stopped ({why[:120]})", file=sys.stderr, flush=True)
 
-    def one(self, site: str, lst: dict, verdict: str, signal: str, prio: int) -> None:
+    def one(self, site: str, lst: dict, verdict: str, signal: str, prio: int, lv: Liveness | None = None) -> None:
         if verdict in ("blocked", "unknown"):
             self.st.put(lst["id"], verdict=verdict, signal=signal)   # last_at untouched: retried next run
             self.note(site, lst, verdict, signal, None, prio)
             return
-        act = apply(self.db, self.st, lst, verdict, signal, dry=self.dry)
+        price = new_price(lst, lv.price, lv.price_is_net) if lv else None
+        try:
+            act = apply(self.db, self.st, lst, verdict, signal, dry=self.dry, price=price)
+        except Exception as e:   # cardb refused (price sanity 422, conflict): log it, keep checking
+            act = f"write failed: {e}"[:80]
         self.st.put(lst["id"], last_at=time.time(), verdict=verdict, signal=signal)
-        self.note(site, lst, verdict, signal, act, prio)
+        if price is not None:
+            signal = f"{signal}; price {lst.get('price')} → {price}"
+        self.note(site, lst, verdict, signal, act, prio, price=lv.price if lv else None)
 
     def site(self, site_id: str, items: list[tuple[int, dict]]) -> None:
         try:
@@ -247,7 +273,7 @@ class Run:
                     self.stop(site_id, "time box reached")
                     return
                 try:
-                    v, sig = self._check(p, lst["url"])
+                    v, sig, lv = self._check(p, lst["url"])
                 except PaceExceeded as e:
                     rest = [x for x in items[i:] if x[0] <= 2]
                     if self.proxy_priority and proxy_cc and rest:
@@ -256,7 +282,7 @@ class Run:
                     else:
                         self.stop(site_id, f"pace budget used ({e.reason}); {len(items) - i} left for later")
                     return
-                self.one(site_id, lst, v, sig, prio)
+                self.one(site_id, lst, v, sig, prio, lv)
                 if v == "blocked":
                     self.stop(site_id, f"blocked: {sig}")
                     return
@@ -268,27 +294,27 @@ class Run:
             if self.over():
                 return
             try:
-                v, sig = self._check(p, lst["url"], country=cc)
+                v, sig, lv = self._check(p, lst["url"], country=cc)
             except (PaceExceeded, AccessError) as e:
                 self.stop(site_id, f"{cc} route: {e}")
                 return
-            self.one(site_id, lst, v, f"{cc} {sig}", prio)
+            self.one(site_id, lst, v, f"{cc} {sig}", prio, lv)
             if v == "blocked":
                 return
 
     @staticmethod
-    def _check(p: base.BaseSite, url: str, country: str | None = None) -> tuple[str, str]:
+    def _check(p: base.BaseSite, url: str, country: str | None = None) -> tuple[str, str, Liveness | None]:
         try:
             lv = p.is_live(url, country=country) if country else p.is_live(url)
         except Blocked as e:
-            return "blocked", e.signature
+            return "blocked", e.signature, None
         except base.Unsupported as e:
-            return "unknown", f"unsupported: {e}"[:80]
+            return "unknown", f"unsupported: {e}"[:80], None
         except PaceExceeded:
             raise
         except Exception as e:   # network error, parse error: unknown, never gone
-            return "unknown", f"error {e!r}"[:80]
-        return verdict_of(lv), lv.evidence
+            return "unknown", f"error {e!r}"[:80], None
+        return verdict_of(lv), lv.evidence, lv
 
     def go(self, by_site: dict[str, list[tuple[int, dict]]]) -> None:
         # one thread per site: different hosts, each paced on its own ledger

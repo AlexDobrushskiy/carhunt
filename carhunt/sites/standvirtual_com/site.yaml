@@ -19,6 +19,7 @@ account:
 phone: decode
 messaging: "site chat, logged in (OLX Group account); sender lives in contact"
 liveness: {evidence: "410 = gone; 200 + ad id = live (measured 11-04)"}
+cursor: {strategy: newest_first, key: site_ref, why: "created_at desc but createdAt is bumped by refreshes → numeric advert id is the cursor"}
 measured: 2026-11-07
 notes:
   - "Phones (advert.phoneNumbers) and VIN (parametersDict.vin) are AES-GCM tokens decoded offline with the site's own client salt (read once from its JS bundles, cached)"

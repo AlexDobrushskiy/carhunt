@@ -16,6 +16,7 @@ account:
 phone: none
 messaging: "none: auction archive, no sellers to contact"
 liveness: {supported: false, evidence: "archive lots, not live ads"}
+cursor: {strategy: full, key: site_ref, why: "VIN lookup, not a feed"}
 measured: 2026-11-01
 notes:
   - "EU auction archive (OpenLane, BCA-type lots): price history with/without VAT, sale date, country, km, damage flag, keys, seller type, ~30 photos"

@@ -24,6 +24,7 @@ liveness:
   mode: fetch
   gone_redirect: '[?&]gone=\d+'
   evidence: "redirect to the list with ?gone=<id> = gone; 200 + id = live (in-tab fetch, measured 11-04)"
+cursor: {strategy: newest_first, key: site_ref, why: "default order is newest first; numeric ids grow"}
 measured: 2026-11-07
 notes:
   - "Plain HTTP stayed 403 for hours (11-03) while a browser on the same IP loaded pages (11-04): read in a browser tab, stop at the first 403"

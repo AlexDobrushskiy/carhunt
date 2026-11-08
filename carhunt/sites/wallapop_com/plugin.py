@@ -11,7 +11,7 @@ from collections.abc import Iterator
 from datetime import UTC, datetime
 from typing import Any
 
-from carhunt.sites.base import overrides, BaseSite, Blocked, Gone, Unsupported
+from carhunt.sites.base import BaseSite, Blocked, Gone, Unsupported, overrides
 from carhunt.sites.extract import num
 from carhunt.sites.model import Card, RawAd, SearchQuery, Seller
 

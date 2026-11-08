@@ -153,6 +153,9 @@ class Liveness:
     evidence: str
     soft: bool = False
     moved_to: str | None = None         # same ad under a new URL (AS24 308 slug change)
+    price: int | None = None            # current asking price read from the same page (no extra load), when parsable
+    price_is_net: bool | None = None
+    ad_status: str | None = None        # site's own status label (e.g. reserved), informational
 
     def to_dict(self) -> dict[str, Any]:
         return _clean(dataclasses.asdict(self)) | {"state": self.state}

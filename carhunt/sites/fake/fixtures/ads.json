@@ -1,5 +1,5 @@
 [
-  {"site_ref": "fk1001", "state": "live", "title": "Volkswagen ID.4 Pro 77 kWh", "make": "Volkswagen", "model": "ID.4",
+  {"site_ref": "fk1001", "state": "live", "live_price": 30900, "title": "Volkswagen ID.4 Pro 77 kWh", "make": "Volkswagen", "model": "ID.4",
    "version": "Pro Performance", "price": 31900, "km": 42000, "first_registration": "2022-05", "fuel": "bev",
    "power_kw": 150, "drive": "rear", "battery_kwh": 77, "seller": {"type": "private", "name": "Synthetic Seller A", "city": "Porto", "country": "PT"},
    "country": "PT", "location": "Porto", "phones": ["+351 555 000 101"], "vin": "SYN0000000000F001",

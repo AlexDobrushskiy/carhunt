@@ -31,6 +31,7 @@ liveness:
   evidence: >-
     redirect to a list page (?marca=…) = soft gone (49 checks 11-04..07); 200 + ad id = live; 404/410 = gone
 proxy: {sticky_minutes: 30}
+cursor: {strategy: newest_first, key: site_ref, why: "orden=date; ad ids grow with time"}
 measured: 2026-11-07
 notes:
   - "Reads: one plain-chrome tab on the home page, then same-origin fetches of the server-rendered pages (window.__INITIAL_PROPS__): one request per page"

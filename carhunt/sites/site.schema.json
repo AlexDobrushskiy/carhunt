@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "carhunt site.yaml",
   "type": "object",
-  "required": ["site", "name", "countries", "hosts", "ad_id", "wall", "route", "pace", "account", "messaging", "phone", "measured"],
+  "required": ["site", "name", "countries", "hosts", "ad_id", "wall", "route", "pace", "account", "messaging", "phone", "cursor", "measured"],
   "additionalProperties": false,
   "properties": {
     "site": {"type": "string", "pattern": "^[a-z0-9.\\-]+$", "description": "id used in config and cardb"},
@@ -54,9 +54,19 @@
         "mode": {"enum": ["fetch", "goto"]},
         "gone_redirect": {"type": "string"},
         "gone_text": {"type": "string"},
+        "gone_title": {"type": "string"},
         "sold_text": {"type": "string"},
         "proxy_country": {"type": "string", "pattern": "^[A-Z]{2}$", "description": "priority checks via this exit when the home pace budget is used up"},
         "evidence": {"type": "string"}
+      }
+    },
+    "cursor": {
+      "type": "object", "additionalProperties": false, "required": ["strategy"],
+      "description": "how discover resumes a sweep",
+      "properties": {
+        "strategy": {"enum": ["newest_first", "full"], "description": "newest_first: stop at the last seen ad; full: page the whole filtered set every run"},
+        "key": {"enum": ["site_ref", "created"], "description": "what orders ads: monotonic site_ref, or created timestamp (+ first organic id)"},
+        "why": {"type": "string"}
       }
     },
     "proxy": {"type": "object", "properties": {"sticky_minutes": {"type": "integer"}}, "additionalProperties": false},

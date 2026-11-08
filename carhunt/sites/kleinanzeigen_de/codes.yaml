@@ -1,0 +1,35 @@
+# kleinanzeigen.de list URL (all filters live in the path, as the site's own facet links build them):
+#   /s-autos/<seo>[/anbieter:<seller>][/preis:<min>:<max>][/seite:<n>]/[k0]c216+autos.<attr>:<value>+…  (attrs sorted)
+# <seo> = the make slug, or the keyword when one is used (then the category reads k0c216).
+category: c216            # Autos
+makes:                    # autos.marke_s slug ("" = not a make on the site: keyword only); missing → lowercase, non-alnum → "_"
+  Volkswagen: volkswagen
+  Audi: audi
+  Skoda: skoda
+  Cupra: cupra
+  Mercedes-Benz: mercedes_benz
+  BMW: bmw
+  Mini: mini
+  Hyundai: hyundai
+  Kia: kia
+  Toyota: toyota
+  BYD: byd
+  Xpeng: ""
+models:                   # autos.model_s slug (only slugs seen in the site's own links / ad attributes)
+  Volkswagen: {ID.3: id_3, ID.4: id_4, ID.5: id_5, ID.7: id_7, ID.Buzz: id_buzz}
+  Toyota: {bZ4X: bz4x}
+keywords:                 # models without a model_s slug → free-text keyword (the EV runners' method); missing → model name
+  Xpeng: {G6: Xpeng G6}
+  BYD: {Seal U: Seal U, Sealion 7: Sealion 7}
+fuel:                     # cardb powertrain → autos.fuel_s
+  bev: elektro
+  petrol: benzin
+  diesel: diesel
+  hev: hybrid             # one hybrid bucket on the site (full + plug-in)
+  phev: hybrid
+seller:                   # anbieter:
+  private: privat
+  dealer: gewerblich
+sort:
+  newest: ""              # site default order (the runners' id cursors relied on it)
+page_size: 27

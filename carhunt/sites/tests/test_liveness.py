@@ -65,8 +65,8 @@ class FakeDB:
     def event(self, car, lid, summary, key, data):
         self.events.append((car, lid, key, data["verdict"]))
 
-    def sighting(self, url):
-        self.sightings.append(url)
+    def sighting(self, url, price=None):
+        self.sightings.append((url, price) if price is not None else url)
 
 
 def fake_url(ref):
@@ -79,8 +79,11 @@ def fake():
         yield
 
 
+PRICES = {"fk1001": 31900, "fk1002": 41000, "fk1003": 36900, "fk1004": 24900}
+
+
 def listings():
-    return [{"id": i, "car_id": 100 + i, "site": "fake", "url": fake_url(ref), "status": "live"}
+    return [{"id": i, "car_id": 100 + i, "site": "fake", "url": fake_url(ref), "status": "live", "price": PRICES[ref]}
             for i, ref in enumerate(["fk1001", "fk1002", "fk1003", "fk1004"], start=1)]
 
 
@@ -88,10 +91,11 @@ def test_run_writes_through_cardb(fake):
     db = FakeDB(listings())
     s = liveness.run(db=db)
     by = {r["listing"]: (r["verdict"], r["action"]) for r in s["results"]}
-    assert by == {1: ("live", "seen"), 2: ("live", "seen"), 3: ("gone", "removed"), 4: ("gone_soft", "soft")}
+    # 1: price dropped 31900 → 30900 on the live page; 2: cardb holds 41000 but the page shows a net price → skipped
+    assert by == {1: ("live", "price"), 2: ("live", "seen"), 3: ("gone", "removed"), 4: ("gone_soft", "soft")}
     assert db.patches == [(3, "removed")]
     assert db.events == [(103, 3, db.events[0][2], "gone")] and db.events[0][2].startswith("liveness:3:gone:")
-    assert len(db.sightings) == 2
+    assert db.sightings == [(fake_url("fk1001"), 30900), fake_url("fk1002")]
 
 
 def test_soft_needs_two_signals_an_hour_apart(fake):
@@ -152,3 +156,18 @@ def test_daily_due_and_priority(fake):
     st.put(3, last_at=now - 3600)
     by, _ = liveness.plan(db, st, daily=True, now=now)
     assert [x["id"] for _, x in by["fake"]] == [2, 1, 4]   # 3 checked an hour ago; liked first, no car record last
+
+
+def test_price_from_page_without_extra_requests():
+    """Liveness reads the current price from the page it already fetched (coches page route, leboncoin)."""
+    import importlib
+
+    from carhunt.sites.testing import FakeNet
+    for pkg in ("coches_net", "leboncoin_fr"):
+        tm = importlib.import_module(f"carhunt.sites.tests.test_{pkg}")
+        s = base.get(pkg, net=FakeNet(pkg))
+        urls = [v for v in vars(tm).values() if isinstance(v, str) and v.startswith("https://") and s.ad_id(v)]
+        pages = [p for p in (base.ROOT / "tests" / "fixtures" / pkg).glob("ad*.html")]
+        found = [ad.price for u in urls for p in pages if (ad := s.ad_from_page(u, p.read_text()))]
+        assert found and all(found), pkg
+        assert s.net.calls == [], "no request: the page is parsed from memory"

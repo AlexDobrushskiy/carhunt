@@ -5,11 +5,13 @@ list page → removed only on a 2nd soft signal ≥1 h later) · blocked (403/42
 nothing) · unknown (200 without the ad id, network error: write nothing) · follow (same ad id under a new URL).
 
 Per-site markers live in site.yaml `liveness:` — `gone_redirect` (regex on the redirect target), `gone_text`
-(regex on the page), `sold_text` (regex: the site keeps the page but flags it sold).
+(regex on the page), `gone_title` (regex on <title> only: the phrase may sit in every page's i18n data),
+`sold_text` (regex: the site keeps the page but flags it sold).
 """
 from __future__ import annotations
 
 import re
+from dataclasses import replace
 from typing import TYPE_CHECKING
 
 from carhunt.access.errors import Blocked
@@ -56,7 +58,8 @@ def hint_of(text: str, aid: str | None, rules: dict | None = None) -> dict:
     has_id = bool(aid and aid in text)
     return {"title": (title(text) or "")[:80] or None, "has_id": has_id, "bot": bot_page(text, aid),
             "sold": bool(rules.get("sold_text") and re.search(rules["sold_text"], text)),
-            "gone_text": bool(rules.get("gone_text") and re.search(rules["gone_text"], text, re.I))}
+            "gone_text": bool(rules.get("gone_text") and re.search(rules["gone_text"], text, re.I))
+            or bool(rules.get("gone_title") and re.search(rules["gone_title"], title(text) or "", re.I))}
 
 
 def to_liveness(site: str, url: str, verdict: str, signal: str, moved: str | None = None) -> Liveness:
@@ -69,6 +72,17 @@ def to_liveness(site: str, url: str, verdict: str, signal: str, moved: str | Non
     if verdict == "live":
         return Liveness("live", signal, moved_to=moved)
     return Liveness("unknown", signal)
+
+
+def with_price(site: BaseSite, url: str, lv: Liveness, text: str) -> Liveness:
+    """Add the current price of a live ad from the page we already have (liveness catches price drops on known
+    listings; newest-first sweeps never revisit them)."""
+    if lv.state != "live" or not text:
+        return lv
+    ad = site.ad_from_page(lv.moved_to or url, text)
+    if ad is None or ad.price is None:
+        return lv
+    return replace(lv, price=ad.price, price_is_net=ad.price_is_net, ad_status=ad.status)
 
 
 def check(site: BaseSite, url: str, *, country: str | None = None) -> Liveness:
@@ -86,5 +100,6 @@ def check(site: BaseSite, url: str, *, country: str | None = None) -> Liveness:
     if v == "follow" and final:   # AS24 308: same ad, new slug → check the new URL once
         r2 = site.net.get(final, follow=False, check=False, ad_id=aid, country=country)
         v, sig2 = classify(final, r2.status, r2.location, hint_of(r2.text, aid, rules), rules=rules, ad_id=site.ad_id)
-        return to_liveness(site.id, url, "unknown" if v == "follow" else v, f"moved→{sig2}", moved=final)
-    return to_liveness(site.id, url, v, sig)
+        lv = to_liveness(site.id, url, "unknown" if v == "follow" else v, f"moved→{sig2}", moved=final)
+        return with_price(site, url, lv, r2.text)
+    return with_price(site, url, to_liveness(site.id, url, v, sig), r.text)

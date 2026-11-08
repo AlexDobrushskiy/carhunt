@@ -14,5 +14,6 @@ account: {needed_for: []}
 phone: page
 messaging: none (synthetic)
 liveness: {evidence: "fixture field `state`: live | removed | soft | blocked"}
+cursor: {strategy: newest_first, key: created, why: "fixture order"}
 measured: 2026-11-08
 notes: ["Fixture cards/ads in fixtures/*.json; edit them to shape e2e scenarios."]

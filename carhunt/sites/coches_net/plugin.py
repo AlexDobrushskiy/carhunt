@@ -240,6 +240,16 @@ class Plugin(BaseSite):
             raise Blocked("no-initial-props", site=self.id, url=url)
         return self.parse_page_ad(url, props)
 
+    def ad_from_page(self, url: str, text: str) -> RawAd | None:
+        """Liveness price: parse the page we already have (`ad()` would go to the gateway first)."""
+        props = window_var(text, "__INITIAL_PROPS__") if text else None
+        if not isinstance(props, dict) or not props.get("ad"):
+            return None
+        try:
+            return self.parse_page_ad(url, props)
+        except Exception:   # noqa: BLE001 - no price, never an error
+            return None
+
     def parse_api_ad(self, url: str, d: dict) -> RawAd:
         """Gateway `/details/<id>`: ad.vehicle.specs (power = CV), privateSeller | professionalSeller, vehicleSpecs."""
         a = d.get("ad") or {}
@@ -331,10 +341,12 @@ class Plugin(BaseSite):
                    "environmental_label": a.get("environmentalLabel"), "traction_text": eng.get("traction")},
             raw=props)
 
-    def is_live(self, url: str) -> Liveness:
-        """One page read without redirects (site.yaml `gone_redirect`); counts against the ≤2/h page budget."""
-        self._page_gate()
-        return super().is_live(url)
+    def is_live(self, url: str, *, country: str | None = None) -> Liveness:
+        """One page read without redirects (site.yaml `gone_redirect`); counts against the ≤2/h home page budget
+        unless it goes through a `country` exit (liveness --proxy-priority)."""
+        if not country:
+            self._page_gate()
+        return super().is_live(url, country=country)
 
     # --- phone -----------------------------------------------------------------
     def phone(self, ad: RawAd, *, reveal: bool = False) -> list[str]:

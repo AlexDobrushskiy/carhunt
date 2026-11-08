@@ -189,6 +189,16 @@ class Plugin(BaseSite):
             raise Blocked("ad-id-mismatch", site=self.id, url=url)
         return self.parse_ad(url, x)
 
+    def ad_from_page(self, url: str, text: str) -> RawAd | None:
+        """Liveness price from the page is_live already read (no second cookie'd load)."""
+        x = (page_props(text) or {}).get("ad") or {}
+        if str(x.get("list_id")) != self.ad_id(url):
+            return None
+        try:
+            return self.parse_ad(url, x)
+        except Exception:   # noqa: BLE001
+            return None
+
     def parse_ad(self, url: str, x: dict) -> RawAd:
         lab, val = attrs(x)
         reg = _reg(val)
@@ -239,7 +249,7 @@ class Plugin(BaseSite):
                           "(browsers + contact modules); cap ≤40 reveals/day, take the slot before the click")
 
     # --- liveness ----------------------------------------------------------
-    def is_live(self, url: str) -> Liveness:
+    def is_live(self, url: str, *, country: str | None = None) -> Liveness:
         """One cookie'd read without redirects. 200 counts as live only with this ad in the page data: a DataDome
         page can quote the ad URL (and so its id) without being the ad."""
         rules = self.meta.get("liveness") or {}
@@ -253,4 +263,4 @@ class Plugin(BaseSite):
                 verdict, sig = "unknown", "200 without the ad in page data"
             elif ad.get("status") not in (None, "active"):
                 verdict, sig = "gone", f"200 status {ad.get('status')}"
-        return live.to_liveness(self.id, url, verdict, sig)
+        return live.with_price(self, url, live.to_liveness(self.id, url, verdict, sig), r.text)

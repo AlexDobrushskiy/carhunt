@@ -29,10 +29,10 @@ def flight(html: str) -> str:
     return "".join(json.loads(s) for s in _FLIGHT.findall(html))
 
 
-def flight_objects(html: str, key: str) -> list[Any]:
-    """Every JSON value that follows `"key":` in the flight payload (objects/arrays decoded with raw_decode)."""
-    text, out, dec = flight(html), [], json.JSONDecoder()
-    for m in re.finditer(r'"%s":' % re.escape(key), text):
+def objects_after(text: str, key: str) -> list[Any]:
+    """Every JSON value that follows `"key":` in already-decoded text (objects/arrays via raw_decode)."""
+    out, dec = [], json.JSONDecoder()
+    for m in re.finditer(rf'"{re.escape(key)}":', text):
         try:
             out.append(dec.raw_decode(text, m.end())[0])
         except json.JSONDecodeError:
@@ -40,9 +40,22 @@ def flight_objects(html: str, key: str) -> list[Any]:
     return out
 
 
+def flight_objects(html: str, key: str) -> list[Any]:
+    """`objects_after` on the page's decoded flight payload (decode once and use objects_after for many keys)."""
+    return objects_after(flight(html), key)
+
+
+def flight_ref_text(stream: str, ref: str) -> str | None:
+    """RSC text record: '$4a' → the text at '\\n4a:T<hex byte length>,<text>' (length in UTF-8 bytes)."""
+    m = re.search(rf"(?:^|\n){re.escape(ref[1:])}:T([0-9a-fA-F]+),", stream)
+    if not m:
+        return None
+    return stream[m.end():].encode("utf-8")[:int(m.group(1), 16)].decode("utf-8", "ignore")
+
+
 def window_var(html: str, name: str) -> Any:
     """`window.NAME = {...};` or `window.NAME = JSON.parse("...")`."""
-    m = re.search(r"window\.%s\s*=\s*" % re.escape(name), html)
+    m = re.search(rf"window\.{re.escape(name)}\s*=\s*", html)
     if not m:
         return None
     rest = html[m.end():]

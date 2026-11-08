@@ -64,6 +64,8 @@ def test_blocked_and_gone():
 def test_liveness():
     assert site({U1: Response(410, AD)}).is_live(AD).state == "removed"
     assert site({U1: Response(200, AD, f"<html>{U1}</html>")}).is_live(AD).state == "live"
+    lv = site({U1: Response(200, AD, fixture(__file__, "autoscout24/ad.html"))}).is_live(AD)
+    assert (lv.state, lv.price, lv.price_is_net) == ("live", 27723, True)   # price read from the same page
     moved = AD.replace("pro-elektro", "pro-x-elektro")
     s = site({"pro-x-elektro": Response(200, moved, f"<html>{U1}</html>"),
               "pro-elektro": Response(308, AD, location=moved)})

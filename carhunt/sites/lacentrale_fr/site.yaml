@@ -18,6 +18,7 @@ account: {needed_for: [], verification: "none needed for reads"}
 phone: none
 messaging: "site's message-seller form on the ad page (not measured here; sender lives in contact)"
 liveness: {supported: false, evidence: "no liveness reader (3 listings in the EV run, 11-04)"}
+cursor: {strategy: full, key: site_ref, why: "newest sort not measured"}
 measured: 2026-10-30
 notes:
   - "Automated browsers (Playwright lane, identity MCP, Playwright-launched headed Chrome) get the slider; a slide solved there → 'Access is temporarily restricted' (10-26)"

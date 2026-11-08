@@ -114,6 +114,19 @@ class BaseSite:
         from carhunt.sites import live
         return live.check(self, url, country=country)
 
+    def ad_from_page(self, url: str, text: str) -> RawAd | None:
+        """Parse an already-fetched ad page with this plugin's own `ad()` (served from memory, no request).
+        None when `ad()` needs anything beyond that page (API calls, a cookie, a decode bundle)."""
+        from carhunt.sites.testing import FakeNet  # in-memory transport: ad() runs unchanged on the given text
+        real = self.net
+        self.net = FakeNet(self.id, {re.escape(url) + "$": text})
+        try:
+            return self.ad(url)
+        except Exception:   # noqa: BLE001 - any miss (extra request, wall marker, parse) = no price, never an error
+            return None
+        finally:
+            self.net = real
+
     def close(self) -> None:
         self.net.close()
 

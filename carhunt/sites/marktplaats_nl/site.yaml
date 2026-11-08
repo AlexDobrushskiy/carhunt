@@ -20,6 +20,7 @@ account:
 phone: none
 messaging: "site chat ('asq' in seller.contactOptions) needs a logged-in account → unusable (SMS 2FA); dealers' own phone/website are on the ad page"
 liveness: {evidence: "410 = gone; 200 + ad id (m…) = live (measured 11-04)"}
+cursor: {strategy: newest_first, key: site_ref, why: "SORT_INDEX decreasing; m-ids grow"}
 measured: 2026-11-07
 notes:
   - "Never warm up on / : CloudFront answers 403 to scripts there while /lrp/api/search and ad pages pass (11-01)"

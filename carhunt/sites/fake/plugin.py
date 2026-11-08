@@ -2,7 +2,8 @@
 
 Env knobs: CARHUNT_FAKE_SITES_FIXTURES = path to an ads.json of the same shape (default: bundled);
 CARHUNT_FAKE_SITES_BLOCK = comma list of actions (search, ad, live) that raise Blocked, to test stop-at-first-block.
-Fixture `state`: live | removed (404) | soft (redirect to a list page) | blocked.
+Fixture `state`: live | removed (404) | soft (redirect to a list page) | blocked; `live_price` = the price
+liveness sees now (simulates a price drop).
 """
 from __future__ import annotations
 
@@ -107,4 +108,5 @@ class Plugin(BaseSite):
             return Liveness("removed", f"redirect to {BASE}/list", soft=True)
         if st == "blocked":
             raise Blocked("fake-wall", site=self.id, url=url)
-        return Liveness("live", "200")
+        # fixture `live_price` simulates a price change since the sweep
+        return Liveness("live", "200", price=a.get("live_price", a.get("price")), price_is_net=a.get("price_is_net"))

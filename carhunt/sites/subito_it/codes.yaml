@@ -1,0 +1,34 @@
+# subito.it list URL: https://www.subito.it/annunci-italia/vendita/auto/?cb=<brand>&fl=<fuel>&ys=<ymin>&pe=<pmax>&me=<km bucket>&advt=<0|1>&o=<page>
+# The list has a brand filter only: models are matched on each row's /car "Modello" group (codes below, else by name).
+makes:          # cb= brand code (seen on the EV runners' queries + ad data 11-04..07); missing → q=<make> text search
+  Volkswagen: "000101"
+  Audi: "000161"
+  Mercedes-Benz: "000033"
+  BMW: "000085"
+  Hyundai: "000122"
+  Toyota: "000103"
+  Skoda: "000094"
+  Mini: "002222"
+  Cupra: "002782"
+  Xpeng: "002857"
+  Kia: "000746"
+  BYD: "002831"
+models:         # make → model → /car level-1 group_key(s) (Modello group); missing → match the model name
+  Volkswagen: {ID.4: "001881", ID.5: "001954"}
+  Audi: {Q4 e-tron: "001919"}
+  Hyundai: {Ioniq 5: "001913"}
+  Kia: {EV6: "001921"}
+  BMW: {iX1: "002003", iX3: "001878"}
+  BYD: {Seal U: "002122"}
+  Mini: {Countryman: "001440", Cooper E: "002067"}
+  Skoda: {Enyaq: "001898"}
+  Toyota: {bZ4X: "002047"}
+fuel:           # cardb powertrain → fl (/fuel key)
+  bev: "4"
+seller:         # advt
+  private: "0"
+  dealer: "1"
+sort:
+  newest: {}    # site default = newest first (the runners' id cursors relied on it)
+km_bucket: 5000  # me=<bucket>: /mileage key k = [(k-1)·5000, k·5000) (key 7 = 30.000–34.999); runners used me=11 for ≤50 000
+page_size: 30

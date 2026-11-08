@@ -1,0 +1,28 @@
+site: subito.it
+name: Subito
+kind: marketplace
+countries: [IT]
+hosts: ['(^|\.)subito\.it$']
+ad_id: ['-(\d{6,})\.htm']
+wall: Akamai + DataDome (not triggered by plain HTTP)
+route: http
+country_ip: null
+accept_language: it-IT,it;q=0.9
+pace:
+  min_gap_s: 6
+  why: "~30 list/ad/phone requests in ~2 min with a Chrome UA, no challenge (11-01); daily sweeps ran at 7 s (11-04..07)"
+caps:
+  why: "no phone cap measured: the contacts endpoint answered every call of the sweeps without login (11-01..07)"
+account:
+  needed_for: [message]
+  verification: "SMS-verified phone required for any login; a foreign EU mobile was accepted (11-02)"
+phone: reveal
+messaging: "site chat 'Contatta', logged in (inbox areariservata.subito.it/messaggi); a thread survives the ad's removal"
+liveness:
+  evidence: "410 = gone; 200 + ad id = live (11-04)"
+cursor: {strategy: newest_first, key: site_ref, why: "site default order is newest first; numeric ids grow"}
+measured: 2026-11-01
+notes:
+  - "Phones are national numbers: prefix +39 (stored without it 11-04)"
+  - "Long ad bodies come as an RSC text record ('$4a'): resolve it, never store the pointer (11-06)"
+  - "The list filters by brand (cb=) only; the model is matched on each row's /car Modello group"

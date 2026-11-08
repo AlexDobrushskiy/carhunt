@@ -128,7 +128,8 @@ def http(url: str, *, headers: dict[str, str] | None = None, follow: bool = True
     return Response(status, url, _decode(body, hdr.get("Content-Encoding")), location=loc,
                     final_url=final if final != url else None,
                     # repeated Set-Cookie headers joined: a dict keeps only the last (DataDome rotates its cookie)
-                    headers={k.lower(): v for k, v in hdr.items()} | {"set-cookie": "\n".join(hdr.get_all("Set-Cookie") or [])})
+                    headers={k.lower(): v for k, v in hdr.items()}
+                    | {"set-cookie": "\n".join(hdr.get_all("Set-Cookie") or [])})
 
 
 TAB_FETCH_JS = """async ([u, opts]) => { try {
@@ -151,6 +152,8 @@ class Net:
         self._last = 0.0
         self._stack: contextlib.ExitStack | None = None
         self._page: Any = None
+        self.fresh_every = pace.get("fresh_profile_every")   # Akamai counts bursts per browser profile (mobile.de)
+        self._tab_loads = 0
 
     # --- pacing ------------------------------------------------------------
     def gate(self, kind: str = "load", *, country: str | None = None) -> None:
@@ -220,10 +223,13 @@ class Net:
     # --- browser route -----------------------------------------------------
     def _tab(self) -> Any:
         if self._page is None:
-            from carhunt.access import session   # browsers module: agent Chrome lanes / plain-chrome
+            from carhunt.access import session  # browsers module: agent Chrome lanes / plain-chrome
             self._stack = contextlib.ExitStack()
             route = self.meta.get("route", "plain-chrome")
-            self._page = self._stack.enter_context(session.tab(route, site=self.site, country=self.meta.get("country_ip")))
+            kw = {"fresh": True} if self.fresh_every else {}   # throwaway profile per batch
+            self._page = self._stack.enter_context(
+                session.tab(route, site=self.site, country=self.meta.get("country_ip"), **kw))
+            self._tab_loads = 0
             home = self.meta.get("tab_home")
             if home:
                 self.gate("load")
@@ -234,8 +240,11 @@ class Net:
                     opts: dict | None = None, check: bool = True) -> Response:
         """One read in the site's browser tab. mode `fetch` = same-origin fetch from the tab (the site's own JSON API,
         cookies included); `goto` = a real navigation (cross-origin pages, e.g. mobile.de ads)."""
+        if self.fresh_every and self._tab_loads >= int(self.fresh_every):
+            self.close()   # next read opens a fresh profile
         page = self._tab()
         self.gate(kind)
+        self._tab_loads += 1
         if mode == "goto":
             try:
                 resp = page.goto(url, wait_until="domcontentloaded")
