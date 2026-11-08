@@ -9,12 +9,23 @@ internals + write rules: [`cardb/DESIGN.md`](../cardb/DESIGN.md) · compose: [`d
 
 | mode | command | when |
 |---|---|---|
-| local binary | `cardb init` once, then `cardb serve` (127.0.0.1:8484) | development; a single Mac without Docker |
+| local binary | `make -C cardb build` → `cardb/bin/cardb`; `cardb init` once, then `cardb serve` (127.0.0.1:8484) | development; a single Mac without Docker |
 | compose | `docker compose -f deploy/compose.yaml up -d --build` (cardb :8484 + web :4321, localhost only) | default for a run: restarts itself, hardened, includes the web UI |
 
 Both use the same data dir `$CARHUNT_HOME/cardb` (`cardb.sqlite3` + WAL, `photos/`, `tokens`) and the same
 `$CARHUNT_HOME/config.yaml`. Run only one server per data dir: SQLite has one writer.
-Health: `GET /healthz` and `GET /api/v1/health` (same handler, no token) → `{"ok":true,"version":"…"}`.
+Health: `GET /healthz` (server root) and `GET /api/v1/health` — same handler, no token → `{"ok":true,"version":"…"}`.
+`carhunt doctor`, `cardb healthcheck` and the compose healthcheck all probe `/healthz`.
+
+### Build (`cardb/Makefile`)
+
+| target | what |
+|---|---|
+| `make -C cardb build` | `cardb/bin/cardb` (gitignored): CGO off, `-tags nodynamic`, version from `git describe` (`VERSION=…` overrides) — same flags as the Dockerfile |
+| `make -C cardb test` | `go test -count=1 ./...` |
+| `make -C cardb clean` | removes `cardb/bin/` |
+
+`scripts/bootstrap` runs `make -C cardb build`, then `cardb init`. Put `cardb/bin` on `PATH` (or `go install ./cmd/cardb`).
 
 ## `cardb init` and secrets
 

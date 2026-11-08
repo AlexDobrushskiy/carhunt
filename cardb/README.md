@@ -12,8 +12,8 @@ Every carhunt stage reads and writes car data only through cardb.
 ## Install and run
 
 ```sh
-cd cardb
-go install -ldflags "-X carhunt/cardb/internal/api.Version=$(git describe --tags --always)" ./cmd/cardb   # Go 1.26+
+make -C cardb build           # → cardb/bin/cardb (static, version-stamped; Go 1.26+). Also: make test, make clean
+export PATH="$PWD/cardb/bin:$PATH"
 cardb init                     # $CARHUNT_HOME/cardb/ + tokens (stored via the secrets backend) + client config
 cardb serve                    # 127.0.0.1:8484, data $CARDB_DATA_DIR, profile from $CARHUNT_HOME/config.yaml
 cardb health
