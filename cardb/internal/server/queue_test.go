@@ -372,7 +372,7 @@ func TestQueueFairPrice(t *testing.T) {
 	rated := c.qcar("rated", map[string]any{"price": 32000})
 	c.call("PUT", fmt.Sprintf("/api/v1/cars/%d/verdict", rated), map[string]any{"value": "down"}, 200, nil)
 	c.qcar("dear", map[string]any{"price": 45000})
-	c.qcar("gone", map[string]any{"price": 1000, "listing_status": "removed"})
+	c.qcar("gone", map[string]any{"price": 10000, "listing_status": "removed"})
 	c.qcar("unpriced", map[string]any{"price": nil})
 	// VW ID.4 2025: one car → falls back to the family (4 live priced cars).
 	y25 := c.qcar("y25", map[string]any{"reg_date": "2025-02", "price": 38000})

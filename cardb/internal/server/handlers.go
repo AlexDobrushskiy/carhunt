@@ -194,6 +194,17 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 			store.KindConflict:   http.StatusConflict,
 			store.KindTooLarge:   http.StatusRequestEntityTooLarge,
 		}[se.Kind]
+		if se.Kind == store.KindPrecondition {
+			status = http.StatusPreconditionFailed
+		}
+		if len(se.Details) > 0 {
+			body := map[string]any{"error": se.Msg}
+			for k, v := range se.Details {
+				body[k] = v
+			}
+			writeJSON(w, status, body)
+			return
+		}
 		writeJSON(w, status, api.Error{Error: se.Msg})
 		return
 	}
@@ -270,7 +281,7 @@ func parseCarFilter(r *http.Request) (store.CarFilter, error) {
 		Q: q.Get("q"), Make: q.Get("make"), Model: q.Get("model"), Market: q.Get("market"),
 		Sort: q.Get("sort"), Order: q.Get("order"),
 		Drive: q["drive"], Country: q["country"], SellerType: q["seller_type"], Status: q["status"], Verdict: q["verdict"],
-		ModelFamily: q["model_family"], Tier: q["tier"],
+		ModelFamily: q["model_family"], Tier: q["tier"], Fuel: q["fuel"],
 	}
 	intp := func(name string, dst **int) error {
 		v := q.Get(name)
@@ -367,8 +378,14 @@ func (h *handler) getCar(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	setETag(w, out.Version)
 	writeJSON(w, http.StatusOK, out)
 	return nil
+}
+
+// setETag sends the car version as ETag ("<version>"), the value If-Match takes back.
+func setETag(w http.ResponseWriter, version int64) {
+	w.Header().Set("ETag", strconv.Quote(strconv.FormatInt(version, 10)))
 }
 
 func (h *handler) patchCar(w http.ResponseWriter, r *http.Request) error {
@@ -380,10 +397,18 @@ func (h *handler) patchCar(w http.ResponseWriter, r *http.Request) error {
 	if raw, ok := patch["author"]; ok {
 		_ = json.Unmarshal(raw, &bodyAuthor)
 	}
+	v, err := store.ParseVersion(r.Header.Get("If-Match"))
+	if err != nil {
+		return err
+	}
+	if v != nil {
+		patch["version"] = json.RawMessage(strconv.FormatInt(*v, 10)) // If-Match wins over a body version
+	}
 	out, err := h.st.PatchCar(r.Context(), r.PathValue("car"), patch, author(r, bodyAuthor))
 	if err != nil {
 		return err
 	}
+	setETag(w, out.Version)
 	writeJSON(w, http.StatusOK, out)
 	return nil
 }
@@ -401,10 +426,18 @@ func (h *handler) setStatus(w http.ResponseWriter, r *http.Request) error {
 	if err := decode(w, r, &in); err != nil {
 		return err
 	}
+	v, err := store.ParseVersion(r.Header.Get("If-Match"))
+	if err != nil {
+		return err
+	}
+	if v != nil {
+		in.Version = v
+	}
 	out, err := h.st.SetStatus(r.Context(), r.PathValue("car"), in, author(r, in.Author))
 	if err != nil {
 		return err
 	}
+	setETag(w, out.Version)
 	writeJSON(w, http.StatusOK, out)
 	return nil
 }

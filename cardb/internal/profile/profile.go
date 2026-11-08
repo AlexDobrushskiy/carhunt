@@ -79,6 +79,7 @@ type Search struct {
 type Price struct {
 	MaxEUR   int    `yaml:"max_eur" json:"max_eur,omitempty"`
 	MinEUR   int    `yaml:"min_eur" json:"min_eur,omitempty"`
+	CapEUR   int    `yaml:"cap_eur" json:"cap_eur,omitempty"` // sanity: refuse prices above (cardb default 2 000 000)
 	Gross    *bool  `yaml:"gross" json:"gross,omitempty"`
 	Currency string `yaml:"currency" json:"currency,omitempty"`
 }

@@ -22,6 +22,8 @@ func cmdLs(e *env, args []string) error {
 	f.Var(&drives, "drive", "fwd|rwd|awd|unknown (repeatable/comma)")
 	f.Var(&families, "family", "model family, e.g. \"Audi Q4,VW ID.4\" (repeatable/comma; none = unmapped; see cardb families)")
 	f.Var(&tiers, "tier", "\"To rate\" tier 1|2|3 (repeatable/comma)")
+	var fuels multi
+	f.Var(&fuels, "fuel", strings.Join(api.Fuels, "|")+" (repeatable/comma; unknown = no fuel recorded)")
 	goodDeal := f.Bool("good-deal", false, "only cars flagged as a good deal (--good-deal=false: only unflagged)")
 	minHp := f.String("min-hp", "", "min metric horsepower (rounded kW × 1.36)")
 	maxHp := f.String("max-hp", "", "max metric horsepower")
@@ -70,6 +72,13 @@ func cmdLs(e *env, args []string) error {
 	}
 	if flt.HpMin != nil && flt.HpMax != nil && *flt.HpMin > *flt.HpMax {
 		return usageErrorf("--min-hp must not exceed --max-hp")
+	}
+	for _, fu := range splitList(fuels) {
+		fu = strings.ToLower(fu)
+		if !contains(api.Fuels, fu) {
+			return usageErrorf("--fuel: want %s", strings.Join(api.Fuels, "|"))
+		}
+		flt.Fuels = append(flt.Fuels, fu)
 	}
 	for _, d := range splitList(drives) {
 		d = strings.ToLower(d)
@@ -268,6 +277,7 @@ func printCard(w io.Writer, c api.CarDetail, ref string) {
 	if len(c.MergedFrom) > 0 {
 		ids = append(ids, "merged from "+joinIDs(c.MergedFrom))
 	}
+	ids = append(ids, fmt.Sprintf("version %d", c.Version)) // for --if-version
 	if len(ids) > 0 {
 		fmt.Fprintln(w, strings.Join(ids, " · "))
 	}
@@ -312,18 +322,6 @@ func printCard(w io.Writer, c api.CarDetail, ref string) {
 	if s.Km != nil {
 		l1 = append(l1, fmtKm(s.Km))
 	}
-	if pt := s.Powertrain; pt != nil && (pt.BatteryNetKwh != nil || pt.BatteryGrossKwh != nil) {
-		b := "battery "
-		if pt.BatteryNetKwh != nil {
-			b += fmtFloat(*pt.BatteryNetKwh)
-		} else {
-			b += "?"
-		}
-		if pt.BatteryGrossKwh != nil {
-			b += "/" + fmtFloat(*pt.BatteryGrossKwh)
-		}
-		l1 = append(l1, b+" kWh")
-	}
 	if s.PowerKw != nil {
 		l1 = append(l1, fmtPower(s.PowerKw))
 	}
@@ -366,6 +364,9 @@ func printCard(w io.Writer, c api.CarDetail, ref string) {
 		if len(l) > 0 {
 			fmt.Fprintf(w, "  %s\n", strings.Join(l, " · "))
 		}
+	}
+	if pt := fmtPowertrain(s.Powertrain); pt != "" {
+		fmt.Fprintf(w, "  powertrain: %s\n", pt)
 	}
 	if len(c.RedFlags) > 0 {
 		fmt.Fprintln(w, "\nRED FLAGS")
@@ -484,7 +485,11 @@ func printListing(w io.Writer, l api.Listing) {
 	if l.PriceNote != nil && *l.PriceNote != "" {
 		price += " (" + *l.PriceNote + ")"
 	}
+	if l.PriceVat != "" && l.PriceVat != "unknown" {
+		price += " " + l.PriceVat
+	}
 	fmt.Fprintf(w, "  listing %d · car %d · %s · %s · %s\n", l.ID, l.CarID, l.Site, l.Status, price)
+	printPriceFlags(w, l.PriceFlags)
 	fmt.Fprintf(w, "    %s\n", l.URL)
 	if l.Title != nil && *l.Title != "" {
 		fmt.Fprintf(w, "    %q\n", *l.Title)

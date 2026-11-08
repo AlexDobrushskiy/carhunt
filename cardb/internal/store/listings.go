@@ -272,6 +272,11 @@ func validateUpsert(in *api.ListingUpsert) error {
 	if in.Price != nil && *in.Price < 0 {
 		return invalidf("price must be ≥ 0")
 	}
+	vat, err := normPriceVat(in.PriceVat)
+	if err != nil {
+		return err
+	}
+	in.PriceVat = vat
 	for k, o := range in.Options {
 		if err := validateOption(k, o); err != nil {
 			return err
@@ -339,6 +344,10 @@ func (s *Store) UpsertListing(ctx context.Context, in api.ListingUpsert, photos 
 		if err != nil {
 			return err
 		}
+		priceOK, err := s.checkUpsertPrice(tx, l, &in, specs) // before any write
+		if err != nil {
+			return err
+		}
 		var carID int64
 		identity := false
 		if l != nil {
@@ -361,6 +370,10 @@ func (s *Store) UpsertListing(ctx context.Context, in api.ListingUpsert, photos 
 				sets = append(sets, "raw = ?")
 				args = append(args, string(in.Raw))
 			}
+			if in.PriceVat != "" {
+				sets = append(sets, "price_vat = ?")
+				args = append(args, in.PriceVat)
+			}
 			args = append(args, l.ID)
 			if _, err := tx.Exec("UPDATE listings SET "+strings.Join(sets, ", ")+" WHERE id = ?", args...); err != nil {
 				return err
@@ -369,6 +382,9 @@ func (s *Store) UpsertListing(ctx context.Context, in api.ListingUpsert, photos 
 				if res.PriceChanged, err = observePrice(tx, l, *in.Price, in.PriceNote, at, author); err != nil {
 					return err
 				}
+			}
+			if err := applyPriceVerdict(tx, priceOK, carID, l.ID, author, at); err != nil {
+				return err
 			}
 			status := in.ListingStatus
 			if status == "" && isGone(l.Status) && (!l.RemovedAt.Valid || at > l.RemovedAt.Float64) {
@@ -465,10 +481,14 @@ func (s *Store) UpsertListing(ctx context.Context, in api.ListingUpsert, photos 
 			if car.SellerID.Valid {
 				sellerArg = car.SellerID.Int64
 			}
+			vat := in.PriceVat
+			if vat == "" {
+				vat = "unknown"
+			}
 			r, err := tx.Exec(`INSERT INTO listings (car_id, url, url_key, site, site_ref, title, status, price, price_note, seller_id,
-				first_seen_at, last_seen_at, removed_at, raw) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?)`,
+				first_seen_at, last_seen_at, removed_at, raw, price_vat) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?)`,
 				carID, nu.URL, nu.Key, nu.Site, nullStr(nu.SiteRef), nullStr(strings.TrimSpace(in.Title)), status,
-				nullStr(in.PriceNote), sellerArg, at, at, removedAt, raw)
+				nullStr(in.PriceNote), sellerArg, at, at, removedAt, raw, vat)
 			if err != nil {
 				return err
 			}
@@ -480,6 +500,9 @@ func (s *Store) UpsertListing(ctx context.Context, in api.ListingUpsert, photos 
 				if _, err := observePrice(tx, l, *in.Price, in.PriceNote, at, author); err != nil {
 					return err
 				}
+			}
+			if err := applyPriceVerdict(tx, priceOK, carID, l.ID, author, at); err != nil {
+				return err
 			}
 			lid := res.ListingID
 			if !res.CarCreated {
@@ -549,6 +572,23 @@ func (s *Store) PatchListing(ctx context.Context, id int64, in api.ListingPatch,
 		if l.CarID, err = resolveCar(tx, itoa(l.CarID)); err != nil {
 			return err
 		}
+		vat, err := normPriceVat(in.PriceVat)
+		if err != nil {
+			return err
+		}
+		gate := priceGate{Price: in.Price, Note: in.PriceNote, Vat: vat, Force: in.Force}
+		if err := gateFromListing(tx, &gate, l, l.CarID); err != nil {
+			return err
+		}
+		priceOK, err := s.checkPrice(tx, gate)
+		if err != nil {
+			return err
+		}
+		if vat != "" {
+			if _, err := tx.Exec("UPDATE listings SET price_vat = ? WHERE id = ?", vat, id); err != nil {
+				return err
+			}
+		}
 		if in.PriceNote != "" {
 			if _, err := tx.Exec("UPDATE listings SET price_note = ? WHERE id = ?", in.PriceNote, id); err != nil {
 				return err
@@ -558,6 +598,9 @@ func (s *Store) PatchListing(ctx context.Context, id int64, in api.ListingPatch,
 			if _, err := observePrice(tx, l, *in.Price, in.PriceNote, now, author); err != nil {
 				return err
 			}
+		}
+		if err := applyPriceVerdict(tx, priceOK, l.CarID, l.ID, author, now); err != nil {
+			return err
 		}
 		if err := setListingStatus(tx, l, in.Status, now, author); err != nil {
 			return err

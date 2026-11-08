@@ -16,12 +16,24 @@ info:
       `author_kind` = `owner` when author == owner name, `viewer` for a configured viewer, else `agent` (`import` for imports).
     - Users: the owner + optional viewers (`GET /profile` → `users`). A token whose name is a viewer is read-only except
       for that viewer's own verdict. Verdicts are per user; car rows show the owner's verdict unless `?user=` is given.
-    - Concurrency: cars carry `version` (incremented on every car write). GET /cars/{car} sends `ETag: "<version>"`;
-      PATCH/status writes with `If-Match: "<version>"` (or body `version`) fail with 412 + the current car when stale.
-      Without If-Match the write applies (last writer wins), as before.
+    - Concurrency: cars carry `version`, an opaque counter that rises (by ≥ 1) on every write to the car or anything shown
+      on it (listings, prices, options, facts, photos, events, messages, notes, verdicts, aliases, duplicates, seller);
+      a sighting that only moves `last_seen_at` / `raw` is not a change. Compare it, never compute it.
+      GET /cars/{car} (and PATCH/status responses) send `ETag: "<version>"`; PATCH/status writes with
+      `If-Match: "<version>"` (bare `5` ok, `*` = any; or body `version`) fail with 412 + the current car when stale.
+      Without If-Match the write applies (last writer wins), as before. A malformed If-Match is 400.
     - Price sanity (upsert, PATCH /listings/{id}): a price that looks ×100 (cents), like a monthly/lease rate, or net of
       VAT is refused with 422 `{error, reason: price_x100|price_lease|price_net|price_range}` unless `force: true`;
-      forced prices are stored with `price_flags` and a `price_sanity_override` event.
+      forced prices are stored with `price_flags` and a `price_sanity_override` event (data {reason, reasons, price, listing_id}).
+      Rules (bounds from `search.price`: `min_eur` default 1 500, `cap_eur` default 2 000 000, `max_eur`):
+      price_range = ≤ 0, or > cap_eur with price/100 also implausible; price_x100 = > cap_eur with price/100 plausible,
+      or > 8× the model-family median of live unflagged listings (n ≥ 3), or (no median) > 8× max_eur;
+      price_lease = < min_eur, or monthly/lease wording in title/price_note (/mês, por mes, per month, mensal, monatlich,
+      mtl, par mois, al mese, leasing, renting, LOA, LLD, …) with a low price (< median/4, or < 10× min_eur without a median);
+      price_net = price_vat net, or net wording (+ IVA, excl. VAT, zzgl. MwSt, netto, excl. BTW, hors taxes, HT, sin IVA,
+      IVA não incluído, …) unless price_vat is gross/margin or gross wording (brutto, incl. VAT, IVA incluído, TTC,
+      IVA dedutível, …) is present. Re-sending a listing's stored price is not re-checked (replays stay idempotent);
+      a price that passes clears the listing's flags. Negative prices stay a plain 422.
       Tokens are only accepted in the `Authorization` header, never in the URL.
     - Timestamps: RFC 3339 UTC strings (`2026-11-01T14:05:00Z`). Money: integer euros.
     - `{car}` path param = numeric car id or any alias/slug (e.g. `pt-testcar-lisbon`, `C1`, `abroad-12`).
@@ -151,7 +163,11 @@ paths:
         Read-only fields of CarDetail are ignored; `good_deal` / `good_deal_note` are 422 (use PUT /cars/{car}/good-deal).
         `red_flags` / `open_questions` replace the whole list; prefer `red_flags_add` / `red_flags_remove` /
         `open_questions_add` / `open_questions_remove` (exact-text items, applied atomically, add is a no-op for an existing item).
-        `powertrain` is merged field by field (send `null` for a field to clear it).
+        `powertrain` is merged field by field (send `null` for a field to clear it; `"powertrain": null` clears all of it).
+        Fuel/gearbox are case-insensitive, stored lower case; an unknown value or powertrain key is 422. Flat
+        `battery_net_kwh` / `battery_gross_kwh` are still accepted (pre-v2 clients); other powertrain keys only nested.
+        `red_flags_*` ops: removals run before additions; empty items are 422; combining an op with the full list of the
+        same field is 422.
       parameters: [ { $ref: "#/components/parameters/ifMatch" } ]
       requestBody:
         required: true
@@ -566,7 +582,7 @@ paths:
       responses:
         "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Listing" } } } }
     patch:
-      summary: Change listing status (live/removed/sold) or price (price sanity as on upsert)
+      summary: Change listing status (live/removed/sold) or price (price sanity as on upsert; a `price_vat` alone re-checks the stored price)
       requestBody:
         required: true
         content:
@@ -1052,7 +1068,7 @@ components:
         listing_id: { type: integer, nullable: true }
         type:
           type: string
-          description: "known: created, status_change, price_change, listing_added, listing_removed, listing_relisted, spec_change, option_change, fact_change, verdict, good_deal (data {from, to, note}), vin_check, report, visit, call, merge, split, duplicate_proposed, note (written on note creation; data {note_id}), message_deleted / message_restored (data {message_id, channel, direction, at, dedupe_key, reason}) (custom types allowed)"
+          description: "known: created, status_change, price_change, listing_added, listing_removed, listing_relisted, spec_change, option_change, fact_change, verdict, good_deal (data {from, to, note}), vin_check, report, visit, call, merge, split, duplicate_proposed, note (written on note creation; data {note_id}), message_deleted / message_restored (data {message_id, channel, direction, at, dedupe_key, reason}), price_sanity_override (data {reason, reasons, price, listing_id}) (custom types allowed)"
         at: { type: string, format: date-time }
         author: { type: string }
         summary: { type: string, description: "human one-liner, e.g. 'price 34 600 → 33 900'" }

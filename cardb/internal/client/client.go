@@ -40,6 +40,7 @@ type APIError struct {
 	Message string
 	Method  string
 	Path    string
+	Body    []byte // raw error body (412 carries version + car, 422 price rejections carry reason)
 }
 
 func (e *APIError) Error() string {
@@ -128,7 +129,7 @@ func apiError(req *http.Request, status int, body []byte) error {
 			msg = http.StatusText(status)
 		}
 	}
-	return &APIError{Status: status, Message: msg, Method: req.Method, Path: req.URL.Path}
+	return &APIError{Status: status, Message: msg, Method: req.Method, Path: req.URL.Path, Body: body}
 }
 
 func (c *Client) do(ctx context.Context, method, path string, query url.Values, body, out any) (int, error) {
@@ -225,6 +226,7 @@ type CarFilter struct {
 	GoodDeal      *bool
 	ModelFamilies []string // canonical family names or "none"
 	Tiers         []int    // "To rate" tiers 1|2|3
+	Fuels         []string // powertrain.fuel; unknown = no fuel recorded
 	Market        string
 	Sort          string
 	Order         string
@@ -290,6 +292,9 @@ func (f CarFilter) Values() url.Values {
 	}
 	for _, t := range f.Tiers {
 		q.Add("tier", strconv.Itoa(t))
+	}
+	for _, v := range f.Fuels {
+		q.Add("fuel", v)
 	}
 	set("market", f.Market)
 	set("sort", f.Sort)

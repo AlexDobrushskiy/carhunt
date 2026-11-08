@@ -14,22 +14,27 @@ import (
 func cmdStatus(e *env, args []string) error {
 	f := newFlags(e, "status")
 	reason := f.String("reason", "", "why (stored as status_reason + on the status_change event)")
+	ifVersion := f.String("if-version", "", "only if the car is still at this version (from show/--json); else exit 1 with a conflict")
 	pos, err := f.parse(args)
 	if err != nil {
 		return err
 	}
-	if err := needArgs("status", pos, 2, 2, "CAR STATUS [--reason R]"); err != nil {
+	if err := needArgs("status", pos, 2, 2, "CAR STATUS [--reason R] [--if-version N]"); err != nil {
 		return err
 	}
 	st, err := normalizeStatus(pos[1])
 	if err != nil {
 		return err
 	}
+	in := api.StatusInput{Status: st, Reason: *reason}
+	if in.Version, err = parseIfVersion(f, *ifVersion); err != nil {
+		return err
+	}
 	cl, err := e.client()
 	if err != nil {
 		return err
 	}
-	car, err := cl.SetStatus(e.ctx, pos[0], api.StatusInput{Status: st, Reason: *reason})
+	car, err := cl.SetStatus(e.ctx, pos[0], in)
 	if err != nil {
 		return err
 	}
@@ -299,16 +304,20 @@ func cmdAlias(e *env, args []string) error {
 func clearKey(name string) (string, bool) {
 	n := strings.TrimPrefix(strings.TrimSpace(name), "--")
 	for _, sf := range specFields {
-		if n == sf.flag || n == sf.key || contains(sf.aliases, n) {
+		if n == sf.flag || n == sf.key || n == strings.TrimPrefix(sf.key, "powertrain.") || contains(sf.aliases, n) {
 			return sf.key, true
 		}
 	}
 	k := normalizeKey(n)
 	switch k {
-	case "slug", "summary", "status_reason", "needs_owner_reason", "red_flags", "open_questions", "seller", "seller_id", "model_family":
+	case "slug", "summary", "status_reason", "needs_owner_reason", "red_flags", "open_questions", "seller", "seller_id", "model_family",
+		"powertrain":
 		return k, true
 	case "family":
 		return "model_family", true
+	}
+	if sub, ok := strings.CutPrefix(k, "powertrain."); ok {
+		return clearKey(sub)
 	}
 	return "", false
 }
@@ -323,10 +332,15 @@ func cmdSet(e *env, args []string) error {
 	statusReason := f.String("status-reason", "", "status reason")
 	sellerID := f.String("seller-id", "", "re-point the car to an existing seller id")
 	family := f.String("family", "", "manual model family, e.g. \"Audi Q4\" (cardb families --known); --clear model_family = auto")
-	var redFlags, questions, clears multi
-	f.Var(&redFlags, "red-flag", "red flag (repeatable; replaces the list)")
-	f.Var(&questions, "question", "open question (repeatable; replaces the list)")
-	f.Var(&clears, "clear", "set FIELD to null (repeatable; flag name or JSON key, e.g. km, reg, vin, summary)")
+	ifVersion := f.String("if-version", "", "only if the car is still at this version (from show/--json); else exit 1 with a conflict")
+	var redFlags, questions, clears, rfAdd, rfRm, qAdd, qRm multi
+	f.Var(&redFlags, "red-flag", "red flag (repeatable; replaces the list — prefer --red-flag-add)")
+	f.Var(&questions, "question", "open question (repeatable; replaces the list — prefer --question-add)")
+	f.Var(&rfAdd, "red-flag-add", "add a red flag, exact text (repeatable; safe with other writers)")
+	f.Var(&rfRm, "red-flag-rm", "remove a red flag by exact text (repeatable)")
+	f.Var(&qAdd, "question-add", "add an open question (repeatable)")
+	f.Var(&qRm, "question-rm", "remove an open question by exact text (repeatable)")
+	f.Var(&clears, "clear", "set FIELD to null (repeatable; flag name or JSON key, e.g. km, reg, vin, summary, engine-cc, powertrain.gearbox)")
 	pos, err := f.parse(args)
 	if err != nil {
 		return err
@@ -367,6 +381,14 @@ func cmdSet(e *env, args []string) error {
 	if len(questions) > 0 {
 		patch["open_questions"] = []string(questions)
 	}
+	for key, vals := range map[string]multi{"red_flags_add": rfAdd, "red_flags_remove": rfRm, "open_questions_add": qAdd, "open_questions_remove": qRm} {
+		if len(vals) > 0 {
+			patch[key] = []string(vals)
+		}
+	}
+	if (len(redFlags) > 0 && len(rfAdd)+len(rfRm) > 0) || (len(questions) > 0 && len(qAdd)+len(qRm) > 0) {
+		return usageErrorf("set: --red-flag/--question replace the whole list; don't combine them with the -add/-rm flags")
+	}
 	si, err := seller.build(f)
 	if err != nil {
 		return err
@@ -379,13 +401,20 @@ func cmdSet(e *env, args []string) error {
 		if !ok {
 			return usageErrorf("--clear: unknown field %q", c)
 		}
-		if _, dup := patch[k]; dup {
+		if hasPath(patch, k) {
 			return usageErrorf("--clear %s conflicts with a value for the same field", c)
 		}
-		patch[k] = nil
+		putPath(patch, k, nil)
 	}
 	if len(patch) == 0 {
 		return usageErrorf("set: nothing to change (give at least one field flag; see `cardb help set`)")
+	}
+	v, err := parseIfVersion(f, *ifVersion)
+	if err != nil {
+		return err
+	}
+	if v != nil {
+		patch["version"] = *v
 	}
 	cl, err := e.client()
 	if err != nil {
@@ -398,7 +427,9 @@ func cmdSet(e *env, args []string) error {
 	return e.emit(car, func(w io.Writer) {
 		keys := make([]string, 0, len(patch))
 		for k := range patch {
-			keys = append(keys, k)
+			if k != "version" {
+				keys = append(keys, k)
+			}
 		}
 		sort.Strings(keys)
 		fmt.Fprintf(w, "car %d %s: updated %s\n", car.ID, car.Title, strings.Join(keys, ", "))
