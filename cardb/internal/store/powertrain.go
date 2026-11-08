@@ -14,8 +14,19 @@ var powertrainCols = []string{"fuel", "battery_net_kwh", "battery_gross_kwh", "e
 // powertrainOnly: accepted only inside `powertrain` on PATCH. The battery keys stay accepted flat (pre-v2 clients).
 var powertrainOnly = map[string]bool{"fuel": true, "engine_cc": true, "gearbox": true, "wltp_range_km": true, "wltp_consumption": true, "co2_g_km": true}
 
+// normEnum canonicalizes an enum value; fuel and gearbox also take the words ads use (api.NormFuel / NormGearbox).
 func normEnum(col, v string) (string, error) {
 	allowed := map[string][]string{"fuel": api.Fuels, "gearbox": api.Gearboxes, "price_vat": api.PriceVats}[col]
+	switch col {
+	case "fuel":
+		if f := api.NormFuel(v); f != "" {
+			return f, nil
+		}
+	case "gearbox":
+		if g := api.NormGearbox(v); g != "" {
+			return g, nil
+		}
+	}
 	v = strings.ToLower(strings.TrimSpace(v))
 	if !slices.Contains(allowed, v) {
 		return "", invalidf("%s must be one of %s", col, strings.Join(allowed, "|"))
@@ -94,11 +105,11 @@ func normFuelFilter(vals []string) ([]string, error) {
 	var out []string
 	for _, v := range vals {
 		for _, p := range strings.Split(v, ",") {
-			p = strings.ToLower(strings.TrimSpace(p))
-			if p == "" {
+			if strings.TrimSpace(p) == "" {
 				continue
 			}
-			if !slices.Contains(api.Fuels, p) {
+			p = api.NormFuel(p)
+			if p == "" {
 				return nil, badRequestf("fuel must be one of %s", strings.Join(api.Fuels, "|"))
 			}
 			out = append(out, p)
@@ -146,4 +157,14 @@ func withLegacyBattery(s api.CarSpecs) (*api.Powertrain, error) {
 		return nil, err
 	}
 	return pt, nil
+}
+
+// fuelConflict: two known fuels that can't be one car. A mild hybrid is often listed as plain petrol/diesel or as a
+// hybrid, so mhev only conflicts with bev, phev, lpg, cng and hydrogen.
+func fuelConflict(a, b string) bool {
+	if a == "" || b == "" || a == "unknown" || b == "unknown" || a == b {
+		return false
+	}
+	loose := func(x, y string) bool { return x == "mhev" && (y == "petrol" || y == "diesel" || y == "hev") }
+	return !loose(a, b) && !loose(b, a)
 }
