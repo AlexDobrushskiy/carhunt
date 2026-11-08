@@ -1,3 +1,4 @@
 # Synthetic fixture for carhunt/access tests (not a real site).
+site: twofafix
 name: twofafix.example.invalid
 account: {needed_for: [message, phone], verification: sms-every-login}

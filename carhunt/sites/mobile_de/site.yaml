@@ -18,14 +18,16 @@ pace:
 caps: {}
 account:
   needed_for: [message]
-  verification: "email + password (password reset by emailed code); no SMS"
+  verification: email-code
+  note: "email + password (password reset by emailed code); no SMS"
+  mail_from: "from:(mobile.de)"
 phone: page
 messaging: "'E-Mail schreiben' form (/checkout/core/<id>), logged in only; sender lives in contact"
 liveness:
   mode: goto
   gone_title: 'nicht verfügbar'
   evidence: "404 'Dieses Fahrzeug ist nicht verfügbar' = gone; 200 + ad id = live (11-04). The phrase is in every page's i18n bundle and a hidden h2 → match the <title> only"
-cursor: {strategy: newest_first, key: site_ref, why: "sb=doc desc; ids come in two widths → one numeric cursor per width"}
+cursor: {strategy: newest_id, why: "sb=doc desc; ids come in two widths → one numeric cursor per width"}
 measured: 2026-11-06
 notes:
   - "curl, any Playwright-launched Chrome (lane, identity MCP, headed PW) and --headless all get 'Zugriff verweigert' 403; a plainly launched Chrome attached after the first load passes (10-25)"

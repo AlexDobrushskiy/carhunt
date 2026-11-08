@@ -74,7 +74,7 @@ Flags discover sets: `lease_transfer` (always dropped), `damaged`, `reseller`, `
 - **Budget ≤ 60 loads/site/run.** Home IP got a 403 on mobile.de after 41 sweep loads (2026-11-06).
 - **Stop a site at the first block; gone ≠ blocked.** Two runs stopped on a 410 and left 200 ads undone (2026-11-04/05).
 - **Cursors only from organic, in-filter cards; checked before the cardb lookup; committed per query after a clean finish; merged, never replaced.** Promoted rows violate filters; a replaced cursor dict lost models with no eligible head.
-- **site.yaml `cursor` → strategy:** `newest_first` + `key: site_ref` = `newest_id` (numeric ids); `newest_first` + `key: created` = `first_seen`; `full` = `full`.
+- **Cursor strategy:** config `discover.cursor.<site>` > site.yaml `cursor.strategy` (`newest_id` \| `first_seen` \| `full`) > `first_seen`.
 - **Newest-first cursors don't see price drops on older ads.** Price tracking of known listings = full-coverage sites + liveness/price checks (sites module).
 - **Upsert without photos, then photos by resolved URL; later writes resolve by URL.** Dealer stock galleries auto-merged 4 cars, then a write hit the wrong car (2026-11-03).
 - **No scoring, no merging here.** Ranking and dedupe are cardb's (one answer for web, CLI, agents); discover sends identity keys (VIN, plate, phone, `dealer_stock_ref`).

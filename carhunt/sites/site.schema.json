@@ -23,6 +23,8 @@
         "max_loads_per_run": {"type": "integer", "minimum": 1},
         "max_loads_per_hour": {"type": "integer", "minimum": 1},
         "max_loads_per_day": {"type": "integer", "minimum": 1},
+        "api_min_gap_s": {"type": "number", "minimum": 0, "description": "kind api (JSON reads, not page loads); default min_gap_s"},
+        "max_api_per_hour": {"type": "integer", "minimum": 1},
         "fresh_profile_every": {"type": "integer", "minimum": 1},
         "read_after": {"type": "string", "pattern": "^\\d{2}:\\d{2}$", "description": "messaging sites: reads only after this local time"},
         "why": {"type": "string"}
@@ -30,19 +32,21 @@
     },
     "caps": {
       "type": "object", "additionalProperties": false,
-      "properties": {
-        "phone_per_day": {"type": "integer", "minimum": 0},
-        "phone_per_session": {"type": "integer", "minimum": 0},
-        "send_per_day": {"type": "integer", "minimum": 0},
-        "login_per_day": {"type": "integer", "minimum": 0},
-        "why": {"type": "string"}
+      "description": "per-kind limits read by access.pace (<kind>_per_day/_per_hour/_min_gap_s); _per_session is read by the site's own flow",
+      "properties": {"why": {"type": "string"}},
+      "patternProperties": {
+        "^(load|api|phone|send|login)_(per_day|per_hour|per_session)$": {"type": "integer", "minimum": 0},
+        "^(load|api|phone|send|login)_min_gap_s$": {"type": "number", "minimum": 0}
       }
     },
     "account": {
-      "type": "object", "additionalProperties": false, "required": ["needed_for"],
+      "type": "object", "additionalProperties": false, "required": ["needed_for", "verification"],
       "properties": {
         "needed_for": {"type": "array", "items": {"enum": ["read", "phone", "message", "vin", "search"]}},
-        "verification": {"type": "string"}
+        "verification": {"enum": ["none", "email", "email-link", "email-code", "google", "sms-once", "sms-own", "sms-every-login"],
+                         "description": "drives `carhunt sms policy`: only sms-once allows a rented number; sms-own = owner's own mobile; sms-every-login = never rent (lockout)"},
+        "note": {"type": "string", "description": "how the signup/login actually went"},
+        "mail_from": {"type": "string", "description": "Gmail query for the site's code/link mails (default from:<site>)"}
       }
     },
     "phone": {"enum": ["page", "decode", "reveal", "reveal-login", "text-only", "none"], "description": "where phones come from"},
@@ -64,8 +68,7 @@
       "type": "object", "additionalProperties": false, "required": ["strategy"],
       "description": "how discover resumes a sweep",
       "properties": {
-        "strategy": {"enum": ["newest_first", "full"], "description": "newest_first: stop at the last seen ad; full: page the whole filtered set every run"},
-        "key": {"enum": ["site_ref", "created"], "description": "what orders ads: monotonic site_ref, or created timestamp (+ first organic id)"},
+        "strategy": {"enum": ["newest_id", "first_seen", "full"], "description": "newest_id: newest first, numeric site_ref grows → stop at the stored max; first_seen: newest first, opaque ids → stop at last run's first organic id / its created time; full: no usable order → page the whole filtered set every run (carhunt/discover/cursor.py)"},
         "why": {"type": "string"}
       }
     },

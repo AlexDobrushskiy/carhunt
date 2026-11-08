@@ -1,5 +1,6 @@
 # Synthetic fixture for test_sitetable.py (not a real site). Minimal: name from the dir, most keys absent.
+site: tablefix-beta
 wall: none
 route: http
-pace: {min_gap_s: 6, per_hour: 2}
+pace: {min_gap_s: 6, max_loads_per_hour: 2}
 measured: 2026-10-25

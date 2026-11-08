@@ -2,96 +2,2066 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "carhunt/config.schema.json",
   "title": "carhunt config",
-  "description": "Top-level sections are fixed (typo guard). Inside a module's section unknown keys are allowed so each module can extend it; core validates only the keys it reads.",
+  "description": "Strict: every section lists the keys some code, brief template or skill reads; an unknown key is an error (typo guard). A module that reads a new key adds it here (tests/core/test_config_coverage.py checks module defaults against this file). Free-form maps (site ids, option keys, tiers) use additionalProperties with a value schema. cardb (Go) parses owner/search/cardb itself and rejects or warns on its own; keep both in step.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["owner"],
+  "required": [
+    "owner"
+  ],
   "$defs": {
-    "window": {"type": "string", "pattern": "^([01]\\d|2[0-3]):[0-5]\\d-([01]\\d|2[0-3]):[0-5]\\d$"},
-    "hhmm": {"type": "string", "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"},
-    "secretRef": {"type": "string", "pattern": "^secret:[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$"},
-    "section": {"type": "object", "additionalProperties": true}
+    "window": {
+      "type": "string",
+      "pattern": "^([01]\\d|2[0-3]):[0-5]\\d-([01]\\d|2[0-3]):[0-5]\\d$",
+      "description": "HH:MM-HH:MM, [start, end), may cross midnight"
+    },
+    "hhmm": {
+      "type": "string",
+      "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+    },
+    "secretRef": {
+      "type": "string",
+      "pattern": "^secret:[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$"
+    },
+    "iso2": {
+      "type": "string",
+      "pattern": "^[A-Z]{2}$"
+    },
+    "iso2any": {
+      "type": "string",
+      "pattern": "^[A-Za-z]{2}$",
+      "description": "ISO-2, any case (upper-cased on load)"
+    },
+    "strings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "nonNeg": {
+      "type": "number",
+      "minimum": 0
+    },
+    "nonNegInt": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "range2": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 2,
+      "maxItems": 2,
+      "description": "[min, max]"
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "number"
+        },
+        "minItems": 2,
+        "maxItems": 2
+      },
+      "description": "[[max_km, eur], ...]; max_km 0 = any distance"
+    },
+    "fuel": {
+      "enum": [
+        "bev",
+        "phev",
+        "hev",
+        "mhev",
+        "petrol",
+        "diesel",
+        "lpg",
+        "cng",
+        "hydrogen",
+        "BEV",
+        "PHEV",
+        "HEV",
+        "MHEV",
+        "PETROL",
+        "DIESEL",
+        "LPG",
+        "CNG",
+        "HYDROGEN"
+      ]
+    },
+    "carField": {
+      "enum": [
+        "year",
+        "km",
+        "price",
+        "power_kw",
+        "power_hp",
+        "wheels_in",
+        "seats",
+        "distance_km",
+        "battery_net_kwh",
+        "battery_gross_kwh",
+        "engine_cc",
+        "wltp_range_km",
+        "wltp_consumption",
+        "co2_g_km",
+        "powertrain.battery_net_kwh",
+        "powertrain.battery_gross_kwh",
+        "powertrain.engine_cc",
+        "powertrain.wltp_range_km",
+        "powertrain.wltp_consumption",
+        "powertrain.co2_g_km"
+      ]
+    },
+    "hardFilter": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "exactly one of field / fact(s) / flag (cardb's grammar; cardb re-validates)",
+      "properties": {
+        "field": {
+          "$ref": "#/$defs/carField"
+        },
+        "fact": {
+          "type": "string",
+          "minLength": 1
+        },
+        "facts": {
+          "$ref": "#/$defs/strings"
+        },
+        "flag": {
+          "type": "string",
+          "minLength": 1
+        },
+        "min": {
+          "type": "number"
+        },
+        "max": {
+          "type": "number"
+        },
+        "words": {
+          "$ref": "#/$defs/strings"
+        },
+        "mentions_country": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/iso2any"
+          }
+        },
+        "label": {
+          "type": "string"
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "field"
+          ],
+          "anyOf": [
+            {
+              "required": [
+                "min"
+              ]
+            },
+            {
+              "required": [
+                "max"
+              ]
+            }
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "words"
+                ]
+              },
+              {
+                "required": [
+                  "mentions_country"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "anyOf": [
+            {
+              "required": [
+                "fact"
+              ]
+            },
+            {
+              "required": [
+                "facts"
+              ]
+            }
+          ]
+        },
+        {
+          "required": [
+            "flag"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "min"
+                ]
+              },
+              {
+                "required": [
+                  "max"
+                ]
+              },
+              {
+                "required": [
+                  "words"
+                ]
+              },
+              {
+                "required": [
+                  "mentions_country"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "predicate": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "contact.nudge predicate over a cardb car: {field, <op>} or {all|any: [...]}",
+      "properties": {
+        "field": {
+          "type": "string",
+          "minLength": 1
+        },
+        "eq": {},
+        "ne": {},
+        "in": {
+          "type": "array"
+        },
+        "not_in": {
+          "type": "array"
+        },
+        "between": {
+          "$ref": "#/$defs/range2"
+        },
+        "gte": {
+          "type": "number"
+        },
+        "lte": {
+          "type": "number"
+        },
+        "truthy": {
+          "type": "boolean"
+        },
+        "all": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/predicate"
+          }
+        },
+        "any": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/predicate"
+          }
+        },
+        "why": {
+          "type": "string"
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "field"
+          ]
+        },
+        {
+          "required": [
+            "all"
+          ]
+        },
+        {
+          "required": [
+            "any"
+          ]
+        }
+      ]
+    },
+    "scheduleTime": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "pattern": "^([01]?\\d|2[0-3]):[0-5]\\d$"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^([01]?\\d|2[0-3]):[0-5]\\d$"
+          }
+        }
+      ]
+    },
+    "siteOverride": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "per-site tweaks on top of carhunt/sites/<pkg>/site.yaml (dicts merge one level, other values replace)",
+      "properties": {
+        "country_ip": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[A-Z]{2}$"
+        },
+        "route": {
+          "enum": [
+            "http",
+            "lane",
+            "identity",
+            "plain-chrome",
+            "camoufox"
+          ]
+        },
+        "tab_home": {
+          "type": "string"
+        },
+        "accept_language": {
+          "type": "string"
+        },
+        "proxy": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "sticky_minutes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 30
+            }
+          }
+        },
+        "pace": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "min_gap_s": {
+              "$ref": "#/$defs/nonNeg"
+            },
+            "per_hour": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "max_loads_per_run": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "max_loads_per_hour": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "max_loads_per_day": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "fresh_profile_every": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "read_after": {
+              "$ref": "#/$defs/hhmm"
+            },
+            "why": {
+              "type": "string"
+            }
+          }
+        },
+        "caps": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "load_per_day": {
+              "$ref": "#/$defs/nonNegInt"
+            },
+            "phone_per_day": {
+              "$ref": "#/$defs/nonNegInt"
+            },
+            "phone_per_session": {
+              "$ref": "#/$defs/nonNegInt"
+            },
+            "phone_per_hour": {
+              "$ref": "#/$defs/nonNegInt"
+            },
+            "phone_min_gap_s": {
+              "$ref": "#/$defs/nonNeg"
+            },
+            "send_per_day": {
+              "$ref": "#/$defs/nonNegInt"
+            },
+            "send_per_hour": {
+              "$ref": "#/$defs/nonNegInt"
+            },
+            "send_min_gap_s": {
+              "$ref": "#/$defs/nonNeg"
+            },
+            "login_per_day": {
+              "$ref": "#/$defs/nonNegInt"
+            },
+            "login_per_hour": {
+              "$ref": "#/$defs/nonNegInt"
+            },
+            "login_min_gap_s": {
+              "$ref": "#/$defs/nonNeg"
+            },
+            "why": {
+              "type": "string"
+            }
+          }
+        },
+        "liveness": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "supported": {
+              "type": "boolean"
+            },
+            "mode": {
+              "enum": [
+                "fetch",
+                "goto"
+              ]
+            },
+            "gone_redirect": {
+              "type": "string"
+            },
+            "gone_text": {
+              "type": "string"
+            },
+            "gone_title": {
+              "type": "string"
+            },
+            "sold_text": {
+              "type": "string"
+            },
+            "proxy_country": {
+              "$ref": "#/$defs/iso2"
+            },
+            "evidence": {
+              "type": "string"
+            }
+          }
+        },
+        "account": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "needed_for": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "read",
+                  "phone",
+                  "message",
+                  "vin",
+                  "search"
+                ]
+              }
+            },
+            "verification": {
+              "type": "string"
+            },
+            "mail_from": {
+              "type": "string",
+              "description": "Gmail query for the site's code mails (default from:<site>)"
+            }
+          }
+        },
+        "geo": {
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number"
+            ]
+          },
+          "description": "search-area params merged into the query (wallapop: latitude/longitude)"
+        }
+      }
+    },
+    "range2opt": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/range2"
+        },
+        {
+          "type": "array",
+          "maxItems": 0
+        }
+      ],
+      "description": "[min, max], or [] = off"
+    }
   },
   "properties": {
     "owner": {
       "type": "object",
-      "additionalProperties": true,
-      "required": ["tz"],
+      "additionalProperties": false,
+      "required": [
+        "tz"
+      ],
       "properties": {
-        "name": {"type": "string", "minLength": 1},
-        "languages": {"type": "array", "items": {"type": "string", "pattern": "^[a-z]{2,3}$"}},
-        "tz": {"type": "string", "minLength": 1, "description": "IANA zone, e.g. Europe/Berlin; checked against zoneinfo at load"},
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "languages": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z]{2,3}$"
+          }
+        },
+        "tz": {
+          "type": "string",
+          "minLength": 1,
+          "description": "IANA zone, e.g. Europe/Berlin; checked against zoneinfo at load"
+        },
         "home": {
           "type": "object",
-          "additionalProperties": true,
+          "additionalProperties": false,
           "properties": {
-            "city": {"type": "string"},
-            "country": {"type": "string", "pattern": "^[A-Z]{2}$"},
-            "lat": {"type": "number", "minimum": -90, "maximum": 90},
-            "lon": {"type": "number", "minimum": -180, "maximum": 180}
+            "city": {
+              "type": "string"
+            },
+            "country": {
+              "$ref": "#/$defs/iso2any"
+            },
+            "lat": {
+              "type": "number",
+              "minimum": -90,
+              "maximum": 90
+            },
+            "lon": {
+              "type": "number",
+              "minimum": -180,
+              "maximum": 180
+            }
+          },
+          "dependentRequired": {
+            "lat": [
+              "lon"
+            ],
+            "lon": [
+              "lat"
+            ]
           }
         }
       }
     },
     "secrets": {
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
-        "backend": {"enum": ["keychain", "op", "file"]},
-        "keychain_service": {"type": "string", "minLength": 1},
-        "op_vault": {"type": "string", "minLength": 1}
+        "backend": {
+          "enum": [
+            "keychain",
+            "op",
+            "file"
+          ]
+        },
+        "keychain_service": {
+          "type": "string",
+          "minLength": 1
+        },
+        "op_vault": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
     "notify": {
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
-        "backend": {"enum": ["telegram", "stdout", "none"]},
+        "backend": {
+          "enum": [
+            "telegram",
+            "stdout",
+            "none"
+          ]
+        },
         "telegram": {
           "type": "object",
-          "additionalProperties": true,
+          "additionalProperties": false,
           "properties": {
-            "bot_token": {"$ref": "#/$defs/secretRef"},
-            "chat_id": {"oneOf": [{"$ref": "#/$defs/secretRef"}, {"type": "integer"}, {"type": "string", "pattern": "^-?\\d+$"}]},
-            "api_base": {"type": "string", "pattern": "^https?://"}
+            "bot_token": {
+              "$ref": "#/$defs/secretRef"
+            },
+            "chat_id": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/secretRef"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "string",
+                  "pattern": "^-?\\d+$"
+                }
+              ]
+            },
+            "api_base": {
+              "type": "string",
+              "pattern": "^https?://"
+            }
           }
         },
-        "quiet_hours": {"$ref": "#/$defs/window"},
+        "quiet_hours": {
+          "$ref": "#/$defs/window"
+        },
         "quiet": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "digest": {"enum": ["hold", "silent"]},
-            "ask": {"enum": ["hold", "silent"]},
-            "urgent": {"enum": ["hold", "silent"]}
+            "digest": {
+              "enum": [
+                "hold",
+                "silent"
+              ]
+            },
+            "ask": {
+              "enum": [
+                "hold",
+                "silent"
+              ]
+            },
+            "urgent": {
+              "enum": [
+                "hold",
+                "silent"
+              ]
+            }
           }
         },
-        "digests": {"type": "array", "items": {"$ref": "#/$defs/hhmm"}},
-        "default_agent": {"type": "string", "minLength": 1}
+        "default_agent": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
-    "search": {"$ref": "#/$defs/section"},
     "cardb": {
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
-        "url": {"type": "string", "pattern": "^https?://"},
-        "token": {"$ref": "#/$defs/secretRef"},
-        "data_dir": {"type": "string"}
+        "url": {
+          "type": "string",
+          "pattern": "^https?://"
+        },
+        "token": {
+          "$ref": "#/$defs/secretRef"
+        },
+        "data_dir": {
+          "type": "string",
+          "minLength": 1,
+          "description": "relative = under $CARHUNT_HOME"
+        },
+        "users": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^[^:,#\\s][^:,#]*[^:,#\\s]$|^[^:,#\\s]$"
+              },
+              "role": {
+                "enum": [
+                  "",
+                  "viewer"
+                ]
+              }
+            }
+          }
+        }
       }
     },
-    "browsers": {"$ref": "#/$defs/section"},
-    "net": {"$ref": "#/$defs/section"},
-    "accounts": {"$ref": "#/$defs/section"},
-    "sites": {"$ref": "#/$defs/section"},
-    "discover": {"$ref": "#/$defs/section"},
-    "contact": {"$ref": "#/$defs/section"},
-    "vet": {"$ref": "#/$defs/section"},
-    "orchestrate": {"$ref": "#/$defs/section"},
-    "privacy": {
+    "search": {
       "type": "object",
-      "additionalProperties": true,
-      "properties": {"denylist": {"type": "string"}}
+      "additionalProperties": false,
+      "properties": {
+        "countries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/iso2any"
+          }
+        },
+        "private_sellers_abroad": {
+          "type": "boolean"
+        },
+        "exclude_regions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z]{2}-[A-Za-z0-9]{1,3}$"
+          }
+        },
+        "exclude_places": {
+          "$ref": "#/$defs/strings"
+        },
+        "price": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "max_eur": {
+              "$ref": "#/$defs/nonNegInt"
+            },
+            "min_eur": {
+              "$ref": "#/$defs/nonNegInt"
+            },
+            "cap_eur": {
+              "$ref": "#/$defs/nonNegInt"
+            },
+            "gross": {
+              "type": "boolean"
+            },
+            "currency": {
+              "type": "string",
+              "pattern": "^[A-Z]{3}$"
+            }
+          }
+        },
+        "year_min": {
+          "$ref": "#/$defs/nonNegInt"
+        },
+        "km_max": {
+          "$ref": "#/$defs/nonNegInt"
+        },
+        "powertrain": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/fuel"
+          }
+        },
+        "max_distance_km": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "road_factor": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 3
+        },
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "make"
+            ],
+            "properties": {
+              "make": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model": {
+                "type": "string"
+              },
+              "tier": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "label": {
+                "type": "string"
+              },
+              "base_fit": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 2
+              },
+              "risk": {
+                "type": "number"
+              },
+              "match": {
+                "type": "string",
+                "minLength": 1,
+                "description": "discover: regex override for the model match"
+              },
+              "when": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "power_hp": {
+                    "$ref": "#/$defs/range2opt"
+                  },
+                  "drive": {
+                    "type": "array",
+                    "items": {
+                      "enum": [
+                        "fwd",
+                        "rwd",
+                        "awd"
+                      ]
+                    }
+                  },
+                  "variant_any": {
+                    "$ref": "#/$defs/strings"
+                  },
+                  "variant_none": {
+                    "$ref": "#/$defs/strings"
+                  },
+                  "year_min": {
+                    "$ref": "#/$defs/nonNegInt"
+                  },
+                  "year_max": {
+                    "$ref": "#/$defs/nonNegInt"
+                  },
+                  "battery_net_kwh": {
+                    "$ref": "#/$defs/range2opt"
+                  },
+                  "fuel": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/fuel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "default_tier": {
+          "$ref": "#/$defs/nonNegInt"
+        },
+        "queue_default_tiers": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "tier_labels": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[1-9]\\d*$"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "families": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "make",
+              "name",
+              "match"
+            ],
+            "properties": {
+              "make": {
+                "type": "string",
+                "minLength": 1
+              },
+              "make_aliases": {
+                "$ref": "#/$defs/strings"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "match": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1
+              },
+              "with": {
+                "$ref": "#/$defs/strings"
+              },
+              "lead": {
+                "type": "boolean"
+              },
+              "bare": {
+                "type": "boolean"
+              },
+              "body": {
+                "$ref": "#/$defs/strings"
+              },
+              "body_name": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "hard_filters": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/hardFilter"
+          }
+        },
+        "options_wanted": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "option_labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "must_have": {
+          "$ref": "#/$defs/strings"
+        },
+        "option_keys": {
+          "$ref": "#/$defs/strings"
+        },
+        "penalties": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "field"
+            ],
+            "anyOf": [
+              {
+                "required": [
+                  "min"
+                ]
+              },
+              {
+                "required": [
+                  "max"
+                ]
+              }
+            ],
+            "properties": {
+              "field": {
+                "$ref": "#/$defs/carField"
+              },
+              "min": {
+                "type": "number"
+              },
+              "max": {
+                "type": "number"
+              },
+              "weight": {
+                "type": "number"
+              },
+              "label": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "weights": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "value": {
+              "$ref": "#/$defs/nonNeg"
+            },
+            "fit": {
+              "$ref": "#/$defs/nonNeg"
+            },
+            "risk": {
+              "$ref": "#/$defs/nonNeg"
+            }
+          }
+        },
+        "ranking": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "peers": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "power_band_hp": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "km_bands": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/nonNegInt"
+                  }
+                },
+                "min_n": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/nonNegInt"
+                  },
+                  "minItems": 4,
+                  "maxItems": 4
+                },
+                "year_eur": {
+                  "type": "number"
+                },
+                "km_eur": {
+                  "type": "number"
+                },
+                "outlier_min_n": {
+                  "$ref": "#/$defs/nonNegInt"
+                },
+                "outlier_low": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "outlier_high": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
+              }
+            },
+            "landed_cost": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "default_distance_km": {
+                  "type": "object",
+                  "propertyNames": {
+                    "pattern": "^([A-Za-z]{2}|other)$"
+                  },
+                  "additionalProperties": {
+                    "$ref": "#/$defs/nonNeg"
+                  }
+                },
+                "home_trip": {
+                  "$ref": "#/$defs/steps"
+                },
+                "abroad_trip": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "travel": {
+                      "$ref": "#/$defs/steps"
+                    },
+                    "fixed": {
+                      "type": "number"
+                    },
+                    "energy_per_km": {
+                      "type": "number"
+                    },
+                    "tolls_per_km": {
+                      "type": "number"
+                    },
+                    "night_cost": {
+                      "type": "number"
+                    },
+                    "night_free_km": {
+                      "type": "number"
+                    },
+                    "km_per_night": {
+                      "type": "number",
+                      "exclusiveMinimum": 0
+                    },
+                    "max_nights": {
+                      "$ref": "#/$defs/nonNegInt"
+                    },
+                    "food": {
+                      "$ref": "#/$defs/steps"
+                    }
+                  }
+                },
+                "registration_home": {
+                  "type": "number"
+                },
+                "registration_import": {
+                  "type": "number"
+                }
+              }
+            },
+            "vat_reserve": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "pct": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 50
+                },
+                "km_max": {
+                  "$ref": "#/$defs/nonNegInt"
+                },
+                "months_max": {
+                  "$ref": "#/$defs/nonNegInt"
+                }
+              }
+            },
+            "fit": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "base_default": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 2
+                },
+                "option_unit": {
+                  "type": "number"
+                },
+                "seller_private": {
+                  "type": "number"
+                },
+                "seller_reseller": {
+                  "type": "number"
+                },
+                "home_market": {
+                  "type": "number"
+                },
+                "age_per_year": {
+                  "type": "number"
+                },
+                "age_years": {
+                  "type": "number"
+                },
+                "km": {
+                  "type": "number"
+                },
+                "km_ref": {
+                  "$ref": "#/$defs/nonNegInt"
+                },
+                "history_fact": {
+                  "type": "number"
+                }
+              }
+            },
+            "risk": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "unknown_option": {
+                  "type": "number"
+                },
+                "unknown_option_top": {
+                  "$ref": "#/$defs/nonNegInt"
+                },
+                "no_vin": {
+                  "type": "number"
+                },
+                "no_service_history": {
+                  "type": "number"
+                },
+                "no_owners": {
+                  "type": "number"
+                },
+                "no_accidents": {
+                  "type": "number"
+                },
+                "no_health": {
+                  "type": "number"
+                },
+                "health_facts": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "$ref": "#/$defs/strings"
+                  }
+                },
+                "distance_unknown": {
+                  "type": "number"
+                },
+                "reseller": {
+                  "type": "number"
+                },
+                "vat_reserve": {
+                  "type": "number"
+                },
+                "thin_peers": {
+                  "type": "number"
+                },
+                "thin_peers_n": {
+                  "$ref": "#/$defs/nonNegInt"
+                },
+                "spread": {
+                  "type": "number"
+                },
+                "spread_max": {
+                  "type": "number"
+                },
+                "red_flag": {
+                  "type": "number"
+                },
+                "price_forced": {
+                  "type": "number"
+                },
+                "reasons_max": {
+                  "$ref": "#/$defs/nonNegInt"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "browsers": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "chrome_app": {
+          "type": "string",
+          "minLength": 1
+        },
+        "lanes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8
+        },
+        "identity_pool": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8
+        },
+        "headless": {
+          "type": "boolean"
+        },
+        "ports": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mcp_base": {
+              "type": "integer",
+              "minimum": 1024,
+              "maximum": 65000
+            },
+            "debug_base": {
+              "type": "integer",
+              "minimum": 1024,
+              "maximum": 65000
+            },
+            "plain_debug": {
+              "type": "integer",
+              "minimum": 1024,
+              "maximum": 65535
+            }
+          }
+        },
+        "launchd_prefix": {
+          "type": "string",
+          "minLength": 1,
+          "description": "must start with carhunt. (checked at use)"
+        },
+        "mcp_name_prefix": {
+          "type": "string",
+          "description": "[A-Za-z0-9_-]* (checked at use)"
+        },
+        "idle_release_s": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "reaper_max_age_h": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "identity_reseed_hours": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "captcha": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "ollama_url": {
+              "type": "string",
+              "pattern": "^https?://"
+            },
+            "model": {
+              "type": "string",
+              "minLength": 1
+            },
+            "owlv2": {
+              "type": "boolean"
+            },
+            "hcaptcha_vlm": {
+              "type": "boolean"
+            },
+            "max_attempts": {
+              "$ref": "#/$defs/nonNegInt"
+            },
+            "site_budget": {
+              "$ref": "#/$defs/nonNegInt"
+            },
+            "site_window_h": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "screenshots": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    "net": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "proxy": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "provider": {
+              "enum": [
+                "none",
+                "decodo"
+              ]
+            },
+            "credentials": {
+              "$ref": "#/$defs/secretRef"
+            },
+            "gateway": {
+              "type": "string",
+              "pattern": "^[^\\s:]+:\\d+$"
+            },
+            "echo_url": {
+              "type": "string",
+              "pattern": "^https?://"
+            }
+          }
+        },
+        "geo": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[a-z]{2}$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "tz": {
+                "type": "string",
+                "minLength": 1
+              },
+              "locale": {
+                "type": "string",
+                "pattern": "^[a-z]{2}(-[A-Z]{2})?$"
+              }
+            }
+          }
+        }
+      }
+    },
+    "accounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "email": {
+          "type": "string",
+          "pattern": "^[^@\\s]+@[^@\\s]+$",
+          "description": "read by agents (skills/carhunt-browsers) for site signups"
+        },
+        "sms": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "provider": {
+              "enum": [
+                "none",
+                "smspool"
+              ]
+            },
+            "api_key": {
+              "$ref": "#/$defs/secretRef"
+            }
+          }
+        },
+        "gmail": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "oauth_client": {
+              "$ref": "#/$defs/secretRef"
+            },
+            "token": {
+              "$ref": "#/$defs/secretRef"
+            },
+            "plus_address": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._-]+$",
+              "description": "read by agents for signups (owner+<tag>@…)"
+            }
+          }
+        }
+      }
+    },
+    "sites": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "overrides": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/siteOverride"
+          }
+        }
+      }
+    },
+    "discover": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "windows": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/window"
+          },
+          "description": "name -> window; must not cross midnight; morning = sites without pace.read_after"
+        },
+        "max_loads_per_site": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_pages": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "detail_tiers": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "max_photos": {
+          "$ref": "#/$defs/nonNegInt"
+        },
+        "cursor": {
+          "type": "object",
+          "additionalProperties": {
+            "enum": [
+              "newest_id",
+              "first_seen",
+              "full"
+            ]
+          }
+        },
+        "price_sanity": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "min_eur": {
+              "$ref": "#/$defs/nonNeg"
+            },
+            "max_eur": {
+              "$ref": "#/$defs/nonNeg"
+            }
+          }
+        },
+        "thin": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "min_photos": {
+              "$ref": "#/$defs/nonNegInt"
+            },
+            "min_info": {
+              "$ref": "#/$defs/nonNegInt"
+            }
+          }
+        },
+        "heuristics": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "distance": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "geocoder": {
+              "enum": [
+                "nominatim",
+                "none",
+                null
+              ]
+            },
+            "router": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^https?://"
+            },
+            "user_agent": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
+    "contact": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "variant": {
+          "enum": [
+            "home",
+            "abroad"
+          ]
+        },
+        "quiet_hours": {
+          "$ref": "#/$defs/window"
+        },
+        "opener_window": {
+          "$ref": "#/$defs/window"
+        },
+        "seller_hours": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "propertyNames": {
+              "pattern": "^(mon|tue|wed|thu|fri|sat|sun)(-(mon|tue|wed|thu|fri|sat|sun))?$"
+            },
+            "additionalProperties": {
+              "$ref": "#/$defs/window"
+            }
+          }
+        },
+        "limits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "channels": {
+                "oneOf": [
+                  {
+                    "const": "*"
+                  },
+                  {
+                    "$ref": "#/$defs/strings"
+                  }
+                ]
+              },
+              "kind": {
+                "enum": [
+                  "opener",
+                  "nudge",
+                  "reply",
+                  "approved",
+                  "any"
+                ]
+              },
+              "per_channel": {
+                "type": "boolean"
+              },
+              "min_gap_s": {
+                "$ref": "#/$defs/nonNeg"
+              },
+              "per": {
+                "enum": [
+                  "hour",
+                  "day"
+                ]
+              },
+              "max": {
+                "$ref": "#/$defs/nonNegInt"
+              },
+              "reserve": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "role": {
+                    "type": "string"
+                  },
+                  "slots": {
+                    "$ref": "#/$defs/nonNegInt"
+                  },
+                  "until": {
+                    "$ref": "#/$defs/hhmm"
+                  }
+                }
+              }
+            },
+            "dependentRequired": {
+              "per": [
+                "max"
+              ]
+            }
+          }
+        },
+        "reply": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "min_seller_age_s": {
+              "$ref": "#/$defs/nonNeg"
+            },
+            "owner_backoff_min": {
+              "$ref": "#/$defs/nonNeg"
+            }
+          }
+        },
+        "opener": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "max_chars": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "max_questions": {
+              "$ref": "#/$defs/nonNegInt"
+            },
+            "spec_pattern": {
+              "type": "string"
+            }
+          }
+        },
+        "nudge": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "after_h": {
+              "$ref": "#/$defs/nonNeg"
+            },
+            "auto_reply_s": {
+              "$ref": "#/$defs/nonNeg"
+            },
+            "statuses": {
+              "$ref": "#/$defs/strings"
+            },
+            "qualify": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/predicate"
+              }
+            },
+            "exclude": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/predicate"
+              }
+            },
+            "seller_hours": {
+              "type": "string"
+            },
+            "price_extra": {
+              "type": "string"
+            },
+            "no_extra": {
+              "type": "string"
+            }
+          }
+        },
+        "duplicate_prefix": {
+          "$ref": "#/$defs/nonNegInt"
+        },
+        "allow_unlisted": {
+          "type": "boolean"
+        },
+        "require_active_agent": {
+          "type": "boolean"
+        },
+        "blocked_statuses": {
+          "$ref": "#/$defs/strings"
+        },
+        "channels": {
+          "description": "channel name (whatsapp, email, sites, or a site id) -> settings; a plain list is accepted but enforces nothing",
+          "oneOf": [
+            {
+              "$ref": "#/$defs/strings"
+            },
+            {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "max_len": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "seller_hours": {
+                    "type": [
+                      "boolean",
+                      "string"
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "phone_tz": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^\\d{1,3}$"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "country_tz": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[A-Z]{2}$"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "default_phone_cc": {
+          "type": [
+            "string",
+            "integer"
+          ],
+          "pattern": "^\\d{0,3}$"
+        },
+        "whatsapp": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "wacli": {
+              "type": "string"
+            },
+            "account": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        "email": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "from_name": {
+              "type": "string"
+            },
+            "from_address": {
+              "type": "string",
+              "description": "an address or secret:NAME"
+            },
+            "plus_tag": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "sent_label": {
+              "type": "string"
+            },
+            "verify_tries": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "verify_wait_s": {
+              "$ref": "#/$defs/nonNeg"
+            },
+            "poll_overlap_s": {
+              "$ref": "#/$defs/nonNeg"
+            },
+            "poll_ignore": {
+              "$ref": "#/$defs/strings"
+            },
+            "poll_limit": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "oauth_client": {
+              "$ref": "#/$defs/secretRef"
+            },
+            "token": {
+              "$ref": "#/$defs/secretRef"
+            }
+          }
+        },
+        "mailroute": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "domains": {
+              "$ref": "#/$defs/strings"
+            },
+            "never_touch": {
+              "$ref": "#/$defs/strings"
+            },
+            "freemail": {
+              "$ref": "#/$defs/strings"
+            },
+            "addresses": {
+              "$ref": "#/$defs/strings"
+            },
+            "deep_at": {
+              "$ref": "#/$defs/hhmm"
+            }
+          }
+        },
+        "watch": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "channels": {
+              "$ref": "#/$defs/strings"
+            }
+          }
+        },
+        "persona": {
+          "type": "object",
+          "description": "free-form lines for briefs, skills and site forms (persona_fields may name any key)",
+          "properties": {
+            "aliases": {
+              "$ref": "#/$defs/strings"
+            }
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "sites": {
+          "type": "object",
+          "description": "site id -> sender overrides",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "selectors": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "box": {
+                    "type": "string"
+                  },
+                  "form_css": {
+                    "type": "string"
+                  },
+                  "submit_css": {
+                    "type": "string"
+                  },
+                  "clear_css": {
+                    "type": "string"
+                  },
+                  "uncheck_css": {
+                    "type": "string"
+                  },
+                  "thread_css": {
+                    "type": "string"
+                  },
+                  "msg_sel": {
+                    "type": "string"
+                  },
+                  "mine_sel": {
+                    "type": "string"
+                  },
+                  "text_sel": {
+                    "type": "string"
+                  },
+                  "time_sel": {
+                    "type": "string"
+                  },
+                  "inbox_url": {
+                    "type": "string"
+                  },
+                  "conv_sel": {
+                    "type": "string"
+                  },
+                  "unread_sel": {
+                    "type": "string"
+                  },
+                  "consent_css": {
+                    "type": "string"
+                  },
+                  "blocked_markers": {
+                    "$ref": "#/$defs/strings"
+                  },
+                  "blocked_html": {
+                    "$ref": "#/$defs/strings"
+                  },
+                  "login_url_parts": {
+                    "$ref": "#/$defs/strings"
+                  },
+                  "login_markers": {
+                    "$ref": "#/$defs/strings"
+                  },
+                  "gone_markers": {
+                    "$ref": "#/$defs/strings"
+                  },
+                  "error_markers": {
+                    "$ref": "#/$defs/strings"
+                  },
+                  "success_url_parts": {
+                    "$ref": "#/$defs/strings"
+                  },
+                  "consent_buttons": {
+                    "$ref": "#/$defs/strings"
+                  },
+                  "confirm_names": {
+                    "$ref": "#/$defs/strings"
+                  },
+                  "open_form": {
+                    "$ref": "#/$defs/strings"
+                  },
+                  "submit_names": {
+                    "$ref": "#/$defs/strings"
+                  },
+                  "open_thread": {
+                    "$ref": "#/$defs/strings"
+                  },
+                  "persona_fields": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "vet": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "destination_country": {
+          "$ref": "#/$defs/iso2any"
+        },
+        "max_open_asks": {
+          "$ref": "#/$defs/nonNegInt"
+        }
+      }
+    },
+    "orchestrate": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "session_backend": {
+          "enum": [
+            "agterm"
+          ]
+        },
+        "agent_cli": {
+          "enum": [
+            "claude",
+            "codex"
+          ]
+        },
+        "agent_args": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "claude": {
+              "$ref": "#/$defs/strings"
+            },
+            "codex": {
+              "$ref": "#/$defs/strings"
+            }
+          }
+        },
+        "handover_ctx_pct": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "cycle_minutes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "mailbox": {
+          "enum": [
+            "carhunt",
+            "external",
+            "off"
+          ]
+        },
+        "workspace": {
+          "type": "string"
+        },
+        "digest_strong_cars": {
+          "$ref": "#/$defs/nonNegInt"
+        },
+        "schedule": {
+          "type": "object",
+          "description": "job -> HH:MM or [HH:MM, ...] (null = off); custom jobs need schedule_commands",
+          "additionalProperties": {
+            "$ref": "#/$defs/scheduleTime"
+          }
+        },
+        "schedule_commands": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/strings"
+          }
+        },
+        "hooks": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "secret_globs": {
+              "$ref": "#/$defs/strings"
+            },
+            "send_patterns": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "regex"
+                ],
+                "properties": {
+                  "regex": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "use": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

@@ -18,9 +18,9 @@ pace:
     apart passed on 11-05/06/07; run allowance 60 (11-07)
 account:
   needed_for: [message]
-  verification: >-
-    email account, email link (11-01); the profile form takes only a Spanish mobile + Spanish postcode (11-05) —
-    don't fake them
+  verification: email-link
+  note: "email account, email link (11-01); the profile form takes only a Spanish mobile + Spanish postcode (11-05) — don't fake them"
+  mail_from: "from:(coches.net)"
 phone: reveal
 messaging: "logged in, Spanish residential IP, non-Playwright browser: 'Contactar' once → contact-mail 2xx; never Enter in the box (resets the form)"
 liveness:
@@ -30,7 +30,7 @@ liveness:
     302 to a model list page (/<make>/<model>/segunda-mano/ or /segunda-mano/) = the site's own "ad gone" (7 checks
     11-04..07; Imperva never redirects); 200 + ad id = live; km-0 pages sometimes 200 without the id → unknown
 proxy: {sticky_minutes: 30}
-cursor: {strategy: full, key: site_ref, why: "no creation-date sort; relevance order with promoted rows first → cover every page"}
+cursor: {strategy: full, why: "no creation-date sort; relevance order with promoted rows first → cover every page"}
 measured: 2026-11-07
 notes:
   - "Never open coches.net in a Playwright-attached browser: Imperva sees the CDP domains and flagged every agent browser on the IP for hours (11-01→02)"

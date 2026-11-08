@@ -16,11 +16,13 @@ pace:
 caps: {}
 account:
   needed_for: [message, phone]
-  verification: "email confirm + mandatory SMS 2FA at every new-device login; never completed (a rented number locks the account later). 2dehands/2ememain account is separate from marktplaats"
+  verification: sms-every-login
+  note: "email confirm + mandatory SMS 2FA at every new-device login; never completed (a rented number locks the account later). 2dehands/2ememain account is separate from marktplaats"
+  mail_from: "from:(marktplaats.nl OR 2dehands.be OR 2ememain.be)"
 phone: none
 messaging: "site chat ('asq' in seller.contactOptions) needs a logged-in account → unusable (SMS 2FA); dealers' own phone/website are on the ad page"
 liveness: {evidence: "410 = gone; 200 + ad id (m…) = live (measured 11-04)"}
-cursor: {strategy: newest_first, key: site_ref, why: "SORT_INDEX decreasing; m-ids grow"}
+cursor: {strategy: newest_id, why: "SORT_INDEX decreasing; m-ids grow"}
 measured: 2026-11-07
 notes:
   - "Never warm up on / : CloudFront answers 403 to scripts there while /lrp/api/search and ad pages pass (11-01)"

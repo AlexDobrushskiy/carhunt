@@ -59,9 +59,7 @@ def test_strategy_resolution():
     assert strategy_for({"site": "s", "cursor": {"strategy": "full"}}, {}) == "full"
     assert strategy_for({"site": "s"}, {"cursor": {"s": "newest_id"}}) == "newest_id"
     assert strategy_for({"site": "s"}, {}) == "first_seen"
-    # sites vocabulary (site.schema.json): newest_first + key
-    assert strategy_for({"site": "s", "cursor": {"strategy": "newest_first", "key": "site_ref"}}, {}) == "newest_id"
-    assert strategy_for({"site": "s", "cursor": {"strategy": "newest_first", "key": "created"}}, {}) == "first_seen"
+    assert strategy_for({"site": "s", "cursor": {"strategy": "newest_id"}}, {}) == "newest_id"
     # config override wins over site.yaml
     assert strategy_for({"site": "s", "cursor": {"strategy": "full"}}, {"cursor": {"s": "newest_id"}}) == "newest_id"
 

@@ -1,6 +1,6 @@
 # carhunt design
 
-Reference for builders and the integrator. Source inventory: [inventory.md](inventory.md).
+Reference for builders and the integrator.
 
 ## Principles
 - **Repo = code, templates, docs, synthetic fixtures.** Everything a run produces (config, secrets, DB, ledgers, rendered briefs, state, logs, browser profiles) lives in `$CARHUNT_HOME` (default `~/.carhunt`), never in the repo.
@@ -62,7 +62,7 @@ Doctor: each package may expose `carhunt/<pkg>/doctor.py: checks() -> list[Check
 - `db.Client.from_config()`: thin REST client for cardb (`upsert_listing, find_listing, car, cars, queue, status, fact, opt, event, msg, msgs, photo_add, listing_patch, verdict`). Raises `NotFound`, `ApiError`.
 
 ### cardb (Go, `cardb/`)
-Port of ev-listings; contract = `cardb/api/openapi.yaml` (see [inventory/store.md](inventory/store.md) §2 for the current surface). Changes:
+Port of ev-listings; contract = `cardb/api/openapi.yaml`. Changes:
 - Renames: `needs_<owner>`→`needs_owner`, `km_to_<home>`→`distance_km`, author `<owner>`→`owner.name` from config, binary `evdb`→`cardb`.
 - Buyer profile from `config.yaml` (`owner`, `search` sections): queue tiers, hard filters, trim weights, model families, option keys, home location. No buyer constants in Go.
 - `powertrain` block (fuel BEV/PHEV/HEV/ICE, battery kWh, engine cc, gearbox); health facts per powertrain.

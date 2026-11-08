@@ -172,3 +172,47 @@ def wait_link(site: str, since: float, pattern: str, *, timeout: float = 180, po
               query: str | None = None, gmail: Gmail | None = None, sleep=time.sleep) -> str | None:
     """Poll for a confirm link matching `pattern` (searched in hrefs/URLs); None on timeout."""
     return _wait(site, since, pattern, timeout, poll, True, query, gmail, sleep)
+
+
+# ---------- CLI: carhunt email-code SITE (prints the code or link only) ----------
+
+def _since(v: str) -> float:
+    """Epoch seconds, or an age like 90s / 10m / 1h."""
+    v = v.strip()
+    unit = {"s": 1, "m": 60, "h": 3600}.get(v[-1:])
+    return time.time() - float(v[:-1]) * unit if unit else float(v)
+
+
+def _cmd(a) -> int:
+    import sys
+    try:
+        since = _since(a.since)
+    except ValueError:
+        print(f"email-code: bad --since {a.since!r} (epoch seconds or 90s/10m/1h)", file=sys.stderr)
+        return 2
+    try:
+        if a.link:
+            r = wait_link(a.site, since, a.link, timeout=a.timeout, query=a.query)
+        else:
+            r = wait_code(a.site, since, a.pattern, timeout=a.timeout, query=a.query)
+    except GmailError as e:
+        print(f"email-code: {e}", file=sys.stderr)
+        return 2
+    if not r:
+        print(f"email-code: no matching mail for {a.site} within {a.timeout:g}s", file=sys.stderr)
+        return 1
+    print(r)
+    return 0
+
+
+def register_cli(sub) -> None:
+    x = sub.add_parser("email-code", help="wait for a site's one-time code (or confirm link) in the Gmail inbox")
+    x.add_argument("site", help="site id; query = site.yaml account.mail_from, else from:<site>")
+    x.add_argument("--since", default="10m",
+                   help="only mail received after this: epoch seconds taken BEFORE triggering the mail (best), "
+                        "or an age like 10m (default)")
+    x.add_argument("--timeout", type=float, default=180, help="seconds to wait (default 180)")
+    x.add_argument("--pattern", default=CODE_RE, help="regex; group 1 = the code (default: a 6-digit code)")
+    x.add_argument("--link", metavar="REGEX", help="print the first link matching REGEX instead of a code")
+    x.add_argument("--query", help="Gmail query instead of the site's mail_from")
+    x.set_defaults(func=_cmd)

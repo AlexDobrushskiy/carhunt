@@ -1,4 +1,4 @@
-"""CLI groups of the access package: `carhunt browser|pace|proxy|sms|captcha …` (auto-discovered by carhunt.cli)."""
+"""CLI groups of the access package: `carhunt browser|pace|proxy|sms|email-code|creds|captcha …` (auto-discovered by carhunt.cli)."""
 from __future__ import annotations
 
 import importlib
@@ -7,7 +7,7 @@ import importlib
 BROWSER_PARTS = ("mcp", "identity", "plainchrome", "reaper", "sitetable", "geo")
 # modules adding their own top-level group
 GROUPS = (("pace", "register_cli"), ("proxy", "register_cli"), ("accounts.sms", "register_cli"),
-          ("captcha.cli", "register"))
+          ("accounts.email_code", "register_cli"), ("creds", "register_cli"), ("captcha.cli", "register"))
 
 
 def register(subparsers) -> None:
