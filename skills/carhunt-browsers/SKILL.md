@@ -28,7 +28,7 @@ Move up after **ONE** blocked hit per rung. Why: every blocked hit raises the si
 3. identity MCP (real history; some checks pass only here)
 4. `plain-chrome fetch|open` (shared profile seeded from the trust-cookie jar; `--warm <home>` for DataDome sites that captcha a cold deep link)
 5. `plain-chrome --profile <identity profile> open …` after `pw-identity acquire <you> --any` (plain launch + real history)
-6. A captcha is showing → **solve it yourself in that same browser** (`carhunt captcha solve --cdp http://127.0.0.1:PORT --target TARGET`; MCP tabs: `--lane|--identity NAME --url <part>`). Why same browser: the solve cookie is tied to that profile; the jar then carries it to the others. Max 2 attempts per run, 6 per site per 6 h (solver enforces).
+6. A captcha is showing → **solve it yourself in that same browser** (`carhunt captcha solve --cdp http://127.0.0.1:PORT --target TARGET`; MCP tabs: `--lane|--identity[-x] --url <part>`). Why same browser: the solve cookie is tied to that profile; the jar then carries it to the others. Max 2 attempts per run, 6 per site per 6 h (solver enforces).
 7. Solver failed/declined → **owner's one-time solve** in that window (`plain-chrome show PORT TARGET`, or `pw-identity login <url>`), asked as one concrete line ("solve the slider on <site> in the window I opened"). After that, rungs 3–5 pass for that site (cookie ~1 year).
 
 Never answer from other data because a site blocked you; name every site you could not read. Stop rules: helpers stop at the first non-200 and print `{"blocked": …}`; **404/410 = ad gone, skip**, not a block (11-05).

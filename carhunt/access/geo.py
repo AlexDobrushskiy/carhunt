@@ -207,3 +207,29 @@ def lease(country: str, holder: str | None = None, *, wait_s: float = WAIT_S, st
             if fwd:
                 fwd.stop()
             give_back(cc, holder)
+
+
+def _cmd_status(a) -> int:
+    for f in sorted(_settings.load().leases_dir.glob("geo-*.json")):
+        cc = f.stem.removeprefix("geo-")
+        cur = held(cc)
+        print(json.dumps({"country": cc, "holder": cur["holder"] if cur else None}))
+    return 0
+
+
+def _cmd_release(a) -> int:
+    ok = give_back(a.country, a.holder or "", force=a.force)
+    print("released" if ok else "held by someone else (use --force only if that holder is dead)")
+    return 0 if ok else 3
+
+
+def register_cli(sub) -> None:
+    p = sub.add_parser("geo", help="country-exit browser leases (one profile per exit country)")
+    p.set_defaults(_parser=p)
+    s = p.add_subparsers(dest="geo_cmd", metavar="<cmd>")
+    s.add_parser("status", help="leases and holders (JSON lines)").set_defaults(func=_cmd_status)
+    x = s.add_parser("release", help="drop a lease (owner override for a dead holder)")
+    x.add_argument("country")
+    x.add_argument("--holder")
+    x.add_argument("--force", action="store_true")
+    x.set_defaults(func=_cmd_release)

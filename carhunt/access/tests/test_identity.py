@@ -273,7 +273,7 @@ def test_restart_only_carhunt_labels(clock):
 
 def test_restart_refuses_foreign_prefix(tmp_path, monkeypatch, clock):
     cfg = tmp_path / "c.yaml"
-    cfg.write_text("browsers:\n  launchd_prefix: com.someone.\n")
+    cfg.write_text("owner: {tz: UTC}\nbrowsers:\n  launchd_prefix: com.someone.\n")
     monkeypatch.setenv("CARHUNT_CONFIG", str(cfg))
     calls = []
     with pytest.raises(ValueError):

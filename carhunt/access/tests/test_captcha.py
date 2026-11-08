@@ -375,7 +375,7 @@ def test_solve_statuses_without_action(carhunt_home, no_sleep):
 
 def test_config_from_yaml(carhunt_home):
     (carhunt_home / "config.yaml").write_text(
-        "browsers:\n  captcha: {enabled: true, model: 'qwen3.5:9b', owlv2: true, ollama_url: 'http://10.0.0.5:11434'}\n")
+        "owner: {tz: UTC}\nbrowsers:\n  captcha: {enabled: true, model: 'qwen3.5:9b', owlv2: true, ollama_url: 'http://10.0.0.5:11434'}\n")
     from carhunt.access.captcha.config import load
     c = load()
     assert (c.enabled, c.model, c.owlv2, c.ollama_url, c.max_attempts, c.site_budget) == \

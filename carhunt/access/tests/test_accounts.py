@@ -208,14 +208,11 @@ def test_creds_names_and_login(env, monkeypatch, capsys):
     assert "Synthetic-Pw-1!" not in capsys.readouterr().out
 
 
-def test_creds_new_stores_never_prints(env, monkeypatch, capsys):
-    store = {}
-    fake = types.ModuleType("carhunt.core.secrets")
-    fake.set = lambda name, value: store.__setitem__(name, value) or "fake"
-    monkeypatch.setitem(sys.modules, "carhunt.core.secrets", fake)
-    out = creds.new("coches.net", "buyer@example.com")
-    pw = store["site_coches_net_pass"]
-    assert store["site_coches_net_user"] == "buyer@example.com"
+def test_creds_new_stores_never_prints(env, capsys):
+    from carhunt.core import secrets
+    out = creds.new("coches.net", "buyer@example.com")   # file backend (conftest): never the real Keychain
+    pw = secrets.get("site_coches_net_pass")
+    assert secrets.get("site_coches_net_user") == "buyer@example.com"
     assert len(pw) == 18 and any(c.isupper() for c in pw) and any(c.isdigit() for c in pw)
     assert pw not in out and pw not in capsys.readouterr().out
     with pytest.raises(ValueError):
@@ -228,7 +225,3 @@ def test_creds_new_refuses_overwrite(env, monkeypatch):
         creds.new("coches.net", "buyer@example.com")
 
 
-def test_creds_new_without_core_gives_fix(env, monkeypatch):
-    monkeypatch.setitem(sys.modules, "carhunt.core.secrets", None)
-    with pytest.raises(RuntimeError, match="carhunt secret set"):
-        creds.new("wallapop.com", "buyer@example.com")

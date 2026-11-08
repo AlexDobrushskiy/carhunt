@@ -22,7 +22,7 @@ def home(tmp_path, monkeypatch):
 
 def _config(tmp_path, monkeypatch, text):
     f = tmp_path / "config.yaml"
-    f.write_text(text)
+    f.write_text("owner: {tz: UTC}\n" + text)
     monkeypatch.setenv("CARHUNT_CONFIG", str(f))
 
 

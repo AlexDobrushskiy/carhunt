@@ -23,7 +23,7 @@ Some sites gate by **country**, not reputation: coches.net and milanuncios (same
 
 ## Geo browser (one account, one IP)
 - An account created on a country IP **lives on that one IP forever**; the home IP never logs into it; its profile (`profiles/geo-<cc>`) never joins the identity pool's cookie sync. Why: provider forum reports of bans on IP hopping; owner rule (11-02).
-- It's a single shared resource → **lease** it (`carhunt browser geo up <CC>` … `geo down <CC>`; Python `access.geo`). Why: a second caller once killed the holder's step (11-04).
+- It's a single shared resource → **lease** it (Python `with access.geo.lease(CC) as g:` or `session.tab("plain-chrome", country=CC)`; `carhunt browser geo status` shows the holder). Why: a second caller once killed the holder's step (11-04).
 - Pace on residential: ≤8 loads per 55 min, ≥60 s gap (leboncoin FR route).
 
 ## Camoufox (optional, `camoufox` route)

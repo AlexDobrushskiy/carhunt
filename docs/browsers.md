@@ -21,10 +21,10 @@ Code: `browsers/bin/` (shell tools), `browsers/` (MCP + launchd templates), `car
 | `carhunt browser mcp-config [--claude\|--json\|--codex\|--hooks] [--scope user]` | print `claude mcp add` lines (default) / JSON / Codex TOML / the identity-lease hooks for settings.json; bootstrap asks, then runs them |
 | `carhunt browser launchd render\|install\|uninstall [--out D] [--dry-run]` | the `<launchd_prefix>*` jobs (macOS) |
 | `carhunt browser site-table [--sites-dir D] [--write P] [--check P]` | render the skill's site table from `carhunt/sites/*/site.yaml`; `--check` exits 1 on drift (CI) |
-| `carhunt browser geo up\|status\|down <CC>` | leased single browser on its own profile behind a country exit |
+| `carhunt browser geo status\|release <CC> [--force]` | country-exit browser lease (held by `session.tab(..., country=CC)` / `geo.lease`) |
 | `carhunt proxy test <CC>` | exit IP country + type through the configured provider (no credentials printed) |
 | `carhunt sms policy <site>` · `rent --site D --country CC --service ID [--pool P] [--dry-run]` | rented one-time numbers (policy below; exit 3 = refused) |
-| `carhunt captcha solve (--cdp URL --target T \| --lane --url P \| --identity N --url P \| --open URL)` · `stats` | local solver |
+| `carhunt captcha solve (--plain\|--lane\|--identity[-x]\|--cdp URL) [--url P] [--target T]` · `stats` | local solver |
 | `carhunt pace take <site> <kind> [--via CC] [--wait]` · `status [site]` · `reset-day <site> [kind]` | shared ledger + day caps; `kind` ∈ `load phone send login`; exit 3 = refused (`retry_at` in the JSON) |
 | `carhunt doctor` | includes browser checks (Chrome, Node, servers up, ports free, Ollama if captcha on, proxy/SMS secrets if enabled) |
 

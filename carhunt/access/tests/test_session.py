@@ -173,11 +173,11 @@ def test_failed_launch_refunds_the_pace_slot(env, monkeypatch):
 def test_identity_route_leases_and_always_releases(env, monkeypatch):
     import carhunt.access.plainchrome as pc
     log = []
-    fake = types.ModuleType("carhunt.access.identity")
-    fake.acquire = lambda holder, name=None, *, any_=False: log.append(("acquire", any_)) or types.SimpleNamespace(
-        name="identity-b", profile=Path("/tmp/fake-identity-b"), mcp_port=1, debug_port=2)
-    fake.release = lambda holder, name: log.append(("release", name))
-    monkeypatch.setitem(sys.modules, "carhunt.access.identity", fake)
+    import carhunt.access.identity as ident
+    monkeypatch.setattr(ident, "acquire", lambda holder, name=None, *, any_=False: log.append(("acquire", any_))
+                        or types.SimpleNamespace(name="identity-b", profile=Path("/tmp/fake-identity-b"),
+                                                 mcp_port=1, debug_port=2))
+    monkeypatch.setattr(ident, "release", lambda holder, name: log.append(("release", name)))
 
     @contextlib.contextmanager
     def open_tab(url, *, profile=None, **kw):

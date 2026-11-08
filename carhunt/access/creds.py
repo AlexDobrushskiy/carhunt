@@ -64,18 +64,6 @@ def new(site: str, user: str, *, overwrite: bool = False) -> str:
     u, p = names(site)
     if _core.secret_exists(p) and not overwrite:
         raise FileExistsError(f"{p} already stored; refusing to overwrite a live password")
-    store = _setter()
-    store(u, user)
-    store(p, new_password())
+    _core.set_secret(u, user)
+    _core.set_secret(p, new_password())
     return f"{u}, {p}"
-
-
-def _setter():
-    try:
-        from carhunt.core import secrets as core_secrets
-    except ImportError:
-        core_secrets = None
-    if core_secrets is None or not hasattr(core_secrets, "set"):
-        raise RuntimeError("carhunt.core.secrets is not available to store credentials: install/merge core, "
-                           "or set them yourself with `carhunt secret set site_<domain>_user|_pass`")
-    return core_secrets.set

@@ -41,8 +41,8 @@ Local only: no paid service, never pings anyone. Needs `browsers.captcha.enabled
 | command | does |
 |---|---|
 | `carhunt captcha solve --cdp http://127.0.0.1:PORT --target T` | solve on a plain-chrome tab |
-| `carhunt captcha solve --lane --url PART` / `--identity NAME --url PART` | solve on a tab you opened with MCP tools (attaches via the server's debug port; the MCP session keeps working, 10-27) |
-| `carhunt captcha solve --open URL` | open in plain-chrome + solve; tab stays open → `plain-chrome close` |
+| `carhunt captcha solve --lane --url PART` / `--identity[-x] --url PART` | solve on a tab you opened with MCP tools (attaches via the server's debug port; the MCP session keeps working, 10-27) |
+| `plain-chrome open URL` then `carhunt captcha solve --plain --url PART` | open + solve; tab stays open → `plain-chrome close` |
 | `carhunt captcha stats` | attempts / successes per site and kind |
 
 - Prints one JSON line: `solved` / `failed` / `hard-block` (ban, nothing to solve) / `unsupported` (e.g. hCaptcha image tasks) / `budget`.

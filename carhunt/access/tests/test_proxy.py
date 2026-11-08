@@ -97,7 +97,7 @@ def test_none_provider(env, capsys):
 
 
 def test_decodo_url_sticky_and_redacted(env, monkeypatch):
-    (env / "config.yaml").write_text("net: {proxy: {provider: decodo, credentials: secret:proxy_credentials}}\n")
+    (env / "config.yaml").write_text("owner: {tz: UTC}\nnet: {proxy: {provider: decodo, credentials: secret:proxy_credentials}}\n")
     monkeypatch.setenv("CARHUNT_SECRET_PROXY_CREDENTIALS", f"acct1:{PW}")
     p = proxy.provider()
     assert isinstance(p, proxy.DecodoProvider) and PW not in repr(p)

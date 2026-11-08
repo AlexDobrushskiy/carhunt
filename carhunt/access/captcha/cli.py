@@ -28,7 +28,7 @@ from carhunt.access.settings import POOL_LETTERS
 def _add_route(p: argparse.ArgumentParser, required: bool) -> None:
     g = p.add_mutually_exclusive_group(required=required)
     g.add_argument("--plain", dest="route", action="store_const", const="plain", help="plain-chrome's browser")
-    g.add_argument("--lane", dest="route", action="store_const", const="lanes", help="the pw-lane MCP Chrome")
+    g.add_argument("--lane", dest="route", action="store_const", const="lanes", help="the lanes MCP Chrome (ch-lane-*)")
     g.add_argument("--identity", dest="route", action="store_const", const="identity", help="identity MCP Chrome (hold the lease)")
     for c in POOL_LETTERS:
         g.add_argument(f"--identity-{c}", dest="route", action="store_const", const=f"identity-{c}", help=argparse.SUPPRESS)

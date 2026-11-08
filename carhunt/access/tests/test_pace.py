@@ -113,7 +113,7 @@ def test_defaults_and_config_override(env):
     assert pace.limits("unmeasured.example.invalid", "phone").per_day == 5
     assert pace.limits("unmeasured.example.invalid", "send").per_day == 10
     assert pace.limits("unmeasured.example.invalid", "login").per_day == 3
-    (env / "config.yaml").write_text("sites:\n  overrides:\n    pacefix: {caps: {phone_per_day: 9}}\n")
+    (env / "config.yaml").write_text("owner: {tz: UTC}\nsites:\n  overrides:\n    pacefix: {caps: {phone_per_day: 9}}\n")
     assert pace.limits("pacefix", "phone").per_day == 9
     assert pace.limits("pacefix", "send").per_day == 2  # rest of site.yaml kept
     assert pace.limits("pacefix.example.invalid", "load").per_hour == 7  # matched by name:
