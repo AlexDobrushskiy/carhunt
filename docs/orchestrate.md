@@ -8,7 +8,7 @@ Agent sessions on agterm: launch from role briefs, state + handover, messages, p
 | agterm | install [agterm](https://github.com/umputun/agterm), enable `agtermctl` | the only session backend in v1 (sessions, screens, mailboxes) |
 | statusline | `carhunt hooks statusline` (sets it in the agent settings; agents only) | handover is measured, not felt: `carhunt agent ctx` reads `$CARHUNT_HOME/ctx/<session>.json`; scraping `ctx:N%` off the screen fails when the statusline is truncated (seen in the smoke test) |
 | hooks | `carhunt hooks install` → `$CARHUNT_HOME/claude/settings.json` (diff of the `hooks` section, asks, backs up) | guards in code, not prose (see below); launch passes the file to every claude agent with `--settings` and refuses to start one without guards |
-| trust | run `claude` once in `$CARHUNT_HOME` and accept the folder-trust dialog | agent sessions start in `$CARHUNT_HOME/agents/<role>/`; an unanswered trust dialog blocks an unattended start |
+| trust | done by `scripts/bootstrap` (marks `$CARHUNT_HOME` trusted in `.claude.json`); without bootstrap, run `claude` once there and accept | agent sessions start in `$CARHUNT_HOME/agents/<role>/`; an unanswered trust dialog blocks an unattended start |
 | permissions | `orchestrate.agent_args.claude`, e.g. `["--allowedTools", "Bash(carhunt:*)", "Bash(cardb:*)"]`, or your own `permissions.allow` | no `--dangerously-*` flag by default; opt in via config if you accept that |
 | schedule | `carhunt schedule install` | the day runs on launchd, not on the overseer's loop |
 | check | `carhunt doctor` | agterm, agent CLI, statusline, hooks, schedule, state files |
@@ -35,6 +35,7 @@ Agent sessions on agterm: launch from role briefs, state + handover, messages, p
 
 ## Launch values
 - Placeholders `{a.b}` come from the config (lists of mappings render as `k=v k=v; …`), plus `home`, `date`, `agent.*`, `learned.dir`. A missing one fails the launch, never a half-rendered brief.
+- Config keys the shipped briefs render (sections in `config.example.yaml`): `owner.{name,tz,languages,home.country}` · `search.{countries,models}` · `sites.enabled` · `discover.windows.{morning,afternoon}` · `contact.{quiet_hours,opener_window}` · `notify.quiet_hours` · `orchestrate.{cycle_minutes,handover_ctx_pct}` · `orchestrate.schedule.{sweep,unpause,digest,pause,learning}`.
 - `--var K=V` adds per-launch values: vet/buy need `car`, `vin`, `country`, `destination` (+ vet `tasks`, `options`; buy `stage`); a plain key also gets `K_lc` (lower case).
 - Variants: role `BASE-VARIANT` without its own brief runs `agents/roles/BASE/brief.md` with `{variant}` set — `outreach-home` and `outreach-abroad` keep separate state, inbox and caps.
 
@@ -92,7 +93,7 @@ orchestrate:
 ## Gaps
 - Backends: agterm only (macOS). tmux would implement `session.Backend` (6 methods).
 - Live-tested: launch → `state done` → `state cleanup`, `msg` typing path. Mailbox receiver hook: unit-tested only (the dev machine runs another receiver).
-- Folder trust is a manual one-time step; launch doesn't answer the dialog.
+- Launch doesn't answer a folder-trust dialog: a `$CARHUNT_HOME` moved after bootstrap needs bootstrap re-run.
 - Agent-scoped hooks bind launched claude agents only. An owner session that drives `ch-identity` directly takes no lease unless installed with `--user`.
 - Site chat sends through a browser MCP can't be told apart from other clicks; the send guard covers CLI sends, the outreach brief covers browser sends.
 - Digest has no per-agent push count yet (needs a notify ledger from core).

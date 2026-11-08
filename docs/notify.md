@@ -5,7 +5,7 @@ Pushes to the owner's phone (Telegram, optional) and the way the owner's answers
 ## Policy (enforced in code)
 | kind | for | quiet hours (`notify.quiet_hours`) |
 |---|---|---|
-| `digest` | the scheduled summaries (`notify.digests`, e.g. 09:30 / 20:00) | held until the window ends |
+| `digest` | the scheduled summaries (`orchestrate.schedule.digest`, e.g. 09:30 / 20:00) | held until the window ends |
 | `ask` | a decision that blocks progress today; `--buttons "A\|B"` or a free answer | held |
 | `urgent` | a breach or a dead session the agent could not fix itself (PAUSE first) | sent silent |
 
@@ -49,7 +49,6 @@ Privacy: a bot sees only chats where someone wrote to it. Keep it private: BotFa
 | `notify.telegram.api_base` | `https://api.telegram.org` |
 | `notify.quiet_hours` | none; example `21:30-09:30` (owner's `owner.tz`) |
 | `notify.quiet` | `{digest: hold, ask: hold, urgent: silent}` |
-| `notify.digests` | read by orchestrate's schedule |
 | `notify.default_agent` | `overseer` |
 
 ## Rules for agents (why)
