@@ -61,25 +61,8 @@ Overseer: checks every `orchestrate.cycle_minutes`, verifies these jobs ran, nev
 
 Install rules: ours = entries naming `carhunt_hook.py` + the lease entries on carhunt's identity matcher; foreign entries are never changed (a personal `mcp__identity…` stack keeps its own hooks); our mailbox receiver is left out where an asyncRewake Stop receiver already runs (target or user settings: both load in an agent). Malformed settings → refuse. Only the `hooks` section is ever diffed or printed (settings can hold tokens in `env`). Guards deny (no "ask"): agents run unattended and a prompt stalls them (11-04).
 
-## Config (`orchestrate` section — integrator: merge into config.example.yaml)
-```yaml
-orchestrate:
-  session_backend: agterm
-  agent_cli: claude            # claude | codex
-  agent_args:                  # extra CLI args per agent CLI; no --dangerously-* unless you add it
-    claude: ["--allowedTools", "Bash(carhunt:*)", "Bash(cardb:*)"]
-    codex: []
-  handover_ctx_pct: 50         # hand over at measured context >= this
-  cycle_minutes: 20            # overseer check cycle
-  mailbox: carhunt             # carhunt (our receiver hook) | external (your own receiver) | off (always type)
-  workspace: ""                # agterm workspace name for new agent sessions ("" = current)
-  digest_strong_cars: 8
-  schedule: {sweep: "07:00", unpause: "08:10", digest: ["09:30", "20:00"], pause: "23:00", learning: "23:15"}
-  schedule_commands: {}        # job -> carhunt argv override, e.g. {sweep: [sweep, --window, morning]}
-  hooks:
-    secret_globs: ["{home}/secrets/**", "**/.env", "**/*.secret"]
-    send_patterns: []          # [{regex: '\bmy-sms-tool send\b', use: "Use carhunt say."}]
-```
+## Config
+Keys and defaults: [`config.example.yaml`](../config.example.yaml) `orchestrate:` (session backend, agent CLI + args, handover %, overseer cycle, mailbox mode, schedule times, hook globs/patterns). Briefs render from this view (`carhunt/orchestrate/settings.py`).
 
 ## Rules kept from the EV run (why in brackets)
 - One session per role; role → `active_agent` at send time [12 briefs pointed at a closed overseer, 11-02].

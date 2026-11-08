@@ -66,25 +66,7 @@ Specs (`e2e/web.spec.ts`): list → fuel filter → car page (powertrain block, 
 
 ## Docker / compose
 
-`web/Dockerfile`: pinned `node:22.23.4-alpine`, multi-stage, non-root, healthcheck on `/health`. Service block for `deploy/compose.yaml` (owned by db):
-
-```yaml
-  web:
-    build: ../web
-    environment:
-      CARDB_URL: http://cardb:8484
-      CARDB_WEB_TOKENS_FILE: /run/secrets/cardb_web_tokens
-    secrets: [cardb_web_tokens]
-    ports: ["127.0.0.1:4321:4321"]
-    depends_on: {cardb: {condition: service_healthy}}
-    read_only: true
-    tmpfs: [/tmp]
-    cap_drop: [ALL]
-    security_opt: ["no-new-privileges:true"]
-    mem_limit: 256m
-secrets:
-  cardb_web_tokens: {file: "${CARHUNT_HOME:-~/.carhunt}/cardb/web-tokens"}   # name:token per line, 0600
-```
+`web/Dockerfile`: pinned `node:22.23.4-alpine`, multi-stage, non-root, healthcheck on `/health`. The `web` service (tokens as a compose secret from `carhunt secret exec`, localhost port, hardening): [`deploy/compose.yaml`](../deploy/compose.yaml), how to start it: [`deploy/README.md`](../deploy/README.md).
 
 ## Dependencies
 

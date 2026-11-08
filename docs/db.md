@@ -59,45 +59,13 @@ Read at server start (restart after editing; an invalid profile refuses to start
 keys only warn). `cardb profile` / `GET /api/v1/profile` show the effective profile with defaults; `cardb profile check FILE` validates a config offline (exit 1 on errors, warnings printed). `search.max_distance_km` and `search.models[].match` are discover's keys: known to cardb, not used by it. `owner` and `secrets`
 are shared with core; `search.private_sellers_abroad` and `search.price.gross` are read by discover, not cardb.
 
+Keys, example values and most defaults: [`config.example.yaml`](../config.example.yaml) `owner`, `cardb`, `search`. Below only what the example leaves out: `models[].when`, `families`, and every `ranking` default.
+
 ```yaml
-# integrator: merge into config.example.yaml (values = defaults unless marked "example")
-owner:
-  name: owner                    # the human: author of web writes, needs_owner, author_kind owner; renaming keeps verdicts
-  tz: Europe/Lisbon              # example; display time zone
-  home: {city: Lisbon, country: PT, lat: 38.72, lon: -9.14}   # example; market home|abroad, distance, phone calling code, VAT reserve rate
-
-cardb:
-  url: http://127.0.0.1:8484     # client fallback (after --server, CARDB_URL, ~/.config/cardb/config.json)
-  token: secret:cardb_token      # client token secret name
-  data_dir: cardb                # omit or keep relative: resolved against $CARHUNT_HOME (also $CARHUNT_HOME/… ok); an absolute ~/… path
-                                 # pins one home and breaks a copied config. CARDB_DATA_DIR wins
-  users:                         # viewers (the owner is implicit); each gets cardb_token_<name> + a web identity
-    - {name: partner, role: viewer}   # example
-
-secrets:
-  backend: keychain              # keychain | file | op (default keychain on macOS, file elsewhere)
-  keychain_service: carhunt      # Keychain service name
-  op_vault: carhunt              # 1Password vault for backend op
-
 search:
-  countries: []                  # ISO-2 scope; empty = any (example: [PT, ES, FR, DE])
-  exclude_regions: []            # ISO 3166-2 by place names: ES-CN ES-IB FR-20R FR-971…976 GR-M IT-82 IT-88 PT-20 PT-30
-  exclude_places: []             # extra city words/phrases to exclude
-  price:
-    max_eur: 0                   # the only queue price filter: above → out (0 = none); also the ×100 check without a family median
-    min_eur: 1500                # write-time sanity floor only: below → 422 price_lease (monthly rate / deposit); not a queue filter
-    cap_eur: 2000000             # write-time sanity ceiling only: above → 422 price_range / price_x100
-    currency: EUR
-  year_min: 0                    # queue: older → out (0 = off)
-  km_max: 0                      # queue: more km → out; also fit km_ref
-  powertrain: []                 # allowed fuels: bev phev hev mhev petrol diesel lpg cng hydrogen (empty = any)
-  models:                        # tiers; first match wins; model "" = every family of the make
+  models:
     - make: VW                   # example
       model: ID.4
-      tier: 1                    # ≤ default_tier
-      label: ""                  # shown with the tier
-      base_fit: 0.40             # default ranking.fit.base_default (0…2)
-      risk: 0                    # model risk points (known weak points)
       when:                      # all set conditions must hold; see DESIGN.md "Ranking" step 2
         power_hp: [280, 290]     # [min, max] metric hp (unknown → variant_any decides)
         drive: [fwd, rwd]        # allowed drives (awd tokens in the text count)
@@ -107,25 +75,8 @@ search:
         year_max: 0
         battery_net_kwh: []      # [min, max]
         fuel: []
-  default_tier: 0                # tier for unmatched cars (0 = highest model tier + 1)
-  queue_default_tiers: []        # tiers `cardb queue` shows (empty = every tier below default_tier)
-  tier_labels: {}                # tier → label, e.g. {1: "first to contact"}
   families:                      # model-family rules added to / overriding internal/store/families.yaml
     - {make: VW, make_aliases: [volkswagen], name: ID.4, match: [id4], with: [], lead: false, bare: false, body: [], body_name: ""}   # example; words folded ("ID.4" → id4)
-  hard_filters:                  # queue exclusions; exactly one of field / fact(s) / flag per rule; label optional
-    - {field: powertrain.battery_net_kwh, min: 70}           # numeric field out of range (missing passes)
-    - {fact: deal_flag, words: [suspect], label: suspect ad} # fact contains a whole word/phrase
-    - {facts: [origin, import, history_report], mentions_country: [PL, LT], label: high-risk history}  # fact names a country
-    - {fact: battery_soh, min: 85}                           # numeric fact out of range
-    - {flag: lease_transfer}                                 # truthy fact, or a price flag of the car's price listing
-  options_wanted: {}             # option key → weight (fit, trim_score, why), e.g. {heat_pump: 3, pano: 2}
-  option_labels: {}              # option key → short label in `why`
-  must_have: []                  # options behind ?spec=confirmed|unknown and the unknown-option risk
-  option_keys: []                # extra option vocabulary (built-ins: GET /profile option_keys)
-  penalties:                     # numeric field hit → fit −weight·option_unit, trim_score −weight
-    - {field: wheels_in, min: 20, weight: 2, label: '{v}" wheels'}   # example
-  weights: {value: 1, fit: 1, risk: 1}   # score = value·v·fit − risk·r; fit scales the fit terms
-  road_factor: 1.3               # great-circle → road km (1…3)
   ranking:
     peers:
       power_band_hp: 25          # trim = power rounded to this + awd/2wd
@@ -189,6 +140,7 @@ search:
       price_forced: 0.5
       reasons_max: 5             # risk_reasons shown
 ```
+Defaults the example doesn't spell out: `models[].model: ""` = every family of the make; `models[].base_fit` = `ranking.fit.base_default`; `default_tier: 0` = highest model tier + 1; `queue_default_tiers: []` = every tier below `default_tier`; `search.price.max_eur` also drives the ×100 check when a family has no median.
 
 Worked example: the EV run's profile is `cardb/internal/profile/testdata/ev.yaml` (VAG 286 hp RWD = tier 1 via
 `power_hp` + `variant_any` markers, long-range alternatives = tier 2, islands excluded, PL/Baltic history and suspect ads

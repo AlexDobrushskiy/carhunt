@@ -41,17 +41,10 @@ Also refused: buttons on a non-`ask`, empty text, text that looks like a token/k
 
 Privacy: a bot sees only chats where someone wrote to it. Keep it private: BotFather → `/setjoingroups` → Disable. The token gives full control of the bot: if it leaks, `/revoke` in BotFather and `secret set` the new one.
 
-## Config keys
-| key | default |
-|---|---|
-| `notify.backend` | `none` (`telegram \| stdout \| none`) |
-| `notify.telegram.bot_token`, `.chat_id` | `secret:telegram_bot_token`, `secret:telegram_chat_id` |
-| `notify.telegram.api_base` | `https://api.telegram.org` |
-| `notify.quiet_hours` | none; example `21:30-09:30` (owner's `owner.tz`) |
-| `notify.quiet` | `{digest: hold, ask: hold, urgent: silent}` |
-| `notify.default_agent` | `overseer` |
+## Config
+Keys and defaults: [`config.example.yaml`](../config.example.yaml) `notify:` (backend, Telegram secret names, `quiet_hours` in `owner.tz`, per-kind `quiet`, `default_agent`). Optional `notify.telegram.api_base` (default `https://api.telegram.org`).
 
 ## Rules for agents (why)
 - Answering an owner line: one reply, nothing after it (duplicate answers, EV 11-04).
 - A decision that can wait for the next digest waits.
-- Never a secret in a ping (a hub stored a password sent as a ping, EV run).
+- Never a secret in a ping ([secrets.md](secrets.md#rules-why)); `send` refuses token-shaped text.

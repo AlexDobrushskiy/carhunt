@@ -36,47 +36,32 @@ Site states: `ok`, `blocked` (signature), `pace`, `budget`, `deferred` (read_aft
 | `geocode.json` | place → lat/lon cache |
 
 ## Config
-```yaml
-owner:
-  home: {city: …, country: PT, lat: …, lon: …}   # distance origin; home country = "abroad" rules
-sites:
-  enabled: [standvirtual.com, …]  # site ids (site.yaml `site:`) the sweep runs; default = every plugin
-search:                           # shared with cardb (ranking); discover reads:
-  countries: [PT, ES, …]          # ISO-2; site countries outside → no query
-  exclude_regions: [PT-20, PT-30, ES-CN]   # ISO 3166-2, see data/regions.yaml
-  price: {max_eur: 40000, min_eur: 1500}   # gross; min_eur = the one price floor (discover drop + cardb 422), default 1500
-  year_min: 2021
-  km_max: 80000
-  powertrain: [BEV]               # cardb fuel vocabulary: bev phev hev mhev petrol diesel …
-  private_sellers_abroad: false   # abroad = dealer-only queries + scope drop
-  max_distance_km: 2500           # optional; road km or great-circle × road_factor
-  road_factor: 1.3
-  models:                         # make/model (+ optional `match:` regex override) + tier
-    - {make: Volkswagen, model: "ID.4", tier: 1}
-  hard_filters:                   # cardb's grammar: {field: powertrain.battery_net_kwh, min} · {fact(s), min|max|words} · {flag: damaged}; mentions_country left to cardb's queue
-    - {field: powertrain.battery_net_kwh, min: 70}
-    - {flag: damaged}
-  options_wanted: {heat_pump: 3, pano: 2}  # keys drive the ask list (weights are cardb's)
+Values and defaults: [`config.example.yaml`](../config.example.yaml) `sites:`, `search:`, `discover:`. What discover does with each key:
 
-discover:
-  windows: {morning: "07:00-09:00", afternoon: "14:00-16:00"}   # morning = sites without pace.read_after
-  max_loads_per_site: 60          # per run; min() with site.yaml pace.max_loads_per_run
-  max_pages: 5                    # per query
-  detail_tiers: [1, 2]            # tiers that get detail reads + gallery; others card-only (default: all)
-  max_photos: 40
-  cursor: {coches.net: full}      # per-site override: newest_id | first_seen | full (else site.yaml cursor, else first_seen)
-  price_sanity: {max_eur: 250000}  # ×100 parse-error ceiling; the floor is search.price.min_eur
-  thin: {min_photos: 8, min_info: 3}
-  heuristics: [vag_meb]           # plug-ins to load (default: all in carhunt/discover/heuristics/)
-  distance: {geocoder: nominatim, router: null, user_agent: "carhunt/1.0 (…)"}   # geocoder none = offline
-```
+| key | effect |
+|---|---|
+| `owner.home` | distance origin; home country decides home vs abroad rules |
+| `sites.enabled` | sites the sweep runs (default: every plugin) |
+| `search.countries` | site countries outside it get no query |
+| `search.exclude_regions` / `exclude_places` | scope drop (ISO 3166-2 via `data/regions.yaml`, postcode first) |
+| `search.price` | gross compare; `min_eur` is the one price floor (discover drops, cardb refuses) |
+| `search.year_min`, `km_max`, `powertrain`, `max_distance_km`, `road_factor` | scope drop (distance = road km, else great-circle × `road_factor`) |
+| `search.private_sellers_abroad` | `false` = dealer-only queries + scope drop abroad |
+| `search.models` | make/model per query (+ `match:` regex override) and tier |
+| `search.hard_filters` | cardb's grammar applied at ingest (`field` min/max, `fact(s)` min/max/words, `flag`); `mentions_country` is left to cardb's queue |
+| `search.options_wanted` | keys drive the ask list (weights are cardb's) |
+| `discover.windows`, `max_loads_per_site`, `max_pages`, `max_photos` | run plan + budget (`max_loads_per_site` = min() with site.yaml `pace.max_loads_per_run`) |
+| `discover.detail_tiers` | tiers that get detail reads + gallery; others card-only (null = all) |
+| `discover.cursor.<site>` | strategy override (see Rules) |
+| `discover.price_sanity.max_eur`, `thin`, `heuristics`, `distance` | ×100 ceiling · thin-ad rule · plug-ins to load · geocoder/router (`none` = offline) |
+
 Flags discover sets: `lease_transfer` (always dropped), `damaged`, `reseller`, `net_price`, `history_abroad`, `china_market_vin`, `net_price_unknown_vat`.
 
 ## Rules (why)
 - **Serial, one sweep per machine.** Parallel workers on one IP got sites banned and killed each other's searches (2026-11-03).
 - **Sends before reads.** Sites with `pace.read_after` are read only after it: discovery reads 403'd the IP used for seller messages (2026-11-05/06).
 - **Budget ≤ 60 loads/site/run.** Home IP got a 403 on mobile.de after 41 sweep loads (2026-11-06).
-- **Stop a site at the first block; gone ≠ blocked.** Two runs stopped on a 410 and left 200 ads undone (2026-11-04/05).
+- **Stop a site at the first block; gone ≠ blocked** (classification and why: [sites.md](sites.md#rules-why)).
 - **Cursors only from organic, in-filter cards; checked before the cardb lookup; committed per query after a clean finish; merged, never replaced.** Promoted rows violate filters; a replaced cursor dict lost models with no eligible head.
 - **Cursor strategy:** config `discover.cursor.<site>` > site.yaml `cursor.strategy` (`newest_id` \| `first_seen` \| `full`) > `first_seen`.
 - **Newest-first cursors don't see price drops on older ads.** Price tracking of known listings = full-coverage sites + liveness/price checks (sites module).

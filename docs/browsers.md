@@ -68,7 +68,7 @@ Python: `access.session.tab(route, country=, site=, fresh=)`, `access.pace.acqui
 1. **Identity master login:** `pw-identity login https://<site>` opens a visible window on the master profile; sign in to Google (if you'll use it) and any site you want agents to share. Agents can do site logins themselves later; only Google + phone-code steps need you.
 2. **Seed the pool:** `pw-identity seed --all` (APFS clones of the master minus Google cookies; a 6-hourly job reseeds stale idle copies).
 3. **Trust-cookie jar:** fills itself: every plain-chrome close and identity launch harvests bot-check cookies. To prime a DataDome site: `plain-chrome fetch --warm https://<site>/ https://<site>/<deep-link>`; if a captcha shows, `carhunt captcha solve` or `plain-chrome show` and solve once.
-4. **MCP:** `carhunt browser mcp-config` → review → run the lines (bootstrap asks first). Identity-lease hooks: `carhunt hooks install` (agent-only `$CARHUNT_HOME/claude/settings.json`, passed by `carhunt agent launch` via `claude --settings`; your own `~/.claude/settings.json` is never touched).
+4. **MCP:** `carhunt browser mcp-config` → review → run the lines (bootstrap asks first). Identity-lease hooks: `carhunt hooks install` ([orchestrate.md](orchestrate.md#guard-hooks-hookscarhunt_hookpy-stdlib-only)).
 5. `carhunt doctor`.
 
 ## Coexistence with an existing personal browser stack
@@ -97,7 +97,7 @@ Ports and labels are chosen not to collide with a typical personal setup on 8931
 - Site kinds: **verify-once, domestic-only** (e.g. leboncoin: FR mobile) → rent; **accept foreign numbers** (e.g. subito) → use your own; **SMS 2FA every login** (marktplaats/2dehands) → never rent, use your own or skip; **IP-gated activation** (kleinanzeigen) → open the link on mobile data.
 
 ## Site accounts (generic)
-1. Check the site row (`account.needed_for`, `verification` ∈ `none email email-link email-code google sms-once sms-own sms-every-login`, `note`, `mail_from`).
+1. Check the site's `account` row in site.yaml (`needed_for`, `verification`, `note`, `mail_from`; values: [design.md](design.md#siteyaml-keys)).
 2. From an identity copy (or the site's `geo` browser if the account must live on a country IP): sign up with `accounts.email` (+ `accounts.gmail.plus_address`), password from `carhunt creds new <site> --user <email>` / `creds.new` (never printed).
 3. Codes: take `t0=$(date +%s)` before triggering the mail, then `carhunt email-code <site> --since $t0` (or `accounts.wait_code(site, since=t0)`); phone-only codes → one batched ask to the owner.
 4. Set real name (+ photo where the web allows) — helps with private sellers.
@@ -120,6 +120,6 @@ APFS clones (`cp -c`) for Agent Chrome + pool seeding · `codesign` ad-hoc re-si
 - Only one proxy provider (Decodo) and one SMS provider (SMSPool) measured; costs per site per month unknown beyond one campaign (66 MB ≈ $0.33).
 - All wall measurements are from one PT residential IP; which sites need which country IP depends on where you live.
 - Identity leases are enforced by Claude Code hooks only; other agent CLIs must call `pw-identity acquire`.
-- Tests: `pytest carhunt/access` (offline); real-Chrome smoke tests are opt-in with `CARHUNT_TEST_CHROME=1`. Tests force `CARHUNT_SECRETS_BACKEND=file` (a first run on the Keychain default wrote synthetic test creds to the real Keychain).
+- Tests: `pytest carhunt/access` (offline); real-Chrome smoke tests are opt-in with `CARHUNT_TEST_CHROME=1`. Isolation: [testing.md](testing.md#isolation-rules-every-test).
 - Site limits drift (mobile.de tightened three times in two weeks); `measured` dates in site.yaml are the staleness signal.
 - Captcha VLM benchmarked on one machine; hCaptcha image tasks unsupported.
