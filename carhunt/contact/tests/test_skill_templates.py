@@ -25,6 +25,7 @@ VALID_NAME = re.compile(r"^(owner|contact|search)(\.[a-z0-9_]+)+$")
 # really needs one; each entry needs a comment saying why.
 WHITELIST: set[str] = {
     "variant",  # set by `carhunt agent launch outreach-home|outreach-abroad` (role suffix), not config
+    "agent.dir",  # the agent's folder, set by `carhunt agent launch` (orchestrate's launch vars), not config
 }
 
 # Keys the templates use that config.example.yaml doesn't carry yet (integrator adds them to the

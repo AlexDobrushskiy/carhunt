@@ -47,8 +47,7 @@ def pause_file() -> Path:
 
 def db_client() -> core_db.Client:
     """core's cardb client; author = $CARDB_AUTHOR (set by `carhunt agent launch`) or `discover`."""
-    cfg = core_config.load_or_none() or core_config.Config({})
-    return core_db.Client.from_config(cfg, author=os.environ.get("CARDB_AUTHOR") or "discover")
+    return core_db.Client.from_config(author=os.environ.get("CARDB_AUTHOR") or "discover")
 
 
 @cache
