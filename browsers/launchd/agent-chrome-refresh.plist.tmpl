@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Template: rendered by `carhunt browser launchd render|install` (carhunt/access/mcp.py). -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>__LABEL_PREFIX__agent-chrome-refresh</string>
+  <key>ProgramArguments</key>
+  <array><string>__REPO__/browsers/bin/agent-chrome</string><string>refresh</string></array>
+  <key>EnvironmentVariables</key>
+  __ENV__
+  <key>StartInterval</key><integer>21600</integer>
+  <key>StandardOutPath</key><string>__LOG_DIR__/agent-chrome-refresh.log</string>
+  <key>StandardErrorPath</key><string>__LOG_DIR__/agent-chrome-refresh.log</string>
+</dict>
+</plist>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Template: rendered by `carhunt browser launchd render|install` (carhunt/access/mcp.py). -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>__LABEL_PREFIX__identity-__X__</string>
+  <key>ProgramArguments</key>
+  <array><string>__REPO__/browsers/bin/serve</string><string>identity-__X__</string></array>
+  <key>EnvironmentVariables</key>
+  __ENV__
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ProcessType</key><string>Interactive</string>
+  <key>StandardOutPath</key><string>__LOG_DIR__/identity-__X__.log</string>
+  <key>StandardErrorPath</key><string>__LOG_DIR__/identity-__X__.log</string>
+</dict>
+</plist>

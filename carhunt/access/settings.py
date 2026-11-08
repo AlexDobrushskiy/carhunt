@@ -16,12 +16,13 @@ POOL_LETTERS = "abcdefgh"
 @dataclass(frozen=True)
 class Settings:
     chrome_app: Path = Path("/Applications/Google Chrome.app")
-    lanes: int = 4                 # named lane registrations (pw-lane-a…), all on one --isolated server
+    lanes: int = 4                 # named lane registrations (ch-lane-a…), all on one --isolated server
     identity_pool: int = 4         # identity copies identity-a… (one MCP server + profile each)
     mcp_base_port: int = 18931     # lanes = base, identity master = base+1, copy i = base+2+i
     debug_base_port: int = 19331   # same offsets, Chrome --remote-debugging-port
     plain_debug_port: int = 19341  # plain-chrome's shared browser
     launchd_prefix: str = "carhunt."
+    mcp_name_prefix: str = "ch-"   # MCP registrations ch-lane-a…, ch-identity…: never clash with the user's own
     idle_release_s: int = 180      # identity lease auto-release after this much idle
     reaper_max_age_h: float = 6.0
     headless: bool = True          # MCP servers; plain-chrome is always headed (off-screen)
@@ -69,7 +70,7 @@ class Settings:
         return [f"identity-{c}" for c in POOL_LETTERS[: self.identity_pool]]
 
     def lane_names(self) -> list[str]:
-        return [f"pw-lane-{c}" for c in POOL_LETTERS[: self.lanes]]
+        return [f"{self.mcp_name_prefix}lane-{c}" for c in POOL_LETTERS[: self.lanes]]
 
     def mcp_port(self, server: str) -> int:
         return self.mcp_base_port + self._offset(server)
@@ -102,7 +103,7 @@ def load() -> Settings:
     kw = {}
     if "chrome_app" in b:
         kw["chrome_app"] = Path(b["chrome_app"]).expanduser()
-    for key in ("lanes", "identity_pool", "launchd_prefix", "idle_release_s", "reaper_max_age_h", "headless", "captcha"):
+    for key in ("lanes", "identity_pool", "launchd_prefix", "mcp_name_prefix", "idle_release_s", "reaper_max_age_h", "headless", "captcha"):
         if key in b:
             kw[key] = b[key]
     if "mcp_base" in ports:

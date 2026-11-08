@@ -1,0 +1,10 @@
+{
+  "name": "carhunt-browsers",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Playwright MCP servers for carhunt's agent browsers (browsers/bin/serve)",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@playwright/mcp": "0.0.83"
+  }
+}

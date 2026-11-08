@@ -452,6 +452,9 @@ def tab(route: str, *, country: str | None = None, site: str | None = None,
             holder = _holder()
             lease = identity.acquire(holder, any_=True)
             stack.callback(identity.release, holder, lease.name)
+            from carhunt.access import plainchrome
+            # clean browser close before the release: cookies flush and sync back to the pool (a kill loses ~30 s)
+            stack.callback(plainchrome.close, lease.profile)
             t = BrowserTab("identity", site=site)
             stack.callback(t.close)
             t._opener = _plain_opener(t, stack, lease.profile)
