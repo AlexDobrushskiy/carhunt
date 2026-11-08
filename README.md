@@ -51,7 +51,7 @@ sites ──sweep──▶ cardb ◀── web UI (owner + viewers)
                   ▲
         overseer: launches roles, digests, pause/learn at night (agterm)
 ```
-cardb is the hub: every stage reads and writes car facts there; ranking lives only in cardb. Agents: `sweep`, `outreach-home`, `outreach-abroad`, `vet`, `buy`, `learning`, `overseer` ([agents/roles](agents/roles/)).
+How the parts talk: [docs/design.md](docs/design.md#interfaces). Agents: `sweep`, `outreach-home`, `outreach-abroad`, `vet`, `buy`, `learning`, `overseer` ([agents/roles](agents/roles/)).
 
 ## Modules
 
@@ -80,9 +80,4 @@ Details: [docs/privacy.md](docs/privacy.md).
 
 ## Tests
 
-```sh
-.venv/bin/pytest -p no:cacheprovider      # all Python suites, offline; root conftest.py isolates HOME + secrets
-make -C cardb test                        # Go
-cd web && npm test                        # web unit tests (npm run e2e: Playwright vs a throwaway cardb)
-```
-Layout, isolation and the clean-HOME e2e run: [docs/testing.md](docs/testing.md).
+All suites run offline on synthetic data: `.venv/bin/pytest -p no:cacheprovider` (Python), `make -C cardb test` (Go), `cd web && npm test`. Isolation rules, the web e2e and the clean-clone run `tests/e2e/run.sh`: [docs/testing.md](docs/testing.md).

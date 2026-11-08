@@ -65,10 +65,7 @@ Per-site walls, pace numbers with their why, quirks: `carhunt/sites/<pkg>/README
 - Liveness writes only via cardb (`PATCH /listings/{id}` + `ad_check` event); it never touches car status.
 
 ## Config
-```yaml
-sites:
-  enabled: [autoscout24, standvirtual.com, …]   # ids from `carhunt site list`; doctor fails on unknown ids
-```
+`sites.enabled` (ids from `carhunt site list`; doctor fails on unknown ids) and `sites.overrides.<site>` (tighten site.yaml numbers): [`config.example.yaml`](../config.example.yaml) `sites:`.
 State + logs (never in the repo): `$CARHUNT_HOME/sites/liveness.db`, `$CARHUNT_HOME/sites/liveness/{checks-<date>.jsonl,runs.jsonl,launchd.log}`.
 
 ## Add a site

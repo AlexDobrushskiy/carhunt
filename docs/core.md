@@ -6,7 +6,7 @@ Shared runtime for every module: config, secrets, owner-local clock, locks, run-
 
 | command | what |
 |---|---|
-| `scripts/bootstrap [--dry-run] [--yes] [--skip-mcp] [--skip-browsers-launchd] [--skip-compose] [--extras all]` | clone → ready: brew deps, `.venv`, `carhunt` on PATH, cardb build + init, compose up, skills, browsers, hooks, doctor. Idempotent. |
+| `scripts/bootstrap [--dry-run] [--yes] [--skip-…] [--extras all]` | clone → ready, idempotent. Steps: [README](../README.md#quick-start); flags: `scripts/bootstrap --help` |
 | `scripts/doctor` = `carhunt doctor [--json]` | ok / warn / fail per component with a fix line; exit 1 on any fail |
 | `carhunt config show [--json]` | the loaded config; secret refs shown as `secret:NAME`, never resolved |
 | `carhunt config get KEY [--json]` | one value by dotted key (lists/maps as JSON; secret refs as `secret:NAME`); exit 1 if unset |
@@ -30,8 +30,8 @@ Shared runtime for every module: config, secrets, owner-local clock, locks, run-
 
 ## Plugin contract (other modules)
 - CLI: `carhunt/<pkg>/cli.py: register(subparsers)`; set `func=handler` (returns exit code). For a group, `p.set_defaults(_parser=p)` makes `carhunt <group>` alone print its help. A plugin that fails to import or register prints a warning; the rest of the CLI works.
-- Doctor: `carhunt/<pkg>/doctor.py: checks() -> list[Check]`. A crash in it shows as one `fail` line, not a traceback. Modules from design.md that aren't installed show as `warn`. Core also checks cardb `/healthz` and the web UI `GET 127.0.0.1:4321/health` (`web.url` once the schema has it; down = warn: agents work without it).
-- Bootstrap calls, when present: `make -C cardb build` (→ `cardb/bin/cardb`), `cardb init`, `deploy/compose.yaml`, `npm ci` in `web/`, `skills/carhunt-*` (symlinked), `browsers/install [--yes] [--skip-launchd] [--skip-mcp]`, `carhunt hooks install`, `scripts/install-hooks`.
+- Doctor: `carhunt/<pkg>/doctor.py: checks() -> list[Check]`. A crash in it shows as one `fail` line, not a traceback. Modules from design.md that aren't installed show as `warn`. Core also checks cardb `/healthz` and the web UI `GET 127.0.0.1:4321/health` at config `web.url` (down = warn: agents work without it).
+- Bootstrap runs each module's install step when present (a missing module = warn + skip): cardb build + init, compose, `npm ci` in `web/`, skill links, `browsers/install`, `carhunt hooks install`, `scripts/install-hooks`.
 
 ## Env
 
@@ -47,15 +47,8 @@ Shared runtime for every module: config, secrets, owner-local clock, locks, run-
 | `CARHUNT_AGENT` (or `CARDB_AUTHOR`) | default `--agent` for `notify` commands |
 | `CARDB_URL`, `CARDB_AUTHOR` | cardb base URL; `X-Author` header |
 
-## Config keys (core)
-
-| key | default | note |
-|---|---|---|
-| `owner.tz` | required | IANA zone; every window (quiet hours, openers, schedule) is read in it. Bootstrap sets it from the Mac's zone. |
-| `owner.name`, `owner.languages`, `owner.home` | | read by cardb / contact |
-| `secrets.backend` | `keychain` (macOS) | `keychain \| op \| file`; `secrets.keychain_service` (default `carhunt`), `secrets.op_vault` (default `carhunt`) |
-| `notify.*` | backend `none` | [notify.md](notify.md) |
-| `cardb.url`, `cardb.token` | `http://127.0.0.1:8484`, `secret:cardb_token` | |
+## Config (core sections)
+Keys and defaults: [`config.example.yaml`](../config.example.yaml) `owner`, `secrets`, `notify`, `cardb`, `web`. `owner.tz` is required: every window (quiet hours, openers, schedule) is read in it; bootstrap sets it from the Mac's zone.
 
 The schema is strict: an unknown key at any level fails validation (a typo like `notfy:` or `quiet_hour:` is an error, not a silent default). A module that adds a config key adds it to `carhunt/core/config.schema.json` and `config.example.yaml` in the same change.
 

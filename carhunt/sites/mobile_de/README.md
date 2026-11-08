@@ -26,4 +26,3 @@ searched. 20 organic rows/page (+ ~4 paid rows on page 1); stops at `numResultsT
 
 ## Gaps
 - Fuel codes other than `ELECTRICITY`, a make-only `ms=<make>;;;` and `sort=relevance` (= no sort params) were not exercised by the sources.
-- `fresh_profile_every` / `read_after` are declared in site.yaml; the transport enforces neither yet.

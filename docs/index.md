@@ -4,7 +4,7 @@ Every doc in the repo, one line each. Start with the [README](../README.md), the
 
 ## Overview
 - [README](../README.md) — what carhunt is, requirements, quick start, module map
-- [design.md](design.md) — layout, CLI groups, interfaces between modules, site.yaml keys, decisions
+- [design.md](design.md) — principles, CLI groups, who calls whom, site.yaml keys, decisions
 - [privacy.md](privacy.md) — what lives where, fixture rules, the privacy check
 - [testing.md](testing.md) — test layout, isolation, how to run each suite and the e2e run
 
@@ -26,7 +26,7 @@ Every doc in the repo, one line each. Start with the [README](../README.md), the
 - [cardb/README.md](../cardb/README.md) — build, run, client settings, agent conventions for the `cardb` CLI
 - [cardb/DESIGN.md](../cardb/DESIGN.md) — cardb storage, dedupe, merge/split, ranking, write rules
 - [deploy/README.md](../deploy/README.md) — compose: start, stop, what the file guarantees
-- [web/README.md](../web/README.md) — npm scripts and env
+- [web/README.md](../web/README.md) — pointer to web.md + deploy
 - [browsers/README.md](../browsers/README.md) — shell tools (`agent-chrome`, `serve`, `pw-identity`, `plain-chrome`, `browser-reaper`)
 - [hooks/README.md](../hooks/README.md) — guard hooks + statusline files
 - [carhunt/core/README.md](../carhunt/core/README.md) · [access](../carhunt/access/README.md) · [sites](../carhunt/sites/README.md) · [discover](../carhunt/discover/README.md) · [contact](../carhunt/contact/README.md) · [vet](../carhunt/vet/README.md) · [orchestrate](../carhunt/orchestrate/README.md) — file maps per package

@@ -9,11 +9,10 @@ carhunt handles phone numbers, seller chats, VINs, site accounts and payment det
 | secrets backend | tokens, passwords, API keys (Keychain / 1Password / `$CARHUNT_HOME/secrets/`, 0600) — [secrets.md](secrets.md) |
 
 ## Rules
-- Never print a secret or a credential file, not even masked. Pass one to a command with `carhunt secret exec NAME[=VAR] -- cmd`. Why: a "masked" dump leaked ~12 passwords into an agent transcript (EV run, 11-06).
-- Agents are held to it in code: the `secret-guard` hook blocks reads of secret paths and value-printing commands ([orchestrate.md](orchestrate.md#guard-hooks-hookscarhunt_hookpy-stdlib-only)).
+- Secrets: never printed, not even masked; passed by env or stdin ([secrets.md](secrets.md#rules-why)). Agents are held to it by the `secret-guard` hook ([orchestrate.md](orchestrate.md#guard-hooks-hookscarhunt_hookpy-stdlib-only)).
 - Fixtures are synthetic: VINs start `SYN`, phones `+<cc> 555 …`, emails on `example.*` / `*.invalid` / `*.test`, URLs `https://example.invalid/…`.
 - No screenshots, captured pages, logs or DB dumps in commits. A parser test needs a page shape → build it by hand with fake values.
-- Tests never touch your real home or Keychain: root `conftest.py` forces a temp `CARHUNT_HOME` and the file backend ([design.md](design.md#tests)).
+- Tests never touch your real home or Keychain ([testing.md](testing.md#isolation-rules-every-test)).
 
 ## The check
 `scripts/install-hooks` (run by bootstrap) wires `scripts/privacy-check` as pre-commit and commit-msg hooks.

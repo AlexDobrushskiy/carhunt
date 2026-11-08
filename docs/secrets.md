@@ -26,10 +26,10 @@ There is no `secret get`. Python code calls `secrets.get(name)` and hands the va
 ## Names used by modules
 | name | used by |
 |---|---|
-| `cardb_token` | cardb client (written by `cardb init`) |
+| `cardb_token`, `cardb_owner_token`, `cardb_token_<viewer>`, `cardb_web_tokens` | cardb clients + web, all written by `cardb init` ([db.md](db.md#cardb-init-and-secrets)) |
 | `telegram_bot_token`, `telegram_chat_id` | notify |
 | `proxy_credentials`, `sms_api_key` | browsers / access |
-| `gmail_oauth_client`, `gmail_token` | contact |
+| `gmail_oauth_client`, `gmail_token`, `gmail_address` | contact (+ `email-code`) |
 | `site_<domain>_user`, `site_<domain>_pass` | access.creds |
 
 ## Rules (why)

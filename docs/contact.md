@@ -106,64 +106,9 @@ Not shipped: marktplaats.nl / 2dehands (no sender ever worked; messaging needs a
 - Gmail search rules baked in: never `in:inbox` (car mail is moved out of it), `after:<epoch>` (no minutes unit in `newer_than:`), times are UTC.
 - Email `--to` forms: `addr` (replies into the latest thread with that address, else new thread: needs `--subject`), `addr#THREAD`, `#THREAD`. Errors before the request are retried ×3; after it, Sent is checked by Message-ID, never re-sent.
 
-## Config (`contact:` section — for config.example.yaml)
-Replaces the skeleton's `caps:` key. Every key has a default (`carhunt/contact/settings.py`); set only what differs. Home vs abroad is the role name (`outreach-home` | `outreach-abroad`, picked at launch), not a config key.
-```yaml
-contact:
-  quiet_hours: "01:30-08:10"    # owner tz, no sends at all
-  opener_window: "09:30-21:30"  # seller-local
-  seller_hours:                 # seller-local; nudges + channels with seller_hours: true
-    dealer: {mon-fri: "08:30-19:00", sat: "08:30-13:00", sun: "10:00-19:00"}
-    private: {mon-sun: "10:00-20:00"}
-  limits:                       # see "Limits"; replace the whole list to change one
-    - {name: chat-spacing, channels: [whatsapp, sites], min_gap_s: 180}
-    - {name: chat-hourly, channels: [whatsapp, sites], per: hour, max: 12}
-    - {name: openers-daily, channels: "*", kind: opener, per: day, max: 20,
-       reserve: {role: outreach-home, slots: 4, until: "15:00"}}
-    - {name: opener-spacing, channels: "*", kind: opener, min_gap_s: 600}
-    - {name: email-spacing, channels: [email], min_gap_s: 300}
-    - {name: site-spacing, channels: [sites], per_channel: true, min_gap_s: 600}
-    - {name: followups-daily, channels: "*", kind: nudge, per: day, max: 15}
-  reply: {min_seller_age_s: 180, owner_backoff_min: 15}
-  opener: {max_chars: 280, max_questions: 2}
-  nudge:
-    after_h: 48
-    statuses: [new, to_contact, contacted, talking]
-    qualify: [{field: tier, eq: 1}, {field: verdict.value, eq: up}, {field: good_deal, eq: true}]
-    exclude:
-      - {field: model_family, in: [BMW iX1, Mercedes EQB, Toyota bZ4X], why: "goes quiet even with a thumbs-up"}
-  channels:
-    whatsapp: {max_len: 500}
-    email: {seller_hours: true}
-    wallapop.com: {max_len: 300}
-  default_phone_cc: "351"       # prefix for bare national numbers
-  whatsapp: {account: null}     # wacli named account, if any
-  email:
-    from_name: Owner
-    from_address: secret:gmail_address
-    plus_tag: cars              # Reply-To owner+cars@…
-    label: cars
-    oauth_client: secret:gmail_oauth_client
-    token: secret:gmail_token
-  mailroute:
-    domains: [autoscout24.com, mobile.de, dealer.example]   # marketplaces + dealers
-    never_touch: [family.example, work.example]        # addresses or domains, never moved
-    freemail: []                # extra freemail hosts (address-only matching)
-  watch: {channels: [whatsapp, email, wallapop.com]}
-  persona:                      # rendered into skills/carhunt-outreach + the outreach brief (English; agents translate)
-    home: "Lisbon, Portugal"
-    family_line: "for myself and my family"
-    travel_line: "since I'd travel to see it, I want everything clear before the trip"
-    health_report: "a recent battery health report (SoH)"
-    spec_line: "Does it have electric seats, a panoramic roof and a heat pump?"
-    payment_line: "I'd pay at handover by instant bank transfer, banker's draft or cash; no deposit before."
-    signoff: ""                 # email only: a first name at most
-    name: ""                    # site forms that require a name
-    email: ""                   # site forms: use the plus-address
-    aliases: []                 # names a site shows for your account (OLX: tells our messages apart)
-  sites:                        # per-site overrides without a code change
-    olx.pt: {selectors: {box: "textarea"}}   # any selector/marker the sender uses (msg_sel, mine_sel, box, conv_sel…)
-```
+## Config (`contact:`)
+Keys and example values: [`config.example.yaml`](../config.example.yaml) `contact:`; every key has a default (`carhunt/contact/settings.py`), so set only what differs. Home vs abroad is the role name (`outreach-home` | `outreach-abroad`, picked at launch), not a config key. `contact.sites.<site>.selectors` pins a sender selector (msg_sel, mine_sel, box, conv_sel…) without a code change.
+
 Site forms never get a phone number (phone fields are emptied before submit).
 
 **`contact.channels` as a plain list** (`[whatsapp, email, sites]`) = the channels allowed to send: `say` refuses any other (exit 10, rule `channel`; `sites` = every site channel), and `watch` polls that list (minus `sites`) when `watch.channels` is unset. The mapping form above only tunes channels and allows all. Why: a list that enforced nothing let a channel the owner left out still send.

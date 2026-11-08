@@ -29,13 +29,8 @@ Items in ask order (one open ask at a time by default): `registration_doc`, `vin
 - PR-code "none:" rows map to `no`; a `yes` from a sibling code wins. Source `vin_pr_code` outranks photos (never overwritten by photo passes, 2026-11-04).
 - RDW odometer codes 04/07 (illogical) and open recall/export flags become red flags.
 
-## Config (for the integrator → `config.example.yaml`)
-```yaml
-vet:
-  destination_country: PT      # selects knowledge/import/<dest>-registration.md (lowercase) + <seller>-to-<dest>.md
-  max_open_asks: 1             # evidence pack: open asks per car at once
-```
-(The current example comment says `knowledge/import/<dest>.md`; the file is `<dest>-registration.md`.)
+## Config
+`vet.destination_country` (picks `knowledge/import/<dest>-registration.md` + `<seller>-to-<dest>.md`) and `vet.max_open_asks`: values and defaults in [`config.example.yaml`](../config.example.yaml) `vet:`.
 
 ## Data files
 - `carhunt/vet/data/wmi.csv` (`wmi,manufacturer,market,confidence`; `market` = `china_jv` | `china_built` | empty). Extend freely; unknown WMIs only produce an info flag.
