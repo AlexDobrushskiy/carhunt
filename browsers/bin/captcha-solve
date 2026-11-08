@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# captcha-solve — local captcha / bot-wall solver; see carhunt/access/captcha/cli.py (`captcha-solve --help`).
+# Same as `carhunt captcha …`; a bare `captcha-solve --plain --url X` means `solve`.
+set -euo pipefail
+src="${BASH_SOURCE[0]}"
+while [ -L "$src" ]; do  # follow symlinks (e.g. ~/bin/captcha-solve → repo) to find _lib.sh
+  d="$(cd -P "$(dirname "$src")" && pwd)"; src="$(readlink "$src")"
+  case "$src" in /*) ;; *) src="$d/$src" ;; esac
+done
+# shellcheck source=SCRIPTDIR/_lib.sh
+. "$(cd -P "$(dirname "$src")" && pwd)/_lib.sh"
+exec "$(carhunt_python)" -m carhunt.access.captcha "$@"

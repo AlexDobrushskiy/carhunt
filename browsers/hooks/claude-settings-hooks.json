@@ -1,0 +1,17 @@
+{
+  "_comment": "Merge `hooks` into ~/.claude/settings.json (render with `carhunt browser mcp-config --hooks`, which fills __REPO__). Identity lease: one holder per identity browser, released after idle; Claude Code only (Codex/opencode have no hooks, so no lease there).",
+  "hooks": {
+    "PreToolUse": [
+      {"matcher": "mcp__ch-identity(-[a-h])?__.*",
+       "hooks": [{"type": "command", "command": "__REPO__/browsers/bin/pw-identity hook pre", "timeout": 30}]}
+    ],
+    "PostToolUse": [
+      {"matcher": "mcp__ch-identity(-[a-h])?__.*",
+       "hooks": [{"type": "command", "command": "__REPO__/browsers/bin/pw-identity hook post", "timeout": 30}]}
+    ],
+    "PostToolUseFailure": [
+      {"matcher": "mcp__ch-identity(-[a-h])?__.*",
+       "hooks": [{"type": "command", "command": "__REPO__/browsers/bin/pw-identity hook post", "timeout": 30}]}
+    ]
+  }
+}

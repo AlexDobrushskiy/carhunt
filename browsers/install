@@ -1,0 +1,63 @@
+#!/bin/bash
+# Install the carhunt browser stack. Idempotent; scripts/bootstrap calls it.
+#   browsers/install [--yes] [--skip-launchd] [--skip-mcp] [--dry-run]
+# Steps: npm ci (Playwright MCP) → Agent Chrome clone → launchd jobs (carhunt.* labels, own ports) →
+# MCP registrations with Claude Code (ch-* names) → hints (identity login, hooks, captcha).
+# Never touches another browser stack's profiles, ports or launchd jobs.
+set -euo pipefail
+# shellcheck source-path=SCRIPTDIR source=bin/_lib.sh
+. "$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)/bin/_lib.sh"
+REPO="$(carhunt_repo)"
+PY="$(carhunt_python)"
+YES=0 SKIP_LAUNCHD=0 SKIP_MCP=0 DRY=0
+for a in "$@"; do
+  case "$a" in
+    --yes|-y) YES=1 ;; --skip-launchd) SKIP_LAUNCHD=1 ;; --skip-mcp) SKIP_MCP=1 ;; --dry-run) DRY=1 ;;
+    -h|--help) sed -n 2,6p "$0"; exit 0 ;;
+    *) echo "unknown option: $a" >&2; exit 2 ;;
+  esac
+done
+say() { printf '  %s\n' "$*"; }
+run() { if [ "$DRY" = 1 ]; then say "would run: $*"; else "$@"; fi; }
+ask() { [ "$YES" = 1 ] && return 0; [ -t 0 ] || return 1; read -r -p "  $1 [y/N] " r; [[ "$r" =~ ^[Yy] ]]; }
+
+say "Playwright MCP (npm ci in browsers/)"
+command -v npm >/dev/null || { echo "npm not found: brew install node@22" >&2; exit 1; }
+run npm ci --prefix "$REPO/browsers" --no-audit --no-fund --loglevel=error
+
+if [ "$(uname)" = Darwin ]; then
+  say "Agent Chrome: re-signed clone of Google Chrome under its own app id (~1 min the first time)"
+  run "$REPO/browsers/bin/agent-chrome" >/dev/null
+else
+  say "not macOS: set CARHUNT_CHROME to a Chrome binary and run browsers/bin/serve under your own supervisor"
+  SKIP_LAUNCHD=1
+fi
+
+if [ "$SKIP_LAUNCHD" = 0 ] && ask "Install the carhunt.* launchd jobs (MCP servers, reaper, refresh)?"; then
+  if [ "$DRY" = 1 ]; then run "$PY" -m carhunt.cli browser launchd install --dry-run
+  else "$PY" -m carhunt.cli browser launchd install; fi
+else
+  say "launchd skipped (later: carhunt browser launchd install)"
+fi
+
+if [ "$SKIP_MCP" = 0 ]; then
+  if command -v claude >/dev/null; then
+    say "MCP servers → Claude Code (user scope; existing registrations are kept)"
+    "$PY" -m carhunt.cli browser mcp-config --claude | while read -r line; do
+      name="$(echo "$line" | awk '{for (i=1;i<NF;i++) if ($i=="http") {print $(i+1); exit}}')"
+      if [ -n "$name" ] && claude mcp get "$name" >/dev/null 2>&1; then say "already registered: $name"; continue; fi
+      # shellcheck disable=SC2086  # the line is our own generated `claude mcp add …` command
+      if [ "$DRY" = 1 ]; then say "would run: $line"; else eval "$line" >/dev/null; fi
+    done
+  else
+    say "claude CLI not found; register later with: carhunt browser mcp-config --claude | sh"
+  fi
+fi
+
+cat <<TXT
+  next:
+    pw-identity login              sign in to your sites once on the identity master (agents use copies)
+    pw-identity seed --all         copy the master onto the pool (Google stays master-only)
+    carhunt browser mcp-config --hooks   identity lease hooks for Claude Code settings (carhunt hooks install merges them)
+    carhunt doctor                 check everything (captcha solver, proxy, SMS are optional)
+TXT

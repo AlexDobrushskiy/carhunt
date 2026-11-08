@@ -1,0 +1,9 @@
+#!/bin/bash
+# Identity browsers: leases (one holder each), idle release, pool seed/sync, manual login.
+# Thin wrapper; the logic and `--help` live in carhunt/access/identity.py.
+set -eu
+self="$0"
+while [ -L "$self" ]; do l="$(readlink "$self")"; case "$l" in /*) self="$l" ;; *) self="$(dirname "$self")/$l" ;; esac; done
+# shellcheck source=SCRIPTDIR/_lib.sh
+. "$(dirname "$self")/_lib.sh"
+exec "$(carhunt_python)" -m carhunt.access.identity "$@"

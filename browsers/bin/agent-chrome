@@ -1,0 +1,114 @@
+#!/bin/bash
+# "Agent Chrome": the installed Google Chrome under its own macOS app identity, for agent browsers.
+#
+# Why: a Chrome started from /Applications/Google Chrome.app (even headless, on another profile) registers with
+# macOS as the user's Chrome: a Dock click activates the windowless agent process and Quit targets it (10-16).
+# Fix: an APFS clone of Google Chrome.app (same binary, version, UA and client hints, so sites see plain Chrome)
+# with its own bundle id, ad-hoc re-signed. Not Chrome for Testing: some sites treat it differently (10-25).
+#
+#   agent-chrome               rebuild the clone if Google Chrome's version changed, print the executable
+#   agent-chrome --no-update   print the installed executable only (exit 1 if none)
+#   agent-chrome refresh       (launchd, periodic) rebuild if needed; restart the carhunt MCP servers onto it
+#                              once no Agent Chrome of this install is running
+#
+# Env: CARHUNT_HOME (clone in $CARHUNT_HOME/browsers/agent-chrome/), CARHUNT_CHROME_APP (source app,
+#      default /Applications/Google Chrome.app), CARHUNT_AGENT_CHROME_ID (bundle id, default
+#      local.carhunt.agent-chrome), CARHUNT_LAUNCHD_PREFIX (default carhunt.; must start with "carhunt.").
+# Stable path for consumers: $ROOT/current/Agent Chrome.app/Contents/MacOS/Google Chrome
+set -euo pipefail
+self="$0"
+while [ -L "$self" ]; do l="$(readlink "$self")"; case "$l" in /*) self="$l" ;; *) self="$(dirname "$self")/$l" ;; esac; done
+# shellcheck source=SCRIPTDIR/_lib.sh
+. "$(dirname "$self")/_lib.sh"
+
+SRC="${CARHUNT_CHROME_APP:-/Applications/Google Chrome.app}"
+ROOT="$(carhunt_home)/browsers/agent-chrome"
+EXE_REL="Agent Chrome.app/Contents/MacOS/Google Chrome"
+EXE="$ROOT/current/$EXE_REL"
+ID="${CARHUNT_AGENT_CHROME_ID:-local.carhunt.agent-chrome}"
+PREFIX="${CARHUNT_LAUNCHD_PREFIX:-carhunt.}"
+
+installed() {  # print the installed executable and stop
+  [ -x "$EXE" ] || { echo "agent-chrome: no Agent Chrome in $ROOT" >&2; exit 1; }
+  echo "$EXE"; exit 0
+}
+[ "${1:-}" = --no-update ] && installed
+
+[ "$(uname -s)" = Darwin ] || { echo "agent-chrome: macOS only; on Linux set CARHUNT_CHROME to a Chrome binary" >&2; exit 1; }
+[ -d "$SRC" ] || { echo "agent-chrome: no $SRC (install Google Chrome or set CARHUNT_CHROME_APP)" >&2; exit 1; }
+mkdir -p "$ROOT"
+# All servers start together under launchd: one builder at a time.
+[ -z "${AGENT_CHROME_LOCKED:-}" ] && AGENT_CHROME_LOCKED=1 exec /usr/bin/lockf -t 900 "$ROOT/.lock" "$0" "$@"
+
+warm_up() {  # $1 = app; first launch of a freshly signed bundle can deadlock in assessment: take it here, not in a server
+  local app="$1" warm pid guard
+  warm="$(mktemp -d)"
+  set -m   # own process group for the warm-up Chrome: cleanup kills exactly that group, never by name pattern
+  "$app/Contents/MacOS/Google Chrome" --headless --user-data-dir="$warm" --use-mock-keychain --no-first-run \
+    --dump-dom about:blank >/dev/null 2>&1 &
+  pid=$!
+  set +m
+  ( sleep 60; kill -9 -- "-$pid" 2>/dev/null ) &
+  guard=$!
+  wait "$pid" 2>/dev/null || true
+  { kill "$guard"; wait "$guard"; } 2>/dev/null || true
+  kill -9 -- "-$pid" 2>/dev/null || true   # leftover helpers of that one launch
+  rm -rf "${warm:?}"
+}
+
+build() {  # $1 = version; clone + re-identify + re-sign into $ROOT/$1
+  local ver="$1" tmp app fw
+  tmp="$(mktemp -d "$ROOT/.build.XXXX")"
+  app="$tmp/Agent Chrome.app"
+  fw="$app/Contents/Frameworks/Google Chrome Framework.framework/Versions"
+  cp -Rc "$SRC" "$app"
+  # Chrome keeps previous framework versions after an update; they fail re-signing.
+  find "$fw" -mindepth 1 -maxdepth 1 -type d ! -name "$ver" ! -name Current -exec rm -rf {} +
+  find "$fw/$ver/Helpers" -mindepth 1 -maxdepth 1 -name 'GoogleUpdater.app' -exec rm -rf {} +
+  /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $ID" -c "Set :CFBundleName Agent Chrome" \
+    -c "Delete :KSProductID" "$app/Contents/Info.plist" 2>/dev/null || true
+  /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName Agent Chrome" "$app/Contents/Info.plist" 2>/dev/null || true
+  xattr -cr "$app"
+  codesign --force --deep --sign - "$app" >/dev/null 2>&1
+  codesign --verify --deep "$app"
+  warm_up "$app"
+  rm -rf "${ROOT:?}/${ver:?}"
+  mv "$tmp" "$ROOT/$ver"
+}
+
+ver="$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$SRC/Contents/Info.plist")"
+before="$(readlink "$ROOT/current" 2>/dev/null || true)"
+if [ ! -x "$ROOT/$ver/$EXE_REL" ]; then
+  build "$ver" || { echo "agent-chrome: build of $ver failed, keeping the installed one" >&2; installed; }
+fi
+ln -sfn "$ver" "$ROOT/current.tmp" && mv -fh "$ROOT/current.tmp" "$ROOT/current"
+
+# Keep the current build and the one before it (a script may still be running on it).
+"$(carhunt_python)" - "$ROOT" "$ver" <<'PY'
+import re, shutil, sys
+from pathlib import Path
+root, cur = Path(sys.argv[1]), sys.argv[2]
+vers = sorted((p for p in root.iterdir() if re.fullmatch(r"[\d.]+", p.name)),
+              key=lambda p: tuple(map(int, p.name.split("."))))
+for p in vers[:-2]:
+    if p.name != cur:
+        shutil.rmtree(p)
+PY
+
+running() {  # an Agent Chrome of THIS install is running (read-only process scan)
+  # shellcheck disable=SC2009  # fixed-string match on a path; pgrep only takes regexes
+  ps -axo command= | grep -F "$ROOT/" | grep -qF "/MacOS/Google Chrome"
+}
+
+if [ "${1:-}" = refresh ] && [ "$before" != "$ver" ] && [ -n "$before" ]; then
+  case "$PREFIX" in carhunt.*) ;; *) echo "agent-chrome: refusing launchd prefix $PREFIX (must start with carhunt.)" >&2; exit 1 ;; esac
+  if running; then
+    echo "agent-chrome: built $ver; servers still on $before (Agent Chrome running), retry next refresh" >&2
+    ln -sfn "$before" "$ROOT/current"   # stay put until the servers can move together
+  else
+    # Only this install's MCP server jobs; never another stack's labels.
+    launchctl list | awk 'NR > 1 {print $3}' | grep -E "^${PREFIX//./\\.}(lanes|identity(-[a-h])?)$" |
+      while read -r label; do launchctl kickstart -k "gui/$(id -u)/$label"; done
+  fi
+fi
+echo "$EXE"

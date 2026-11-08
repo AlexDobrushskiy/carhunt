@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# plain-chrome — see carhunt/access/plainchrome.py (`plain-chrome --help`).
+set -euo pipefail
+src="${BASH_SOURCE[0]}"
+while [ -L "$src" ]; do  # follow symlinks (e.g. ~/bin/plain-chrome → repo) to find _lib.sh
+  d="$(cd -P "$(dirname "$src")" && pwd)"; src="$(readlink "$src")"
+  case "$src" in /*) ;; *) src="$d/$src" ;; esac
+done
+# shellcheck source=SCRIPTDIR/_lib.sh
+. "$(cd -P "$(dirname "$src")" && pwd)/_lib.sh"
+exec "$(carhunt_python)" -m carhunt.access.plainchrome "$@"

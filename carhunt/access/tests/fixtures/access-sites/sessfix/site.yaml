@@ -1,0 +1,4 @@
+# Synthetic fixture for carhunt/access tests (not a real site).
+name: sessfix.example.invalid
+route: [http]
+pace: {min_gap_s: 0, per_hour: 100, max_loads_per_run: 100}
