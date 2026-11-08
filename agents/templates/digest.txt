@@ -1,0 +1,16 @@
+carhunt {slot} digest · {date}
+
+Sessions
+{sessions}
+
+Strong cars
+{cars}
+
+Needs you
+{needs_you}
+
+Advice
+{advice}
+
+FYI
+{fyi}
