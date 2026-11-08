@@ -6,7 +6,8 @@ Operator guide (run modes, config keys, remote access, backups, backfills, migra
 ## Binary
 One Go binary `cardb` (`cmd/cardb`), pure Go (`modernc.org/sqlite`, CGO off, `-tags nodynamic` for static builds):
 - `cardb serve` — HTTP server. `CARDB_LISTEN` (default `127.0.0.1:8484`); data dir `--data` > `CARDB_DATA_DIR` >
-  config `cardb.data_dir` > `$CARHUNT_HOME/cardb`; tokens `CARDB_TOKENS` / `CARDB_TOKENS_FILE`, else `<data dir>/tokens`;
+  config `cardb.data_dir` (relative or `$CARHUNT_HOME/…` resolved against the carhunt home) > `$CARHUNT_HOME/cardb`;
+  tokens `CARDB_TOKENS` / `CARDB_TOKENS_FILE`, else `<data dir>/tokens`;
   profile `--config` > `CARHUNT_CONFIG` > `$CARHUNT_HOME/config.yaml` (missing file = neutral profile, invalid = refuse to start).
 - `cardb init [--home H] [--backend keychain|file|op] [--rotate]` — data dir (0700), tokens, secrets; idempotent (see docs/db.md).
 - `cardb backup <dest.sqlite3>` — `VACUUM INTO` snapshot (no API; run where the data dir is).
@@ -160,8 +161,9 @@ stored. WHY: one answer everywhere (a recomputation over the live EV queue found
 is a `search.ranking.*` default (docs/db.md has the full key list).
 
 1. **Eligible** (per user, default owner): no verdict from that user; status not closed/dropped/bought; ≥ 1 live listing;
-   in scope — `year_min`, `price.max_eur`, `price.min_eur`, `km_max`, `countries`, `exclude_regions` (ISO 3166-2 via
-   place names), `exclude_places`, `powertrain` fuels, then each `hard_filters` rule. A missing value passes and shows as `? year` etc.
+   in scope — `year_min`, `price.max_eur` (the only price filter; `min_eur`/`cap_eur` are write-time sanity only),
+   `km_max`, `countries`, `exclude_regions` (ISO 3166-2 via place names), `exclude_places`, `powertrain` fuels, then
+   each `hard_filters` rule. A missing value passes and shows as `? year` etc.
 2. **Tier** = first `search.models` entry whose family (or make, when `model` is empty) matches and whose `when` holds,
    else `default_tier` (default: highest model tier + 1). `when` ranges (`power_hp`, `battery_net_kwh`): a known value
    must be in range; unknown → `variant_any` (the trim marker) decides when set, else passes. `variant_none` always

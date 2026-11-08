@@ -27,7 +27,7 @@ Token and secret names, `init` flags: [`../docs/db.md`](../docs/db.md#cardb-init
 | env | default | what |
 |---|---|---|
 | `CARDB_LISTEN` | `127.0.0.1:8484` | listen address (`0.0.0.0:8484` inside the container) |
-| `CARDB_DATA_DIR` | config `cardb.data_dir`, else `$CARHUNT_HOME/cardb` | `cardb.sqlite3` (WAL) + `photos/` + `tokens` |
+| `CARDB_DATA_DIR` | config `cardb.data_dir` (relative to `$CARHUNT_HOME`; best omitted), else `$CARHUNT_HOME/cardb` | `cardb.sqlite3` (WAL) + `photos/` + `tokens` |
 | `CARDB_TOKENS_FILE` / `CARDB_TOKENS` | `<data dir>/tokens` | named tokens: `name:sha256:<hex>` lines from `cardb init`, or legacy `name:token` |
 | `CARHUNT_CONFIG` / `CARHUNT_HOME` | `~/.carhunt/config.yaml` | buyer profile (`owner`, `search`, `cardb` sections); missing = neutral profile |
 

@@ -30,7 +30,8 @@ Health: `GET /healthz` (server root) and `GET /api/v1/health` — same handler, 
 ## `cardb init` and secrets
 
 `cardb init [--home H] [--backend keychain|file|op] [--rotate]` (idempotent; re-run after adding a viewer):
-- creates the data dir (0700) = `CARDB_DATA_DIR` > config `cardb.data_dir` > `$CARHUNT_HOME/cardb`;
+- creates the data dir (0700) = `CARDB_DATA_DIR` > config `cardb.data_dir` (relative / `$CARHUNT_HOME` resolved
+  against the carhunt home) > `$CARHUNT_HOME/cardb`;
 - keeps valid tokens (`--rotate` makes new ones), stores each in the secrets backend and writes only their hashes to
   `<data dir>/tokens` (`name:sha256:<hex>`, 0600);
 - prints names and the next step (`cardb serve` / restart), never a token. No client config file is written: the client
@@ -68,7 +69,8 @@ owner:
 cardb:
   url: http://127.0.0.1:8484     # client fallback (after --server, CARDB_URL, ~/.config/cardb/config.json)
   token: secret:cardb_token      # client token secret name
-  data_dir: ~/.carhunt/cardb     # default $CARHUNT_HOME/cardb; CARDB_DATA_DIR wins
+  data_dir: cardb                # omit or keep relative: resolved against $CARHUNT_HOME (also $CARHUNT_HOME/… ok); an absolute ~/… path
+                                 # pins one home and breaks a copied config. CARDB_DATA_DIR wins
   users:                         # viewers (the owner is implicit); each gets cardb_token_<name> + a web identity
     - {name: partner, role: viewer}   # example
 
@@ -82,9 +84,9 @@ search:
   exclude_regions: []            # ISO 3166-2 by place names: ES-CN ES-IB FR-20R FR-971…976 GR-M IT-82 IT-88 PT-20 PT-30
   exclude_places: []             # extra city words/phrases to exclude
   price:
-    max_eur: 0                   # queue: price above → out (0 = no cap); also the ×100 check without a family median
-    min_eur: 0                   # price sanity floor (unset = 1500: below = lease/deposit); when set also a queue filter (price below → out)
-    cap_eur: 0                   # price sanity ceiling (unset = 2 000 000)
+    max_eur: 0                   # the only queue price filter: above → out (0 = none); also the ×100 check without a family median
+    min_eur: 1500                # write-time sanity floor only: below → 422 price_lease (monthly rate / deposit); not a queue filter
+    cap_eur: 2000000             # write-time sanity ceiling only: above → 422 price_range / price_x100
     currency: EUR
   year_min: 0                    # queue: older → out (0 = off)
   km_max: 0                      # queue: more km → out; also fit km_ref
@@ -249,7 +251,8 @@ Details and every formula: [`cardb/DESIGN.md`](../cardb/DESIGN.md) "Ranking", "P
 - value = landed price vs the peer group's fair landed price (median of per-country medians); fit = wanted options,
   seller, home market, age, km, history; risk = missing evidence, thin/wide peers, red flags, model risk, VAT reserve.
   Agents feed facts (`deal_rank`, `trim_score`, history, health facts), never scores.
-- Price sanity bounds: `search.price.min_eur` (default 1500), `cap_eur` (2 000 000), 8× family median / `max_eur`.
+- Price keys: `search.price.max_eur` is the only queue price filter; `min_eur` (default 1500) and `cap_eur` (2 000 000)
+  only bound price writes (with 8× family median / `max_eur` for ×100).
 - `version` is opaque: compare it, never compute it; it moves on any write to the car or anything on its page.
 
 ## Remote access
