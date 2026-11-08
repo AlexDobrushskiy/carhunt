@@ -47,9 +47,12 @@ def sites_dir(root: Path | str | None = None) -> Path:
     return Path(env).expanduser() if env else DEFAULT_SITES_DIR
 
 
+SYNTHETIC = {"fake"}  # test-only plugins: not a site an agent can visit
+
+
 def discover(root: Path | str | None = None) -> list[Path]:
     """`<root>/*/site.yaml`, sorted. root: arg, else $CARHUNT_SITES_DIR, else carhunt/sites."""
-    return sorted(sites_dir(root).glob("*/site.yaml"))
+    return sorted(p for p in sites_dir(root).glob("*/site.yaml") if p.parent.name not in SYNTHETIC)
 
 
 def load(path: Path) -> dict:
@@ -140,7 +143,7 @@ def row(site: Mapping) -> list[str]:
         _account(site.get("account")),
         _cell(site.get("messaging")),
         _cell(site.get("measured")),
-        _cell(site.get("notes")),
+        _cell("; ".join(map(str, site["notes"])) if isinstance(site.get("notes"), list) else site.get("notes")),
     ]
 
 

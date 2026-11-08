@@ -23,7 +23,9 @@ caps:
     total (owner's rule 11-05); a slot is taken before the click (a 403 counts)
 account:
   needed_for: [phone, message]
-  verification: "email + password, email link (11-01); no buyer phone verification (phoneRequired NONE)"
+  verification: email-link
+  note: "email + password, email link (11-01); no buyer phone verification (phoneRequired NONE)"
+  mail_from: "from:(milanuncios.com)"
 phone: reveal-login
 messaging: "logged in + Spanish IP, media on: 'Mensaje' → 'Escribir otro mensaje' → 'Enviar' once → chat/contact 200 (11-03)"
 liveness:
@@ -31,7 +33,7 @@ liveness:
   evidence: >-
     redirect to a list page (?marca=…) = soft gone (49 checks 11-04..07); 200 + ad id = live; 404/410 = gone
 proxy: {sticky_minutes: 30}
-cursor: {strategy: newest_first, key: site_ref, why: "orden=date; ad ids grow with time"}
+cursor: {strategy: newest_id, why: "orden=date; ad ids grow with time"}
 measured: 2026-11-07
 notes:
   - "Reads: one plain-chrome tab on the home page, then same-origin fetches of the server-rendered pages (window.__INITIAL_PROPS__): one request per page"

@@ -101,3 +101,11 @@ def test_cli_stdout_and_main(capsys, monkeypatch):
 def test_write_and_check_are_exclusive():
     with pytest.raises(SystemExit):
         _cli("--write", "a", "--check", "b")
+
+
+def test_shipped_table_matches_site_yaml(monkeypatch):
+    """Drift test: the skill's table is the render of carhunt/sites/*/site.yaml (CI fails until regenerated)."""
+    monkeypatch.delenv("CARHUNT_SITES_DIR", raising=False)
+    table = sitetable.REPO / "skills" / "carhunt-browsers" / "references" / "site-table.md"
+    assert _cli("--check", str(table)) == 0, f"run: carhunt browser site-table --write {table.relative_to(sitetable.REPO)}"
+    assert "Placeholder" not in table.read_text() and "| fake |" not in table.read_text()

@@ -131,3 +131,37 @@ def test_cli_take_and_status(env, capsys):
 def test_ledger_lives_under_carhunt_home(env):
     pace.acquire("sessfix", "load")
     assert (env / "access" / "pace.sqlite").exists()
+
+
+def test_shipped_site_yaml_feed_the_ledger(carhunt_home, monkeypatch):
+    """Every shipped site.yaml resolves by dir name, id and host to one ledger key, and carries what access reads."""
+    from carhunt.access.accounts import sms
+    monkeypatch.delenv("CARHUNT_SITES_DIR", raising=False)
+    files = sorted(pace.REPO_SITES.glob("*/site.yaml"))
+    assert len(files) >= 10
+    for f in files:
+        import yaml
+        d = yaml.safe_load(f.read_text())
+        sid = d["site"]
+        assert pace.canonical(f.parent.name) == sid == pace.canonical(sid.upper())
+        assert pace.limits(sid, "load").min_gap_s == d["pace"]["min_gap_s"]
+        assert pace.limits(sid, "load").per_hour == d["pace"].get("max_loads_per_hour")  # measured: no default cap
+        for kind in pace.KINDS:
+            pace.limits(sid, kind)
+        v = d["account"]["verification"]
+        assert sms.policy(sid).allowed == (v == "sms-once"), sid
+        assert "renting needs an explicit" not in sms.policy(sid).reason, f"{sid}: verification {v!r} unknown to sms"
+    assert pace.canonical("www.autoscout24.de") == "autoscout24"   # host regex
+    assert pace.canonical("coches_net") == "coches.net"
+
+
+def test_api_kind_defaults_to_load_gap_without_load_caps(env, tmp_path, monkeypatch):
+    d = tmp_path / "apifix"
+    d.mkdir()
+    (d / "site.yaml").write_text("site: apifix\npace: {min_gap_s: 7, max_loads_per_hour: 2, max_loads_per_run: 3}\n")
+    monkeypatch.setenv("CARHUNT_SITES_DIR", str(tmp_path))
+    lim = pace.limits("apifix", "api")
+    assert (lim.min_gap_s, lim.per_hour, lim.per_run) == (7, None, None)
+    (d / "site.yaml").write_text("site: apifix\npace: {min_gap_s: 7, api_min_gap_s: 12, max_api_per_hour: 20}\n")
+    lim = pace.limits("apifix", "api")
+    assert (lim.min_gap_s, lim.per_hour) == (12, 20)
