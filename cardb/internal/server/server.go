@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"carhunt/cardb/internal/api"
+	"carhunt/cardb/internal/profile"
 	"carhunt/cardb/internal/store"
 )
 
@@ -83,7 +84,8 @@ func loadTokens() (map[string]string, error) {
 // Main runs `cardb serve [-listen addr] [-data dir]` until ctx is cancelled.
 func Main(ctx context.Context, args []string) error {
 	fs := flag.NewFlagSet("serve", flag.ContinueOnError)
-	listen := fs.String("listen", envOr("CARDB_LISTEN", ":8480"), "listen address (env CARDB_LISTEN)")
+	listen := fs.String("listen", envOr("CARDB_LISTEN", "127.0.0.1:8484"), "listen address (env CARDB_LISTEN)")
+	config := fs.String("config", profile.Resolve(), "buyer profile: carhunt config.yaml (env CARHUNT_CONFIG / CARHUNT_HOME); missing = neutral profile")
 	dataDir := fs.String("data", envOr("CARDB_DATA_DIR", "./data"), "data directory (env CARDB_DATA_DIR)")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -93,11 +95,24 @@ func Main(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
+	prof := profile.Default()
+	if *config != "" {
+		p, err := profile.Load(*config)
+		switch {
+		case err == nil:
+			prof = p
+		case errors.Is(err, os.ErrNotExist):
+			slog.Warn("no config file, using the neutral profile", "config", *config)
+		default:
+			return err
+		}
+	}
 	st, err := store.Open(*dataDir)
 	if err != nil {
 		return err
 	}
 	defer st.Close()
+	st.SetProfile(prof)
 
 	srv := &http.Server{
 		Addr:              *listen,
@@ -131,13 +146,13 @@ func Main(ctx context.Context, args []string) error {
 	return nil
 }
 
-// Backup runs `cardb backup <dest.sqlite3>`: a VACUUM INTO snapshot of $CARDB_DATA_DIR/ev.sqlite3.
+// Backup runs `cardb backup <dest.sqlite3>`: a VACUUM INTO snapshot of $CARDB_DATA_DIR/cardb.sqlite3.
 func Backup(args []string) error {
 	if len(args) != 1 || args[0] == "" {
 		return errors.New("usage: cardb backup <dest.sqlite3>")
 	}
 	dataDir := envOr("CARDB_DATA_DIR", "./data")
-	if _, err := os.Stat(dataDir + "/ev.sqlite3"); err != nil {
+	if _, err := os.Stat(dataDir + "/cardb.sqlite3"); err != nil {
 		return fmt.Errorf("no database in %s: %w", dataDir, err)
 	}
 	st, err := store.Open(dataDir)
@@ -150,7 +165,7 @@ func Backup(args []string) error {
 
 // Healthcheck GETs /healthz on the local listener ($CARDB_LISTEN); used by the Docker HEALTHCHECK.
 func Healthcheck() error {
-	listen := envOr("CARDB_LISTEN", ":8480")
+	listen := envOr("CARDB_LISTEN", "127.0.0.1:8484")
 	host, port, err := net.SplitHostPort(listen)
 	if err != nil {
 		return fmt.Errorf("bad CARDB_LISTEN %q: %w", listen, err)

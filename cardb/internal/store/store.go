@@ -13,6 +13,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"carhunt/cardb/internal/profile"
+
 	_ "modernc.org/sqlite" // driver "sqlite"
 )
 
@@ -54,14 +56,15 @@ type Store struct {
 	dataDir   string
 	photosDir string
 	now       func() time.Time
+	profile   *profile.Profile
 }
 
-// Open opens (creating if needed) $dataDir/ev.sqlite3 and migrates the schema.
+// Open opens (creating if needed) $dataDir/cardb.sqlite3 and migrates the schema. Profile = profile.Default() until SetProfile.
 func Open(dataDir string) (*Store, error) {
 	if err := os.MkdirAll(filepath.Join(dataDir, "photos"), 0o755); err != nil {
 		return nil, fmt.Errorf("create data dir: %w", err)
 	}
-	path := filepath.Join(dataDir, "ev.sqlite3")
+	path := filepath.Join(dataDir, "cardb.sqlite3")
 	dsn := "file:" + path + "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=foreign_keys(ON)&_pragma=synchronous(NORMAL)&_pragma=temp_store(MEMORY)"
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
@@ -69,7 +72,7 @@ func Open(dataDir string) (*Store, error) {
 	}
 	db.SetMaxOpenConns(1)
 	db.SetConnMaxIdleTime(0)
-	s := &Store{db: db, dataDir: dataDir, photosDir: filepath.Join(dataDir, "photos"), now: time.Now}
+	s := &Store{db: db, dataDir: dataDir, photosDir: filepath.Join(dataDir, "photos"), now: time.Now, profile: profile.Default()}
 	if err := s.migrate(); err != nil {
 		db.Close()
 		return nil, err
@@ -79,6 +82,17 @@ func Open(dataDir string) (*Store, error) {
 
 // Close closes the database.
 func (s *Store) Close() error { return s.db.Close() }
+
+// SetProfile sets the buyer profile (call before serving; not safe concurrently with requests).
+func (s *Store) SetProfile(p *profile.Profile) {
+	if p == nil {
+		p = profile.Default()
+	}
+	s.profile = p
+}
+
+// Profile returns the active buyer profile.
+func (s *Store) Profile() *profile.Profile { return s.profile }
 
 // SetClock overrides the time source (tests).
 func (s *Store) SetClock(now func() time.Time) { s.now = now }

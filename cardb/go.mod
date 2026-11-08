@@ -5,6 +5,7 @@ go 1.26.0
 require (
 	github.com/gen2brain/avif v0.6.0
 	github.com/gen2brain/heic v0.7.2
+	go.yaml.in/yaml/v3 v3.0.4
 	golang.org/x/image v0.47.0
 	modernc.org/sqlite v1.61.1
 )
