@@ -1,0 +1,1289 @@
+openapi: 3.1.0
+info:
+  title: cardb API
+  version: 2.0.0
+  description: |
+    One database of used-car listings: cars (physical vehicles), their listings (ads), price history,
+    options with evidence, photos, timeline events, chat messages, notes and per-user verdicts.
+    The buyer profile (queue tiers, hard filters, weights, home location) comes from the `owner` and `search`
+    sections of `$CARHUNT_HOME/config.yaml`, read at server start; `GET /profile` shows the effective profile.
+
+    Conventions
+    - Auth: `Authorization: Bearer <token>` on every route except `/health`. Tokens are named
+      (e.g. `web`, `agents`); the token name is the default `author` of writes.
+    - `author` on writes: optional body field or `X-Author` header (agent role/session id, the owner's name, `import`).
+      Precedence: body `author` > `X-Author` header > token name. The web UI sends the owner's name (`owner.name`).
+      `author_kind` = `owner` when author == owner name, `viewer` for a configured viewer, else `agent` (`import` for imports).
+    - Users: the owner + optional viewers (`GET /profile` → `users`). A token whose name is a viewer is read-only except
+      for that viewer's own verdict. Verdicts are per user; car rows show the owner's verdict unless `?user=` is given.
+    - Concurrency: cars carry `version` (incremented on every car write). GET /cars/{car} sends `ETag: "<version>"`;
+      PATCH/status writes with `If-Match: "<version>"` (or body `version`) fail with 412 + the current car when stale.
+      Without If-Match the write applies (last writer wins), as before.
+    - Price sanity (upsert, PATCH /listings/{id}): a price that looks ×100 (cents), like a monthly/lease rate, or net of
+      VAT is refused with 422 `{error, reason: price_x100|price_lease|price_net|price_range}` unless `force: true`;
+      forced prices are stored with `price_flags` and a `price_sanity_override` event.
+      Tokens are only accepted in the `Authorization` header, never in the URL.
+    - Timestamps: RFC 3339 UTC strings (`2026-11-01T14:05:00Z`). Money: integer euros.
+    - `{car}` path param = numeric car id or any alias/slug (e.g. `pt-testcar-lisbon`, `C1`, `abroad-12`).
+      A merged car's id still resolves (to the car it was merged into; response `id` is the live one).
+    - Errors: `{"error": "message"}` with 400/401/403/404/409/412/422 (413 for an oversized photo upload).
+    - Status vocabulary: new → to_contact → contacted → talking → ready_to_visit → visited → closed | dropped | bought.
+servers:
+  - url: /api/v1
+security:
+  - bearer: []
+
+paths:
+  /health:
+    get:
+      security: []
+      summary: Liveness + DB check
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { type: object, properties: { ok: { type: boolean }, version: { type: string, description: "build version (Dockerfile build arg VERSION; `dev` when unset)" } } } } } }
+
+  /profile:
+    get:
+      summary: Effective buyer profile + users (read-only, no secrets). Web/agents use it for labels, tiers and option keys.
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Profile" } } } }
+
+  /stats:
+    get:
+      summary: Counts for navigation (per status, per verdict of `user` (default owner), needs_owner, open duplicate proposals)
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Stats" }
+
+  /cars:
+    get:
+      summary: List/filter cars (merged cars excluded)
+      parameters:
+        - { name: q, in: query, schema: { type: string }, description: "free text over make/model/variant/city/seller/notes/aliases" }
+        - { name: make, in: query, schema: { type: string } }
+        - { name: model, in: query, schema: { type: string }, description: "substring, case-insensitive (matches make+model+variant)" }
+        - { name: hp_min, in: query, schema: { type: integer, minimum: 0 }, description: "Inclusive rounded metric hp (kW × 1.36); missing power excluded" }
+        - { name: hp_max, in: query, schema: { type: integer, minimum: 0 }, description: "Inclusive rounded metric hp (kW × 1.36); missing power excluded" }
+        - { name: drive, in: query, schema: { type: array, items: { type: string, enum: [fwd, rwd, awd, unknown] } }, style: form, explode: true, description: "OR within drive, AND with other filters; missing drive counts as unknown" }
+        - { name: year_min, in: query, schema: { type: integer } }
+        - { name: year_max, in: query, schema: { type: integer } }
+        - { name: km_max, in: query, schema: { type: integer } }
+        - { name: price_max, in: query, schema: { type: integer } }
+        - { name: price_min, in: query, schema: { type: integer } }
+        - { name: country, in: query, schema: { type: array, items: { type: string } }, style: form, explode: true, description: "ISO-2, repeatable" }
+        - { name: distance_km_max, in: query, schema: { type: integer }, description: "stored distance_km, else the estimate from lat/lon; missing excluded" }
+        - { name: seller_type, in: query, schema: { type: array, items: { $ref: "#/components/schemas/SellerType" } }, style: form, explode: true }
+        - { name: status, in: query, schema: { type: array, items: { $ref: "#/components/schemas/Status" } }, style: form, explode: true }
+        - { name: verdict, in: query, schema: { type: array, items: { $ref: "#/components/schemas/VerdictFilter" } }, style: form, explode: true, description: "up|maybe|down|none" }
+        - name: option
+          in: query
+          schema: { type: array, items: { type: string } }
+          style: form
+          explode: true
+          description: "`key:value`, repeatable, ANDed; value yes|no|unknown|yes_or_unknown, e.g. `option=pano:yes&option=tailgate:yes_or_unknown`. A missing option row counts as unknown."
+        - { name: needs_owner, in: query, schema: { type: boolean } }
+        - { name: has_duplicates, in: query, schema: { type: boolean }, description: "has open duplicate proposals" }
+        - { name: good_deal, in: query, schema: { type: boolean }, description: "true = flagged as a good deal, false = not flagged" }
+        - name: model_family
+          in: query
+          schema: { type: array, items: { type: string } }
+          style: form
+          explode: true
+          description: "Canonical family (GET /model-families), case/diacritics-insensitive exact match; repeatable, comma lists ok; `none` = unmapped. ORed within, ANDed with other filters (independent of the `model` substring filter). 400 on an unknown name."
+        - name: tier
+          in: query
+          schema: { type: array, items: { type: string } }
+          style: form
+          explode: true
+          description: "\"To rate\" tier 1|2|3 (see GET /queue); repeatable, comma lists ok (`tier=1,2`), `T1` ok. ORed within, ANDed with other filters. 400 on another value."
+        - { name: market, in: query, schema: { type: string, enum: [home, abroad] }, description: "home = country equals owner.home.country" }
+        - name: fuel
+          in: query
+          schema: { type: array, items: { $ref: "#/components/schemas/Fuel" } }
+          style: form
+          explode: true
+          description: "powertrain.fuel, repeatable; missing fuel counts as unknown"
+        - { $ref: "#/components/parameters/user" }
+        - name: sort
+          in: query
+          schema: { type: string, enum: [last_activity, price, km, year, distance_km, created, status, model, deal_rank, score], default: last_activity }
+          description: "deal_rank: `T<tier>-<n>` by (tier, n); unparseable values after parseable ones and missing last, in both orders"
+        - { name: order, in: query, schema: { type: string, enum: [asc, desc] }, description: "default desc for last_activity/created/year, asc otherwise" }
+        - { name: limit, in: query, schema: { type: integer, default: 200, maximum: 1000 } }
+        - { name: offset, in: query, schema: { type: integer, default: 0 } }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [total, cars]
+                properties:
+                  total: { type: integer }
+                  cars: { type: array, items: { $ref: "#/components/schemas/CarSummary" } }
+    post:
+      summary: Create a car without a listing (rare; prefer POST /listings/upsert)
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CarInput" } } }
+      responses:
+        "201": { description: created, content: { application/json: { schema: { $ref: "#/components/schemas/CarDetail" } } } }
+
+  /cars/{car}:
+    parameters: [ { $ref: "#/components/parameters/car" } ]
+    get:
+      summary: Everything about one car (ETag = version)
+      parameters: [ { $ref: "#/components/parameters/user" } ]
+      responses:
+        "200":
+          description: ok
+          headers: { ETag: { schema: { type: string }, description: "\"<version>\"" } }
+          content: { application/json: { schema: { $ref: "#/components/schemas/CarDetail" } } }
+        "404": { $ref: "#/components/responses/Error" }
+    patch:
+      summary: Update specs / seller / status / needs_owner / summary / model_family. Only sent fields change; `null` clears. Optional `at` = event/updated time.
+      description: |
+        Changing `status` writes a status_change event (with `status_reason`). Spec changes write a spec_change event. Setting `vin`/`plate` may auto-merge a certain duplicate (response carries the live car).
+        `model_family`: a name from GET /model-families `known` (case/diacritics-insensitive, stored canonical) sets a manual override; `null` returns to the derived family; an unknown name is 422. A change writes a spec_change event (`model_family auto → Audi Q4`).
+        Read-only fields of CarDetail are ignored; `good_deal` / `good_deal_note` are 422 (use PUT /cars/{car}/good-deal).
+        `red_flags` / `open_questions` replace the whole list; prefer `red_flags_add` / `red_flags_remove` /
+        `open_questions_add` / `open_questions_remove` (exact-text items, applied atomically, add is a no-op for an existing item).
+        `powertrain` is merged field by field (send `null` for a field to clear it).
+      parameters: [ { $ref: "#/components/parameters/ifMatch" } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CarPatch" } } }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/CarDetail" } } } }
+        "403": { $ref: "#/components/responses/Error" }
+        "412": { $ref: "#/components/responses/Conflict" }
+
+    delete:
+      summary: Hard-delete a car and everything attached to it (test cleanup, junk ads)
+      description: |
+        Removes listings + price history, options, facts, photos (rows; files and derived sizes too unless another car
+        has the same bytes), events, messages, notes, verdict, aliases and duplicate rows. Sellers are kept.
+        `confirm` must equal the car's numeric id (after alias/merge resolution). Refused with 409 while merged cars
+        (tombstones) point at it. Not undoable.
+      parameters:
+        - { name: confirm, in: query, required: true, schema: { type: integer }, description: "the car's numeric id" }
+      responses:
+        "204": { description: deleted }
+        "400": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+
+  /cars/{car}/status:
+    parameters: [ { $ref: "#/components/parameters/car" } ]
+    post:
+      summary: Set status (shortcut for PATCH; no-op + no event if unchanged). Honours If-Match / body `version`.
+      parameters: [ { $ref: "#/components/parameters/ifMatch" } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { $ref: "#/components/schemas/Status" }
+                reason: { type: string }
+                version: { type: integer, description: "same as If-Match" }
+                author: { type: string }
+                at: { type: string, format: date-time, description: "original time for imports: becomes the stored timestamp and the event time; default now" }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/CarDetail" } } } }
+        "412": { $ref: "#/components/responses/Conflict" }
+
+  /cars/{car}/options/{key}:
+    parameters:
+      - { $ref: "#/components/parameters/car" }
+      - { name: key, in: path, required: true, schema: { type: string }, description: "known keys = GET /profile `option_keys` (built-in set + search.option_keys); other keys allowed with a warning" }
+    put:
+      summary: Set one option (writes option_change only when an existing value changes; the first fill is silent)
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/OptionInput" } } }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Option" } } } }
+    delete:
+      summary: Remove option row (back to unknown)
+      responses: { "204": { description: deleted } }
+
+  /cars/{car}/facts/{key}:
+    parameters:
+      - { $ref: "#/components/parameters/car" }
+      - { name: key, in: path, required: true, schema: { type: string }, description: "free keys: warranty, owners, accidents, service_history, reason_for_sale, origin, plate_note, health facts per powertrain (battery_soh; timing_belt, dpf, compression), …" }
+    put:
+      summary: Set one free-form fact with its source (fact_change only when an existing value changes; the first fill is silent)
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/FactInput" } } }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Fact" } } } }
+    delete:
+      summary: Remove fact
+      responses: { "204": { description: deleted } }
+
+  /cars/{car}/aliases:
+    parameters: [ { $ref: "#/components/parameters/car" } ]
+    post:
+      summary: Add an alias (unique across cars)
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [alias], properties: { alias: { type: string } } } } }
+      responses:
+        "200":
+          description: ok (also when the car already had this alias; matching is case-insensitive)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [car_id, alias]
+                properties:
+                  car_id: { type: integer }
+                  alias: { type: string }
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+
+  /cars/{car}/notes:
+    parameters: [ { $ref: "#/components/parameters/car" } ]
+    get:
+      summary: Notes, newest first
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Note" } } } } }
+    post:
+      summary: Add a note
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/NoteInput" } } }
+      responses:
+        "201": { description: created, content: { application/json: { schema: { $ref: "#/components/schemas/Note" } } } }
+
+  /notes/{id}:
+    parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ]
+    patch:
+      summary: Edit note text/pinned
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, properties: { text: { type: string }, pinned: { type: boolean } } } } }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Note" } } } }
+    delete:
+      summary: Delete note
+      responses: { "204": { description: deleted } }
+
+  /cars/{car}/verdict:
+    parameters: [ { $ref: "#/components/parameters/car" } ]
+    put:
+      summary: Set a user's verdict (one current verdict per car and user; history kept as verdict events)
+      description: |
+        User = body `user`, else `?user=`, else the token's user (viewer tokens), else the owner. A viewer token may only set
+        its own verdict (403 otherwise). Unknown user → 422.
+      parameters: [ { $ref: "#/components/parameters/user" } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/VerdictInput" } } }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Verdict" } } } }
+        "403": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+    delete:
+      summary: Clear a user's verdict (same user resolution as PUT)
+      parameters: [ { $ref: "#/components/parameters/user" } ]
+      responses: { "204": { description: cleared }, "403": { $ref: "#/components/responses/Error" } }
+
+  /cars/{car}/good-deal:
+    parameters: [ { $ref: "#/components/parameters/car" } ]
+    put:
+      summary: Flag or unflag a car as a good deal
+      description: |
+        `note` omitted keeps the current note while the flag stays on; `""` or `null` clears it; turning the flag off always clears it.
+        The note is trimmed and collapsed to one line (422 beyond 300 characters). `by`/`at` = who last changed it.
+        When neither flag nor note changes this is a no-op (no event, car not touched); otherwise a `good_deal` event
+        (summary `good deal ★: <note>` / `good deal cleared`, data {from, to, note}) is written and the car is touched.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/GoodDealInput" } } }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/GoodDeal" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+
+  /model-families:
+    get:
+      summary: Model families present among live (non-merged) cars with counts, sorted by make then family
+      description: "Effective family per car = manual override, else derived from make/model/variant at read time. `known` lists every canonical name (valid for the `model_family` filter and PATCH)."
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/ModelFamilies" } } } }
+
+  /queue:
+    get:
+      summary: "\"To rate\" queue: cars `user` (default owner) has not rated that pass the profile's hard filters, ranked"
+      description: |
+        Eligible = no verdict from `user`; status not closed/dropped/bought; at least one live listing; and every
+        `search` hard filter of the profile: `year_min`, `price.max_eur`, `km_max`, `countries`, `exclude_regions`
+        (+ `exclude_places`), `powertrain`, and each `hard_filters` rule (field min/max, fact words, flags). A missing
+        value passes (shown as `? year` etc. in `why`). `GET /profile` lists the effective rules.
+
+        Tier = first `search.models` entry whose family + `when` conditions match (else `search.default_tier`, default 3).
+        Score (see DESIGN.md "Ranking"): peer-group fair landed price (median of per-country medians) → value;
+        option/age/km/seller fit; missing-evidence and red-flag risk; `score = w.value·value·fit − w.risk·risk`.
+        Order: tier asc; good_deal first; deal_rank (`T<tier>-<n>`, parsed, unparseable, missing); score desc;
+        landed asc (missing last); created_at desc; id desc.
+      parameters:
+        - name: tier
+          in: query
+          schema: { type: array, items: { type: string } }
+          style: form
+          explode: true
+          description: "tiers to return; repeatable, comma lists ok (`tier=1,2&tier=3`), `T1` ok. Default = profile `queue_default_tiers` (EV example: 1,2). 400 on a tier the profile does not define."
+        - name: spec
+          in: query
+          schema: { type: string, enum: [confirmed, unknown] }
+          description: "profile `must_have` options: confirmed = all yes; unknown = none is no, at least one unknown. Applies to total and counts too. 400 on another value or when the profile has no must_have."
+        - { $ref: "#/components/parameters/user" }
+        - { name: limit, in: query, schema: { type: integer, default: 200, maximum: 1000 } }
+        - { name: offset, in: query, schema: { type: integer, default: 0 } }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Queue" } } } }
+        "400": { $ref: "#/components/responses/Error" }
+
+  /cars/{car}/events:
+    parameters: [ { $ref: "#/components/parameters/car" } ]
+    get:
+      summary: Timeline, newest first
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Event" } } } } }
+    post:
+      summary: Add an event (vin_check, report, visit, call, custom…). Idempotent on `dedupe_key`.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/EventInput" } } }
+      responses:
+        "201": { description: created, content: { application/json: { schema: { $ref: "#/components/schemas/Event" } } } }
+        "200": { description: already existed (same dedupe_key), content: { application/json: { schema: { $ref: "#/components/schemas/Event" } } } }
+
+  /cars/{car}/messages:
+    parameters: [ { $ref: "#/components/parameters/car" } ]
+    get:
+      summary: Full chat log of the car, oldest first
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Message" } } } } }
+
+  /messages:
+    post:
+      summary: Log a message (either direction). Idempotent on `external_id` or `dedupe_key`.
+      description: |
+        Car resolution order: `car` (id/alias) → `listing_url` → `counterpart` (phone/email/chat handle known for exactly one live car).
+        Reconciliation: if no row has this (channel, external_id) but a row matches `dedupe_key` and has no external_id, the
+        request's external_id is attached to that row (unless another row of that channel already holds it), empty/unknown
+        sender/sender_kind are filled, and the row is returned with 200. Nothing else on the row changes.
+        Near duplicates (unless `allow_duplicate`): when no key matches, a live row of the same car, channel and direction
+        with the same whitespace-normalized text and attachment kinds, an agreeing counterpart (first token; URLs by key),
+        within 5 minutes, is returned with 200 and `matched_by: near_duplicate` instead of inserting (an external_id is
+        attached to it as above). Not a match: two different external_ids, one failed attempt and one not, or two
+        different caller keys of the same logger (`sends:1` vs `sends:2` = two real sends).
+        A key match may return a deleted row (`deleted_at` set): deleted rows are never re-created by their key.
+        422 if the counterpart maps to several cars and no `car`/`listing_url` is given.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/MessageInput" } } }
+      responses:
+        "201": { description: created, content: { application/json: { schema: { $ref: "#/components/schemas/Message" } } } }
+        "200": { description: "already existed (see `matched_by`)", content: { application/json: { schema: { $ref: "#/components/schemas/Message" } } } }
+        "422": { $ref: "#/components/responses/Error" }
+
+  /messages/duplicates:
+    get:
+      summary: Live message pairs that look like one message logged twice (the near-duplicate rule above)
+      description: "`keep` = the row with an external_id, else the older row. Clean up with DELETE /messages/{drop.id}."
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    car_id: { type: integer }
+                    keep: { $ref: "#/components/schemas/Message" }
+                    drop: { $ref: "#/components/schemas/Message" }
+                    seconds: { type: number, description: "time between the two" }
+
+  /messages/{id}/restore:
+    parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ]
+    post:
+      summary: Undo a delete (writes a message_restored event)
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Message" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+
+  /messages/{id}:
+    parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ]
+    patch:
+      summary: Edit a logged message — e.g. link an uploaded car photo into `attachments` via `photo_id`
+      description: |
+        Only sent fields change; `attachments` replaces the whole list; `error: ""` clears the error.
+        Every `photo_id` must be a photo of the message's car (else 422). The car, external_id and dedupe key never change,
+        so re-posting the original message still returns this one (200).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text: { type: string }
+                attachments: { type: array, items: { $ref: "#/components/schemas/Attachment" } }
+                delivery: { type: string, enum: [sent, failed, received, unknown] }
+                error: { type: string, description: "empty string clears" }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Message" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+    delete:
+      summary: Remove a message (soft delete, e.g. a double-logged row; 409 on PATCH of a deleted row)
+      description: |
+        The row disappears from every read (car detail, chat log, activity, list counts, stats) but keeps its keys, so a
+        logger re-posting it gets the deleted row back instead of a new one. Writes a `message_deleted` timeline event
+        (author = X-Author, summary includes the reason). Deleting a deleted row is a no-op (200). Undo: POST …/restore.
+      parameters:
+        - { name: reason, in: query, schema: { type: string }, description: "why; also accepted as JSON body {reason}" }
+      responses:
+        "200": { description: deleted, content: { application/json: { schema: { $ref: "#/components/schemas/Message" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+
+  /cars/{car}/photos:
+    parameters: [ { $ref: "#/components/parameters/car" } ]
+    get:
+      summary: Photos of the car in display order
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Photo" } } } } }
+    post:
+      summary: Add a photo (multipart file, or JSON `{url}` fetched by the server). Idempotent on content hash per car.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+                caption: { type: string }
+                source: { $ref: "#/components/schemas/PhotoSource" }
+                source_ref: { type: string, description: "ad photo #, chat message external id, …" }
+                listing_id: { type: integer }
+                position: { type: integer }
+          application/json:
+            schema:
+              type: object
+              required: [url]
+              properties:
+                url: { type: string }
+                caption: { type: string }
+                source: { $ref: "#/components/schemas/PhotoSource" }
+                source_ref: { type: string }
+                listing_id: { type: integer }
+                position: { type: integer }
+      responses:
+        "201": { description: created, content: { application/json: { schema: { $ref: "#/components/schemas/Photo" } } } }
+        "200": { description: same bytes already on this car, content: { application/json: { schema: { $ref: "#/components/schemas/Photo" } } } }
+        "413": { description: "photo larger than 15 MB", content: { application/json: { schema: { type: object, properties: { error: { type: string } } } } } }
+        "422": { $ref: "#/components/responses/Error" }
+
+  /photos/{id}:
+    parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ]
+    get:
+      summary: Photo bytes (JPEG). `size=thumb` ≈ 400 px wide, `size=medium` ≈ 1000 px, default original. Cacheable (immutable).
+      parameters:
+        - { name: size, in: query, schema: { type: string, enum: [thumb, medium, full], default: full } }
+      responses:
+        "200": { description: image, content: { image/jpeg: { schema: { type: string, format: binary } } } }
+    patch:
+      summary: Edit caption / position / cover
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, properties: { caption: { type: string }, position: { type: integer }, cover: { type: boolean } } } } }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Photo" } } } }
+    delete:
+      summary: Delete photo
+      responses: { "204": { description: deleted } }
+
+  /listings/upsert:
+    post:
+      summary: Create or update a listing by URL (idempotent). Main entry point for agents/imports.
+      description: |
+        - URL is normalized (scheme/host lowercased, tracking params and fragment dropped, site ad id extracted).
+        - New listing → dedupe against existing cars: a *certain* match (same VIN, same plate, same private-seller
+          phone + same model, or ≥2 distinctive matching photos with agreeing make/model/specs on a car that is not closed — see
+          DESIGN.md § Dedupe) attaches the listing to that car (`linked_by`); otherwise a new car
+          is created and *likely* matches are stored as duplicate proposals and returned.
+        - Existing listing → updates last_seen; a price change appends price history + a price_change event;
+          `listing_status: removed|sold` writes a listing_removed event.
+        - Relist rule: an upsert of a removed/sold listing *without* `listing_status` counts as a sighting — if its
+          `seen_at` (default now) is later than `removed_at`, the listing becomes `live` and a listing_relisted event is
+          written; an older `seen_at` (import replay) leaves it unchanged.
+        - Car fields are filled only where the car has no value yet, unless `overwrite: true`. Filling an empty
+          spec/option/fact writes no event (the `created` event covers it); only replacing an existing value writes
+          spec_change / option_change / fact_change.
+        - `car` forces the target car (id/alias) for a new listing.
+        - Price sanity runs before any write: 422 with `reason` (price_x100 | price_lease | price_net | price_range) unless
+          `force: true`. Forced → stored, `price_flags` on the listing, `price_sanity_override` event.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/ListingUpsert" } } }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UpsertResult" }
+        "422": { $ref: "#/components/responses/PriceRejected" }
+
+  /listings:
+    get:
+      summary: Find listings (by url or site ref)
+      parameters:
+        - { name: url, in: query, schema: { type: string } }
+        - { name: site, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { $ref: "#/components/schemas/ListingStatus" } }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Listing" } } } } }
+
+  /listings/{id}:
+    parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ]
+    get:
+      summary: One listing with price history
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Listing" } } } }
+    patch:
+      summary: Change listing status (live/removed/sold) or price (price sanity as on upsert)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { $ref: "#/components/schemas/ListingStatus" }
+                price: { type: integer }
+                price_note: { type: string }
+                price_vat: { $ref: "#/components/schemas/PriceVat" }
+                force: { type: boolean, description: "store a price that fails the sanity check (flagged)" }
+                author: { type: string }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Listing" } } } }
+        "422": { $ref: "#/components/responses/PriceRejected" }
+
+  /duplicates:
+    get:
+      summary: Duplicate proposals
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [proposed, rejected, merged], default: proposed } }
+        - { name: car, in: query, schema: { type: string }, description: "only proposals involving this car" }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/DuplicateCandidate" } } } } }
+
+  /duplicates/{id}/reject:
+    parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ]
+    post:
+      summary: Mark a proposal as "not the same car" (never proposed again)
+      responses: { "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/DuplicateCandidate" } } } } }
+
+  /cars/{car}/merge:
+    parameters: [ { $ref: "#/components/parameters/car" } ]
+    post:
+      summary: Merge other cars INTO this car (listings, messages, notes, photos, events, aliases move; empty spec fields filled; target verdict, model_family override and good-deal flag kept unless empty). Sources become tombstones redirecting here.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [from], properties: { from: { type: array, items: { type: string } }, author: { type: string } } } } }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/CarDetail" } } } }
+
+  /cars/{car}/split:
+    parameters: [ { $ref: "#/components/parameters/car" } ]
+    post:
+      summary: Move listings (and optionally their messages/photos) out to a new car with copied specs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [listing_ids]
+              properties:
+                listing_ids: { type: array, items: { type: integer } }
+                move_messages: { type: boolean, default: false, description: "move messages whose counterpart is the moved listings' seller contact" }
+                move_photos: { type: boolean, default: true, description: "move photos tied to the moved listings" }
+                author: { type: string }
+      responses:
+        "200": { description: new car, content: { application/json: { schema: { $ref: "#/components/schemas/CarDetail" } } } }
+
+  /sellers/{id}:
+    parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ]
+    get:
+      summary: Seller with contacts and its cars
+      responses: { "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Seller" } } } } }
+    patch:
+      summary: Edit seller
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/SellerInput" } } }
+      responses: { "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Seller" } } } } }
+
+  /activity:
+    get:
+      summary: Global feed (events + messages) across cars, newest first — "what changed since"
+      description: Events include `note` events (written when a note is added, summary = excerpt, data {note_id}), so new notes show up here.
+      parameters:
+        - { name: since, in: query, schema: { type: string, format: date-time } }
+        - { name: limit, in: query, schema: { type: integer, default: 100 } }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    kind: { type: string, enum: [event, message] }
+                    car_id: { type: integer }
+                    car_title: { type: string }
+                    at: { type: string, format: date-time }
+                    event: { $ref: "#/components/schemas/Event" }
+                    message: { $ref: "#/components/schemas/Message" }
+
+components:
+  securitySchemes:
+    bearer: { type: http, scheme: bearer }
+  parameters:
+    car: { name: car, in: path, required: true, schema: { type: string }, description: "car id or alias" }
+    user: { name: user, in: query, schema: { type: string }, description: "whose verdict to show/filter/set (a GET /profile user name); default owner" }
+    ifMatch: { name: If-Match, in: header, schema: { type: string }, description: "\"<version>\" from GET /cars/{car} ETag; stale → 412" }
+  responses:
+    Error:
+      description: error
+      content: { application/json: { schema: { type: object, properties: { error: { type: string } } } } }
+    Conflict:
+      description: version mismatch (If-Match / body version is stale)
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [error, version, car]
+            properties:
+              error: { type: string }
+              version: { type: integer, description: current version }
+              car: { $ref: "#/components/schemas/CarDetail" }
+    PriceRejected:
+      description: "price failed the sanity check (resend with `force: true` to store it flagged)"
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [error, reason]
+            properties:
+              error: { type: string }
+              reason: { $ref: "#/components/schemas/PriceFlag" }
+              price: { type: integer }
+              expected: { type: string, nullable: true, description: "e.g. `fair 31 000 (VW ID.4, n=40)`" }
+
+  schemas:
+    Status:
+      type: string
+      enum: [new, to_contact, contacted, talking, ready_to_visit, visited, closed, dropped, bought]
+    SellerType: { type: string, enum: [private, dealer, reseller, unknown] }
+    VerdictValue: { type: string, enum: [up, maybe, down], description: "👍 up / 🤔 maybe / 👎 down" }
+    VerdictFilter: { type: string, enum: [up, maybe, down, none] }
+    ListingStatus: { type: string, enum: [live, removed, sold, unknown] }
+    OptionValue: { type: string, enum: ["yes", "no", unknown] }
+    EvidenceSource:
+      type: string
+      enum: [ad_text, ad_spec, photo, vin_pr_code, vin_decoder, seller_said, inspection, agent_inference, owner]
+      description: "`owner` = the human buyer said so (strongest); legacy `owner` is read as owner"
+    PhotoSource: { type: string, enum: [ad, seller, inspection, other] }
+    Channel:
+      type: string
+      description: "known values; others accepted"
+      enum: [whatsapp, standvirtual, olx, custojusto, email, mobile.de, autoscout24, lacentrale, leboncoin, coches.net, kleinanzeigen, subito, wallapop, marktplaats, milanuncios, autohero, phone, sms, telegram, other]
+    OptionKey:
+      type: string
+      description: "built-in option keys; GET /profile `option_keys` = these + search.option_keys (others allowed with a warning)"
+      enum: [pano, pano_opening, power_tailgate, electric_seats, memory_seats, heated_seats, ventilated_seats, premium_audio, hud, camera_360, adaptive_cruise, heat_pump, towbar, matrix_led, keyless, massage_seats, rear_recline, air_suspension, adaptive_dampers]
+
+    Fuel: { type: string, enum: [bev, phev, hev, mhev, petrol, diesel, lpg, cng, hydrogen, unknown] }
+    Gearbox: { type: string, enum: [manual, automatic, unknown] }
+    PriceVat: { type: string, enum: [gross, net, margin, unknown], description: "gross = incl. VAT (what cardb stores); net = excl. VAT (refused unless force); margin = used-car margin scheme (no VAT shown)" }
+    PriceFlag: { type: string, enum: [price_x100, price_lease, price_net, price_range] }
+    Market: { type: string, enum: [home, abroad] }
+    Powertrain:
+      type: object
+      description: "Fuel/drive-train facts; every field optional. Merged field by field on PATCH/upsert."
+      properties:
+        fuel: { $ref: "#/components/schemas/Fuel" }
+        battery_net_kwh: { type: number, nullable: true, description: "BEV/PHEV usable capacity" }
+        battery_gross_kwh: { type: number, nullable: true }
+        engine_cc: { type: integer, nullable: true }
+        gearbox: { $ref: "#/components/schemas/Gearbox" }
+        wltp_range_km: { type: integer, nullable: true, description: "electric range (BEV/PHEV)" }
+        wltp_consumption: { type: number, nullable: true, description: "kWh/100 km (BEV) or l/100 km (combustion)" }
+        co2_g_km: { type: integer, nullable: true }
+
+    Stats:
+      type: object
+      properties:
+        total: { type: integer }
+        by_status: { type: object, additionalProperties: { type: integer } }
+        by_verdict: { type: object, additionalProperties: { type: integer }, description: "keys up/maybe/down/none" }
+        needs_owner: { type: integer }
+        duplicate_proposals: { type: integer }
+        listings: { type: integer }
+        messages: { type: integer }
+
+    CarSpecs:
+      type: object
+      description: Canonical vehicle specs (all optional).
+      properties:
+        make: { type: string, example: MINI }
+        model: { type: string, example: Countryman E }
+        variant: { type: string, example: Favoured L }
+        body: { type: string, description: "body/seat note", example: "SUV, 5 seats" }
+        reg_date: { type: string, description: "YYYY-MM or YYYY-MM-DD", example: "2024-05" }
+        year: { type: integer, readOnly: true, description: "from reg_date" }
+        km: { type: integer }
+        powertrain: { $ref: "#/components/schemas/Powertrain" }
+        power_kw: { type: number }
+        drive: { type: string, enum: [fwd, rwd, awd, unknown] }
+        seats: { type: integer }
+        colour: { type: string }
+        interior: { type: string, description: "colour + material, e.g. 'black leather'" }
+        interior_tone: { type: string, enum: [dark, grey, brown, light, unknown] }
+        wheels_in: { type: integer }
+        vin: { type: string }
+        plate: { type: string }
+        country: { type: string, description: ISO-2 }
+        city: { type: string }
+        lat: { type: number, nullable: true, description: "car location, for the distance estimate" }
+        lon: { type: number, nullable: true }
+        distance_km: { type: integer, description: "road km from owner.home (stored); read: else great-circle × search.road_factor from lat/lon" }
+        distance_source: { type: string, enum: [stored, estimate], readOnly: true, nullable: true }
+        market: { $ref: "#/components/schemas/Market", readOnly: true, description: "home if country == owner.home.country" }
+
+    CarInput:
+      allOf:
+        - $ref: "#/components/schemas/CarSpecs"
+        - type: object
+          properties:
+            slug: { type: string, description: "stable human id, becomes an alias" }
+            aliases: { type: array, items: { type: string } }
+            summary: { type: string, description: "one-line why interesting / watch-outs" }
+            status: { $ref: "#/components/schemas/Status" }
+            status_reason: { type: string }
+            needs_owner: { type: boolean }
+            needs_owner_reason: { type: string }
+            seller: { $ref: "#/components/schemas/SellerInput" }
+            red_flags: { type: array, items: { type: string } }
+            open_questions: { type: array, items: { type: string } }
+            author: { type: string }
+
+    CarPatch:
+      allOf:
+        - $ref: "#/components/schemas/CarInput"
+        - type: object
+          properties:
+            seller_id: { type: integer, description: "re-point car to an existing seller" }
+            red_flags_add: { type: array, items: { type: string } }
+            red_flags_remove: { type: array, items: { type: string } }
+            open_questions_add: { type: array, items: { type: string } }
+            open_questions_remove: { type: array, items: { type: string } }
+            version: { type: integer, description: "same as If-Match" }
+            model_family: { type: string, nullable: true, description: "manual model family override (a GET /model-families `known` name); null = back to the derived family", example: Audi Q4 Sportback }
+            at: { type: string, format: date-time, description: "original time for imports: becomes the stored timestamp and the event time; default now" }
+
+    CarSummary:
+      type: object
+      description: One row of the car list.
+      required: [id, title, status, options, good_deal, model_family_manual, removed_listing_count, tier]
+      properties:
+        id: { type: integer }
+        slug: { type: string, nullable: true }
+        title: { type: string, description: "make model variant" }
+        make: { type: string }
+        model: { type: string }
+        variant: { type: string }
+        year: { type: integer, nullable: true }
+        reg_date: { type: string, nullable: true }
+        km: { type: integer, nullable: true }
+        powertrain: { $ref: "#/components/schemas/Powertrain" }
+        power_kw: { type: number, nullable: true }
+        drive: { type: string, nullable: true, enum: [fwd, rwd, awd, unknown] }
+        country: { type: string, nullable: true }
+        city: { type: string, nullable: true }
+        distance_km: { type: integer, nullable: true }
+        distance_source: { type: string, enum: [stored, estimate], nullable: true }
+        market: { type: string, enum: [home, abroad], nullable: true }
+        interior: { type: string, nullable: true }
+        interior_tone: { type: string, nullable: true }
+        wheels_in: { type: integer, nullable: true }
+        seller_type: { $ref: "#/components/schemas/SellerType" }
+        seller_name: { type: string, nullable: true }
+        price: { type: integer, nullable: true, description: "lowest price among live listings, else latest known" }
+        price_note: { type: string, nullable: true }
+        price_drop: { type: integer, nullable: true, description: "first seen price − current price (positive = cheaper now)" }
+        listing_count: { type: integer }
+        live_listing_count: { type: integer }
+        sites: { type: array, items: { type: string } }
+        primary_url: { type: string, nullable: true }
+        cover_photo_id: { type: integer, nullable: true }
+        photo_count: { type: integer }
+        options: { type: object, additionalProperties: { $ref: "#/components/schemas/OptionValue" }, description: "key → yes/no/unknown, only keys with a row" }
+        option_sources: { type: object, additionalProperties: { $ref: "#/components/schemas/EvidenceSource" }, description: "key → evidence source of that option row (same keys as options)" }
+        status: { $ref: "#/components/schemas/Status" }
+        status_reason: { type: string, nullable: true }
+        verdict: { $ref: "#/components/schemas/Verdict", description: "verdict of `?user=` (default owner)" }
+        verdicts: { type: object, additionalProperties: { $ref: "#/components/schemas/Verdict" }, description: "user name → verdict, every user who rated" }
+        version: { type: integer }
+        needs_owner: { type: boolean }
+        needs_owner_reason: { type: string, nullable: true }
+        summary: { type: string, nullable: true }
+        message_count: { type: integer }
+        last_message_at: { type: string, format: date-time, nullable: true }
+        last_message_direction: { type: string, enum: [in, out], nullable: true }
+        last_activity_at: { type: string, format: date-time, description: "latest of event/message/note/listing seen" }
+        duplicate_candidate_count: { type: integer }
+        created_at: { type: string, format: date-time }
+        model_family: { type: string, nullable: true, description: "canonical \"<Make> <Family>\" (override, else derived from make/model/variant); null = unmapped", example: VW ID.4 }
+        model_family_manual: { type: boolean, description: "model_family is a manual override" }
+        good_deal: { type: boolean }
+        good_deal_note: { type: string, nullable: true }
+        good_deal_by: { type: string, nullable: true, description: "who last changed the flag" }
+        good_deal_at: { type: string, format: date-time, nullable: true }
+        deal_rank: { type: string, nullable: true, description: "value of the deal_rank fact, e.g. T1-3", example: T1-3 }
+        removed_listing_count: { type: integer, description: "listings with status removed" }
+        tier: { type: integer, minimum: 1, description: "\"To rate\" tier (GET /queue) from the profile's search.models rules; default_tier when none matches" }
+        price_flags: { type: array, items: { $ref: "#/components/schemas/PriceFlag" }, description: "flags of the listing that gives `price` (forced past sanity)" }
+
+    CarDetail:
+      allOf:
+        - $ref: "#/components/schemas/CarSpecs"
+        - type: object
+          required: [id, title, status, listings, options, facts, photos, events, messages, notes, aliases, duplicates, good_deal, model_family_manual]
+          properties:
+            id: { type: integer }
+            slug: { type: string, nullable: true }
+            title: { type: string }
+            aliases: { type: array, items: { type: string } }
+            summary: { type: string, nullable: true }
+            status: { $ref: "#/components/schemas/Status" }
+            status_reason: { type: string, nullable: true }
+            status_changed_at: { type: string, format: date-time, nullable: true }
+            needs_owner: { type: boolean }
+            needs_owner_reason: { type: string, nullable: true }
+            red_flags: { type: array, items: { type: string } }
+            open_questions: { type: array, items: { type: string } }
+            price: { type: integer, nullable: true }
+            price_note: { type: string, nullable: true }
+            seller: { $ref: "#/components/schemas/Seller" }
+            listings: { type: array, items: { $ref: "#/components/schemas/Listing" } }
+            options: { type: array, items: { $ref: "#/components/schemas/Option" } }
+            facts: { type: array, items: { $ref: "#/components/schemas/Fact" } }
+            photos: { type: array, items: { $ref: "#/components/schemas/Photo" } }
+            events: { type: array, items: { $ref: "#/components/schemas/Event" }, description: newest first }
+            messages: { type: array, items: { $ref: "#/components/schemas/Message" }, description: oldest first }
+            notes: { type: array, items: { $ref: "#/components/schemas/Note" }, description: "pinned first, then newest first" }
+            verdict: { $ref: "#/components/schemas/Verdict", description: "verdict of `?user=` (default owner)" }
+            verdicts: { type: object, additionalProperties: { $ref: "#/components/schemas/Verdict" } }
+            version: { type: integer, description: "increments on every car write; ETag / If-Match" }
+            duplicates: { type: array, items: { $ref: "#/components/schemas/DuplicateCandidate" }, description: open proposals involving this car }
+            merged_from: { type: array, items: { type: integer } }
+            created_at: { type: string, format: date-time }
+            updated_at: { type: string, format: date-time }
+            model_family: { type: string, nullable: true, description: "canonical \"<Make> <Family>\" (override, else derived from make/model/variant); null = unmapped", example: VW ID.4 }
+            model_family_manual: { type: boolean, description: "model_family is a manual override" }
+            good_deal: { type: boolean }
+            good_deal_note: { type: string, nullable: true }
+            good_deal_by: { type: string, nullable: true, description: "who last changed the flag" }
+            good_deal_at: { type: string, format: date-time, nullable: true }
+            deal_rank: { type: string, nullable: true, description: "value of the deal_rank fact, e.g. T1-3", example: T1-3 }
+
+    Listing:
+      type: object
+      properties:
+        id: { type: integer }
+        car_id: { type: integer }
+        url: { type: string }
+        site: { type: string, example: StandVirtual }
+        site_ref: { type: string, nullable: true, example: SYN8Q1aB }
+        title: { type: string, nullable: true }
+        status: { $ref: "#/components/schemas/ListingStatus" }
+        price: { type: integer, nullable: true }
+        price_note: { type: string, nullable: true }
+        price_vat: { $ref: "#/components/schemas/PriceVat" }
+        price_flags: { type: array, items: { $ref: "#/components/schemas/PriceFlag" }, description: "set when a price was forced past the sanity check" }
+        price_history: { type: array, items: { $ref: "#/components/schemas/PricePoint" }, description: oldest first }
+        seller_id: { type: integer, nullable: true }
+        first_seen_at: { type: string, format: date-time }
+        last_seen_at: { type: string, format: date-time }
+        removed_at: { type: string, format: date-time, nullable: true }
+        raw: { type: object, nullable: true, description: "last raw payload the agent sent (opaque)" }
+
+    PricePoint:
+      type: object
+      properties:
+        price: { type: integer }
+        at: { type: string, format: date-time }
+        note: { type: string, nullable: true }
+
+    ListingUpsert:
+      allOf:
+        - $ref: "#/components/schemas/CarSpecs"
+        - type: object
+          required: [url]
+          properties:
+            url: { type: string }
+            site: { type: string, description: "derived from URL host if omitted" }
+            title: { type: string }
+            price: { type: integer }
+            price_note: { type: string }
+            price_vat: { $ref: "#/components/schemas/PriceVat" }
+            force: { type: boolean, default: false, description: "store a price that fails the sanity check (flagged + event)" }
+            listing_status: { $ref: "#/components/schemas/ListingStatus" }
+            seen_at: { type: string, format: date-time, description: "default now; imports pass the original time" }
+            car: { type: string, description: "attach a new listing to this car (id/alias)" }
+            slug: { type: string }
+            aliases: { type: array, items: { type: string } }
+            summary: { type: string }
+            status: { $ref: "#/components/schemas/Status", description: "set only when the car is created, or when overwrite" }
+            seller: { $ref: "#/components/schemas/SellerInput" }
+            options: { type: object, additionalProperties: { $ref: "#/components/schemas/OptionInput" } }
+            facts: { type: object, additionalProperties: { $ref: "#/components/schemas/FactInput" } }
+            photo_urls: { type: array, items: { type: string }, description: "server fetches; failures reported, not fatal" }
+            overwrite: { type: boolean, default: false, description: "overwrite existing car fields instead of fill-if-empty" }
+            raw: { type: object }
+            author: { type: string }
+
+    UpsertResult:
+      type: object
+      required: [car_id, listing_id, listing_created, car_created]
+      properties:
+        car_id: { type: integer }
+        listing_id: { type: integer }
+        listing_created: { type: boolean }
+        car_created: { type: boolean }
+        linked_by: { type: string, nullable: true, description: "vin|plate|phone_model|photos|car_param — why a new listing went to an existing car" }
+        price_changed: { type: boolean }
+        relisted: { type: boolean, description: "this upsert moved a removed/sold listing back to live (explicitly or by the relist rule)" }
+        duplicate_candidates: { type: array, items: { $ref: "#/components/schemas/DuplicateCandidate" } }
+        photo_errors: { type: array, items: { type: string } }
+
+    Option:
+      type: object
+      properties:
+        key: { type: string }
+        value: { $ref: "#/components/schemas/OptionValue" }
+        source: { $ref: "#/components/schemas/EvidenceSource" }
+        source_ref: { type: string, nullable: true, description: "photo #, PR code, quote" }
+        note: { type: string, nullable: true }
+        author: { type: string }
+        updated_at: { type: string, format: date-time }
+    OptionInput:
+      type: object
+      required: [value]
+      properties:
+        value: { $ref: "#/components/schemas/OptionValue" }
+        source: { $ref: "#/components/schemas/EvidenceSource" }
+        source_ref: { type: string }
+        note: { type: string }
+        author: { type: string }
+        at: { type: string, format: date-time, description: "original time for imports: becomes the stored timestamp and the event time; default now" }
+
+    Fact:
+      type: object
+      properties:
+        key: { type: string }
+        value: { type: string }
+        source: { $ref: "#/components/schemas/EvidenceSource" }
+        source_ref: { type: string, nullable: true }
+        author: { type: string }
+        updated_at: { type: string, format: date-time }
+    FactInput:
+      type: object
+      required: [value]
+      properties:
+        value: { type: string }
+        source: { $ref: "#/components/schemas/EvidenceSource" }
+        source_ref: { type: string }
+        author: { type: string }
+        at: { type: string, format: date-time, description: "original time for imports: becomes the stored timestamp and the event time; default now" }
+
+    Photo:
+      type: object
+      properties:
+        id: { type: integer }
+        car_id: { type: integer }
+        listing_id: { type: integer, nullable: true }
+        position: { type: integer }
+        cover: { type: boolean }
+        caption: { type: string, nullable: true }
+        source: { $ref: "#/components/schemas/PhotoSource" }
+        source_ref: { type: string, nullable: true }
+        width: { type: integer }
+        height: { type: integer }
+        phash: { type: string, description: "64-bit perceptual hash, hex" }
+        url: { type: string, description: "relative API path: /api/v1/photos/{id}" }
+        created_at: { type: string, format: date-time }
+
+    Event:
+      type: object
+      properties:
+        id: { type: integer }
+        car_id: { type: integer }
+        listing_id: { type: integer, nullable: true }
+        type:
+          type: string
+          description: "known: created, status_change, price_change, listing_added, listing_removed, listing_relisted, spec_change, option_change, fact_change, verdict, good_deal (data {from, to, note}), vin_check, report, visit, call, merge, split, duplicate_proposed, note (written on note creation; data {note_id}), message_deleted / message_restored (data {message_id, channel, direction, at, dedupe_key, reason}) (custom types allowed)"
+        at: { type: string, format: date-time }
+        author: { type: string }
+        summary: { type: string, description: "human one-liner, e.g. 'price 34 600 → 33 900'" }
+        data: { type: object, nullable: true, description: "type-specific, e.g. {from, to} for status/price" }
+    EventInput:
+      type: object
+      required: [type, summary]
+      properties:
+        type: { type: string }
+        summary: { type: string }
+        at: { type: string, format: date-time }
+        data: { type: object }
+        listing_id: { type: integer }
+        dedupe_key: { type: string }
+        author: { type: string }
+
+    Message:
+      type: object
+      properties:
+        id: { type: integer }
+        car_id: { type: integer }
+        channel: { $ref: "#/components/schemas/Channel" }
+        direction: { type: string, enum: [in, out] }
+        at: { type: string, format: date-time }
+        sender_kind: { type: string, enum: [seller, agent, owner, system] }
+        sender: { type: string, description: "agent role/session id / owner name / seller name or number" }
+        counterpart: { type: string, nullable: true, description: "seller phone/email/chat URL" }
+        text: { type: string }
+        attachments: { type: array, items: { $ref: "#/components/schemas/Attachment" } }
+        delivery: { type: string, enum: [sent, failed, received, unknown], description: "failed = send attempt that errored" }
+        error: { type: string, nullable: true }
+        external_id: { type: string, nullable: true }
+        dedupe_key: { type: string, nullable: true, readOnly: true, description: "idempotency key as stored: the client's dedupe_key, else server-derived (`auto:<sha1>` or `ext:<channel>:<external_id>`)" }
+        deleted_at: { type: string, format: date-time, description: "set only on a deleted row (returned by POST /messages key matches and DELETE)" }
+        deleted_by: { type: string }
+        deleted_reason: { type: string }
+        matched_by: { type: string, enum: [external_id, dedupe_key, near_duplicate], description: "POST /messages 200 only: why nothing was inserted" }
+    MessageInput:
+      type: object
+      required: [channel, direction, text]
+      properties:
+        car: { type: string }
+        listing_url: { type: string }
+        counterpart: { type: string }
+        channel: { $ref: "#/components/schemas/Channel" }
+        direction: { type: string, enum: [in, out] }
+        at: { type: string, format: date-time }
+        sender_kind: { type: string, enum: [seller, agent, owner, system] }
+        sender: { type: string }
+        text: { type: string }
+        attachments: { type: array, items: { $ref: "#/components/schemas/Attachment" } }
+        delivery: { type: string, enum: [sent, failed, received, unknown] }
+        error: { type: string }
+        external_id: { type: string }
+        dedupe_key: { type: string, description: "fallback idempotency key when there is no external id" }
+        author: { type: string }
+        allow_duplicate: { type: boolean, description: "skip the near-duplicate check (an intentional repeat of the same text)" }
+    Attachment:
+      type: object
+      properties:
+        kind: { type: string, enum: [image, video, audio, document, other] }
+        name: { type: string, nullable: true }
+        mime: { type: string, nullable: true }
+        photo_id: { type: integer, nullable: true, description: "if stored as a car photo" }
+        url: { type: string, nullable: true }
+
+    Note:
+      type: object
+      properties:
+        id: { type: integer }
+        car_id: { type: integer }
+        author: { type: string, description: "user name or agent role/session id" }
+        author_kind: { type: string, enum: [owner, viewer, agent, import] }
+        text: { type: string }
+        pinned: { type: boolean }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    NoteInput:
+      type: object
+      required: [text]
+      properties:
+        text: { type: string }
+        pinned: { type: boolean }
+        author: { type: string }
+        at: { type: string, format: date-time, description: "original time for imports: becomes the stored timestamp and the event time; default now" }
+
+    Verdict:
+      type: object
+      nullable: true
+      properties:
+        user: { type: string, description: "whose verdict" }
+        value: { $ref: "#/components/schemas/VerdictValue" }
+        note: { type: string, nullable: true }
+        author: { type: string }
+        updated_at: { type: string, format: date-time }
+    VerdictInput:
+      type: object
+      required: [value]
+      properties:
+        value: { $ref: "#/components/schemas/VerdictValue" }
+        note: { type: string }
+        user: { type: string, description: "whose verdict (default: token user, else owner)" }
+        author: { type: string }
+        at: { type: string, format: date-time, description: "original time for imports: becomes the stored timestamp and the event time; default now" }
+
+    GoodDeal:
+      type: object
+      required: [good_deal, note, by, at]
+      properties:
+        good_deal: { type: boolean }
+        note: { type: string, nullable: true }
+        by: { type: string, nullable: true, description: "who last changed the flag" }
+        at: { type: string, format: date-time, nullable: true }
+    GoodDealInput:
+      type: object
+      required: [good_deal]
+      properties:
+        good_deal: { type: boolean }
+        note: { type: string, nullable: true, description: "omitted = keep while staying on; \"\" or null = clear; max 300 chars after collapsing to one line" }
+        author: { type: string }
+        at: { type: string, format: date-time, description: "original time for imports: becomes good_deal_at and the event time; default now" }
+
+    Queue:
+      type: object
+      required: [total, counts, items]
+      properties:
+        total: { type: integer, description: "eligible cars in the selected tiers" }
+        counts: { type: object, additionalProperties: { type: integer }, description: "tier (\"1\", \"2\", …) → eligible cars, every profile tier present, ignoring the tier param" }
+        items: { type: array, items: { $ref: "#/components/schemas/QueueItem" } }
+    QueueItem:
+      type: object
+      required: [position, tier, car, score, value, fit, risk, landed, fair_price, fair_landed, fair_n, fair_basis, price_gap_pct, trim_score, trim_score_source, why]
+      properties:
+        position: { type: integer, description: "1-based position in the queue for the selected tiers (offset + index + 1)" }
+        tier: { type: integer, minimum: 1 }
+        car: { $ref: "#/components/schemas/CarSummary" }
+        score: { type: number, nullable: true, description: "w.value·value·fit − w.risk·risk, 2 decimals; null when the car has no price" }
+        value: { type: number, nullable: true, description: "50 + 2·clamp(gap_pct, −15, 20) (20…90); 50 when there is no peer group" }
+        fit: { type: number, description: "search.fit: base per family + option weights + age/km/seller/history terms (3 decimals)" }
+        risk: { type: number, description: "missing evidence + unknown must-haves + thin peer group + red flags + model risk (2 decimals)" }
+        risk_reasons: { type: array, items: { type: string }, description: "top contributors, e.g. `no VIN +0.8`" }
+        landed: { type: integer, nullable: true, description: "price + trip + registration + VAT reserve (search.landed_cost)" }
+        fair_price: { type: integer, nullable: true, description: "peer-group fair asking price: median of per-country medians, rounded to 50" }
+        fair_landed: { type: integer, nullable: true, description: "same over peers' landed costs" }
+        fair_n: { type: integer, description: "peers behind fair_price (0 when null)" }
+        fair_basis: { type: string, nullable: true, example: "VW ID.4 · 2024 · <30k km", description: "which fallback step of the peer ladder" }
+        price_gap_pct: { type: number, nullable: true, example: 8.4, description: "(fair_landed − landed) / fair_landed × 100, 1 decimal; positive = cheaper than peers" }
+        trim_score: { type: number, description: "numeric `trim_score` fact if present, else Σ search.options_wanted weights (yes +w, no −w)" }
+        trim_score_source: { type: string, enum: [fact, options] }
+        why: { type: string, description: "one line (≤ 160 chars): good-deal note, else known wanted options, gap and unknowns" }
+
+    ModelFamilies:
+      type: object
+      required: [families, unmapped, known]
+      properties:
+        families: { type: array, items: { $ref: "#/components/schemas/ModelFamilyCount" }, description: "families present among live cars, sorted by make then family" }
+        unmapped: { type: integer, description: "live cars without a family" }
+        known: { type: array, items: { type: string }, description: "every canonical family name, sorted by make then family" }
+    ModelFamilyCount:
+      type: object
+      required: [family, make, count]
+      properties:
+        family: { type: string, example: Audi Q4 Sportback }
+        make: { type: string, example: Audi }
+        count: { type: integer }
+
+    Seller:
+      type: object
+      nullable: true
+      properties:
+        id: { type: integer }
+        name: { type: string, nullable: true }
+        type: { $ref: "#/components/schemas/SellerType" }
+        company: { type: string, nullable: true }
+        city: { type: string, nullable: true }
+        note: { type: string, nullable: true }
+        contacts: { type: array, items: { $ref: "#/components/schemas/Contact" } }
+        car_ids: { type: array, items: { type: integer } }
+    SellerInput:
+      type: object
+      properties:
+        name: { type: string }
+        type: { $ref: "#/components/schemas/SellerType" }
+        company: { type: string }
+        city: { type: string }
+        note: { type: string }
+        contacts: { type: array, items: { $ref: "#/components/schemas/Contact" } }
+    Contact:
+      type: object
+      required: [kind, value]
+      properties:
+        kind: { type: string, enum: [phone, whatsapp, email, site_chat, web] }
+        value: { type: string, description: "phone: digits with country code, no +; email lowercased; site_chat: ad/chat URL" }
+        note: { type: string, nullable: true }
+        shared: { type: boolean, description: "read-only: number also printed on other sellers' ads (call-centre); never identifies the seller" }
+
+    DuplicateCandidate:
+      type: object
+      properties:
+        id: { type: integer }
+        car_a: { type: integer }
+        car_b: { type: integer }
+        other_car_id: { type: integer, description: "when listed under a car: the other one" }
+        other_title: { type: string }
+        score: { type: number, description: "0..1" }
+        reasons: { type: array, items: { type: string }, example: ["same seller phone 351555010203", "km 31 200 vs 31 500", "1 matching photo"] }
+        status: { type: string, enum: [proposed, rejected, merged] }
+        created_at: { type: string, format: date-time }
+
+    Profile:
+      type: object
+      description: "Effective buyer profile (config owner + search sections, defaults applied). No secrets, no tokens."
+      required: [owner, users, tiers, option_keys, must_have, hard_filters]
+      properties:
+        owner:
+          type: object
+          properties:
+            name: { type: string }
+            tz: { type: string }
+            home: { type: object, properties: { city: { type: string }, country: { type: string }, lat: { type: number }, lon: { type: number } } }
+        users:
+          type: array
+          items: { type: object, required: [name, role], properties: { name: { type: string }, role: { type: string, enum: [owner, viewer] } } }
+        tiers: { type: array, items: { type: object, properties: { tier: { type: integer }, label: { type: string }, rules: { type: array, items: { type: string } } } }, description: "tier → human-readable rule lines" }
+        default_tier: { type: integer }
+        queue_default_tiers: { type: array, items: { type: integer } }
+        option_keys: { type: array, items: { type: string }, description: "known option keys (built-in + search.option_keys)" }
+        options_wanted: { type: object, additionalProperties: { type: number } }
+        must_have: { type: array, items: { type: string }, description: "options behind `spec=confirmed|unknown`" }
+        hard_filters: { type: array, items: { type: string }, description: "one human-readable line per queue hard filter" }
+        countries: { type: array, items: { type: string } }
+        currency: { type: string, example: EUR }
+        weights: { type: object, additionalProperties: { type: number } }
+        families: { type: array, items: { type: string }, description: "canonical family names (built-in table + search.families + search.models)" }
