@@ -8,7 +8,7 @@ export default defineConfig({
   adapter: node({ mode: 'standalone' }),
   integrations: [react()],
   vite: { plugins: [tailwind()] },
-  server: { host: '127.0.0.1', port: 4323 },
+  server: { host: '127.0.0.1', port: 4321 },
   // Writes are checked in the /ui proxy (sameOrigin), which also honours X-Forwarded-Host behind a reverse proxy.
   security: { checkOrigin: false },
   compressHTML: true,

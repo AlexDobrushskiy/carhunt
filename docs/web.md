@@ -7,7 +7,7 @@ Astro 5 SSR + React islands + Tailwind 4, Node 22. A pure cardb API consumer: no
 | command | what |
 |---|---|
 | `npm ci` | install (Node 22; `npm run check` crashes on Node 20) |
-| `npm run dev` | dev server on `127.0.0.1:4323` |
+| `npm run dev` | dev server on `127.0.0.1:4321` |
 | `npm run build && npm start` | production server (`HOST`, `PORT`) |
 | `npm run check` | `astro check` + `tsc` |
 | `npm test` | vitest unit tests, offline (filters, queue, proxy allowlist, identity, profile, powertrain, format, lightbox; schema sync when `cardb/` is checked out) |
@@ -18,11 +18,11 @@ Astro 5 SSR + React islands + Tailwind 4, Node 22. A pure cardb API consumer: no
 
 | var | default | what |
 |---|---|---|
-| `CARDB_URL` | `http://127.0.0.1:8484` (image: `http://cardb:8480`) | cardb base, without `/api/v1` |
+| `CARDB_URL` | `http://127.0.0.1:8484` (image: `http://cardb:8484`) | cardb base, without `/api/v1` |
 | `CARDB_WEB_TOKENS` | — | `name:token` pairs (comma/space/newline separated). Name = cardb token name = user. First pair = default viewer unless one is named like `owner.name` |
 | `CARDB_WEB_TOKENS_FILE` | — | same, from a file (Docker secret); used when `CARDB_WEB_TOKENS` is empty |
 | `CARDB_WEB_USER_HEADER` | — | trusted header set by an auth proxy (e.g. `Remote-User`). Pins the identity, hides the picker; an unknown name → 403 |
-| `HOST`, `PORT` | `127.0.0.1`, `4323` | listen address (image: `0.0.0.0`) |
+| `HOST`, `PORT` | `127.0.0.1`, `4321` | listen address (image: `0.0.0.0`) |
 
 No config.yaml section: labels, tiers, option keys, home city and time zone come from `GET /api/v1/profile` (cached 60 s, last good copy kept on error).
 
@@ -72,10 +72,10 @@ Specs (`e2e/web.spec.ts`): list → fuel filter → car page (powertrain block, 
   web:
     build: ../web
     environment:
-      CARDB_URL: http://cardb:8480
+      CARDB_URL: http://cardb:8484
       CARDB_WEB_TOKENS_FILE: /run/secrets/cardb_web_tokens
     secrets: [cardb_web_tokens]
-    ports: ["127.0.0.1:4323:4323"]
+    ports: ["127.0.0.1:4321:4321"]
     depends_on: {cardb: {condition: service_healthy}}
     read_only: true
     tmpfs: [/tmp]

@@ -15,7 +15,7 @@ describe("api client", () => {
   });
 
   it("sends the caller's token always and X-Author only on writes", async () => {
-    process.env.CARDB_URL = "http://cardb:8480/";
+    process.env.CARDB_URL = "http://cardb:8484/";
     const seen: { url: string; headers: Record<string, string> }[] = [];
     setFetchForTesting(async (url, init) => {
       seen.push({ url: String(url), headers: (init?.headers ?? {}) as Record<string, string> });
@@ -25,7 +25,7 @@ describe("api client", () => {
     await api(who, "/api/v1/stats");
     await api(who, "/api/v1/cars/1/notes", { method: "POST", body: "{}" });
     await api({ token: "", author: "" }, "/api/v1/stats");
-    expect(seen[0].url).toBe("http://cardb:8480/api/v1/stats");
+    expect(seen[0].url).toBe("http://cardb:8484/api/v1/stats");
     expect(seen[0].headers.Authorization).toBe("Bearer t0k");
     expect(seen[0].headers["X-Author"]).toBeUndefined();
     expect(seen[1].headers["X-Author"]).toBe("sam");

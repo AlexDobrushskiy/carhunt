@@ -42,7 +42,7 @@ describe("viewer", () => {
   });
   it("only goes back to same-origin paths", () => {
     expect(safeBack("/cars/3?x=1")).toBe("/cars/3?x=1");
-    expect(safeBack("http://127.0.0.1:4323/queue?all=1")).toBe("/queue?all=1");
+    expect(safeBack("http://127.0.0.1:4321/queue?all=1")).toBe("/queue?all=1");
     expect(safeBack("//evil.example/x")).toBe("/");
     expect(safeBack("javascript:alert(1)")).toBe("/");
     expect(safeBack(null)).toBe("/");

@@ -39,10 +39,10 @@ describe("write proxy", () => {
 
   it("refuses cross-site writes", () => {
     const h = (o: Record<string, string>) => new Headers(o);
-    expect(sameOrigin(h({ Origin: "http://127.0.0.1:4323", Host: "127.0.0.1:4323" }))).toBe(true);
-    expect(sameOrigin(h({ Origin: "https://cars.example.com", Host: "web:4323", "X-Forwarded-Host": "cars.example.com" }))).toBe(true);
-    expect(sameOrigin(h({ Origin: "https://evil.example", Host: "127.0.0.1:4323" }))).toBe(false);
-    expect(sameOrigin(h({ Origin: "null", Host: "127.0.0.1:4323" }))).toBe(false);
+    expect(sameOrigin(h({ Origin: "http://127.0.0.1:4321", Host: "127.0.0.1:4321" }))).toBe(true);
+    expect(sameOrigin(h({ Origin: "https://cars.example.com", Host: "web:4321", "X-Forwarded-Host": "cars.example.com" }))).toBe(true);
+    expect(sameOrigin(h({ Origin: "https://evil.example", Host: "127.0.0.1:4321" }))).toBe(false);
+    expect(sameOrigin(h({ Origin: "null", Host: "127.0.0.1:4321" }))).toBe(false);
     expect(sameOrigin(h({ "Sec-Fetch-Site": "cross-site" }))).toBe(false);
     expect(sameOrigin(h({}))).toBe(true);
   });
