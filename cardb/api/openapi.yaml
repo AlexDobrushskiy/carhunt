@@ -166,6 +166,8 @@ paths:
         `powertrain` is merged field by field (send `null` for a field to clear it; `"powertrain": null` clears all of it).
         Fuel/gearbox are case-insensitive, stored lower case; an unknown value or powertrain key is 422. Flat
         `battery_net_kwh` / `battery_gross_kwh` are still accepted (pre-v2 clients); other powertrain keys only nested.
+        The same flat battery keys are accepted on POST /listings/upsert and POST /cars (folded into powertrain,
+        fill-if-empty); a flat value that differs from the nested one in the same request is 422. Reads only nest.
         `red_flags_*` ops: removals run before additions; empty items are 422; combining an op with the full list of the
         same field is 422.
       parameters: [ { $ref: "#/components/parameters/ifMatch" } ]

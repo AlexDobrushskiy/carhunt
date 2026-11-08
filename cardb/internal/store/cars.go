@@ -126,7 +126,11 @@ func specsMap(s api.CarSpecs) (map[string]any, error) {
 	if s.Km != nil {
 		put("km", *s.Km)
 	}
-	for k, v := range powertrainValues(s.Powertrain) {
+	pt, err := withLegacyBattery(s)
+	if err != nil {
+		return nil, err
+	}
+	for k, v := range powertrainValues(pt) {
 		put(k, v)
 	}
 	if s.PowerKw != nil {

@@ -479,3 +479,52 @@ func TestCarListRowsCarryVersion(t *testing.T) {
 		t.Fatalf("list version after write %v (was %v), detail %d", v2, v1, c.car(id).Version)
 	}
 }
+
+// Pre-v2 clients send the battery flat; upsert and POST /cars fold it into powertrain (fill-if-empty like any
+// spec) instead of dropping it, and a flat value that contradicts a nested one is 422.
+func TestUpsertLegacyFlatBattery(t *testing.T) {
+	c := newServer(t)
+	u := "https://example.invalid/legacy/1"
+	r := c.upsert(map[string]any{"url": u, "make": "SYNTH", "model": "Old Client", "price": 30000, "battery_net_kwh": 77, "battery_gross_kwh": 82})
+	pt := c.car(r.CarID).Powertrain
+	if pt == nil || *pt.BatteryNetKwh != 77 || *pt.BatteryGrossKwh != 82 || pt.Fuel != nil {
+		t.Fatalf("flat battery on create: %s", mustJSONT(t, pt))
+	}
+	// Fill-if-empty: an existing value stays, overwrite replaces it.
+	c.upsert(map[string]any{"url": u, "battery_net_kwh": 70})
+	if v := *c.car(r.CarID).Powertrain.BatteryNetKwh; v != 77 {
+		t.Fatalf("flat battery overwrote without overwrite: %v", v)
+	}
+	c.upsert(map[string]any{"url": u, "battery_net_kwh": 74, "overwrite": true})
+	if v := *c.car(r.CarID).Powertrain.BatteryNetKwh; v != 74 {
+		t.Fatalf("flat battery with overwrite: %v", v)
+	}
+	// Flat + nested: same value is fine and merges with other nested fields; different values are 422.
+	r2 := c.upsert(map[string]any{"url": "https://example.invalid/legacy/2", "make": "SYNTH", "model": "Mixed", "price": 30000,
+		"battery_net_kwh": 60, "powertrain": map[string]any{"battery_net_kwh": 60, "fuel": "bev"}})
+	if pt := c.car(r2.CarID).Powertrain; *pt.BatteryNetKwh != 60 || *pt.Fuel != "bev" {
+		t.Fatalf("flat + nested agreeing: %s", mustJSONT(t, pt))
+	}
+	var e api.Error
+	c.call("POST", "/api/v1/listings/upsert", map[string]any{"url": "https://example.invalid/legacy/3", "price": 30000,
+		"battery_gross_kwh": 64, "powertrain": map[string]any{"battery_gross_kwh": 66}}, 422, &e)
+	if !strings.Contains(e.Error, "battery_gross_kwh") {
+		t.Fatalf("conflict error: %q", e.Error)
+	}
+	var found []api.Listing
+	c.call("GET", "/api/v1/listings?url=https://example.invalid/legacy/3", nil, 200, &found)
+	if len(found) != 0 {
+		t.Fatal("conflicting upsert stored a listing")
+	}
+	// POST /cars takes the same path.
+	var d api.CarDetail
+	c.call("POST", "/api/v1/cars", map[string]any{"make": "SYNTH", "model": "Direct", "battery_net_kwh": 58}, 201, &d)
+	if d.Powertrain == nil || *d.Powertrain.BatteryNetKwh != 58 {
+		t.Fatalf("POST /cars flat battery: %s", mustJSONT(t, d.Powertrain))
+	}
+	// Reads only ever nest.
+	_, body, _ := c.send("GET", fmt.Sprintf("/api/v1/cars/%d", d.ID), nil, nil)
+	if strings.Count(string(body), `"battery_net_kwh"`) != 1 || !strings.Contains(string(body), `"powertrain":{"battery_net_kwh":58`) {
+		t.Fatalf("read shape: flat battery key leaked: %s", body)
+	}
+}
