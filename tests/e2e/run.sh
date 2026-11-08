@@ -12,7 +12,9 @@ SELF=$SELF_DIR/$(basename "${BASH_SOURCE[0]}")
 # allow-list below: no CLAUDE_CONFIG_DIR, CARHUNT_*, CARDB_*, AGTERM_SESSION_ID, tokens.
 if [ -z "${_E2E_INNER:-}" ]; then
   REAL_HOME=$HOME
-  W=$(mktemp -d "${TMPDIR:-/tmp}/carhunt-e2e.XXXXXX")
+  # Short base: the agterm socket link lives at $HOME/Library/Application Support/agterm/agterm.sock and a unix
+  # socket path must stay under 104 bytes (the macOS $TMPDIR is too long for it).
+  W=$(mktemp -d "${E2E_TMP:-/tmp}/carhunt-e2e.XXXXXX")
   W=$(cd "$W" && pwd -P)
   mkdir -p "$W/home" "$W/stubs" "$W/logs" "$W/state"
 
@@ -47,7 +49,7 @@ SH
     "_E2E_INNER=1" "_E2E_WORK=$W" "_E2E_SELF=$SELF" "_E2E_REAL_HOME=$REAL_HOME" "_E2E_REAL_LAUNCHCTL=$REAL_LAUNCHCTL"
     "CARHUNT_SECRETS_BACKEND=file" "CARHUNT_FAKE_SITES=1"
   )
-  for k in E2E_SRC E2E_REF E2E_PATCH KEEP E2E_KEEP_GOING E2E_SKIP E2E_COMPOSE E2E_CACHES E2E_VERBOSE; do
+  for k in E2E_SRC E2E_REF E2E_PATCH E2E_TMP KEEP E2E_KEEP_GOING E2E_SKIP E2E_COMPOSE E2E_CACHES E2E_VERBOSE; do
     [ -n "${!k:-}" ] && envs+=("$k=${!k}")
   done
   # agtermctl looks for agterm's control socket under $HOME only (AGTERM_SOCKET is ignored): link the real one in.
@@ -96,6 +98,10 @@ wait_http() {  # wait_http URL PIDFILE WHAT [SECONDS]
     sleep 0.2; i=$((i + 1))
   done
   die "$3 not up at $1 after ${4:-30}s"
+}
+# cars_field FIELD: FIELD of the first car in $LOGS/cars.json (`cardb ls --json`: {"cars": [...]}, or a list)
+cars_field() {
+  venv python -c 'import json,sys; d=json.load(open(sys.argv[1])); d=d if isinstance(d,list) else d.get("cars") or d.get("items") or []; print(len(d) if sys.argv[2]=="count" else (d[0].get(sys.argv[2]) or "") if d else "")' "$LOGS/cars.json" "$1"
 }
 cksum_of() { [ -e "$1" ] && shasum -a 256 "$1" | cut -d' ' -f1 || echo absent; }
 
@@ -271,9 +277,9 @@ step_sweep() {
   carhunt sweep --sites fake --max 5 --json >"$LOGS/sweep.json" 2>"$LOGS/sweep.err" || { cat "$LOGS/sweep.err"; die "sweep failed"; }
   head -c 2000 "$LOGS/sweep.json"; echo
   cardb ls --json >"$LOGS/cars.json" || die "cardb ls failed"
-  local n; n=$(venv python -c 'import json,sys; d=json.load(open(sys.argv[1])); d=d.get("items",d) if isinstance(d,dict) else d; print(len(d))' "$LOGS/cars.json")
+  local n; n=$(cars_field count)
   [ "$n" -ge 1 ] || die "no cars in cardb after the sweep"
-  local car; car=$(venv python -c 'import json,sys; d=json.load(open(sys.argv[1])); d=d.get("items",d) if isinstance(d,dict) else d; print(d[0]["id"])' "$LOGS/cars.json")
+  local car; car=$(cars_field id)
   setstate CAR_ID "$car"
   info "$n car(s) in cardb; first car id $car"
 }
@@ -299,7 +305,8 @@ step_web_live() {  # this web on the swept cardb: /health + the list page shows 
   echo $! >"$W/state/web.pid"
   wait_http "http://127.0.0.1:$port/health" "$W/state/web.pid" "web"
   info "/health: $(curl -fsS "http://127.0.0.1:$port/health" | head -c 200)"
-  local model; model=$(venv python -c 'import json,sys; d=json.load(open(sys.argv[1])); d=d.get("items",d) if isinstance(d,dict) else d; print(d[0].get("model") or "")' "$LOGS/cars.json")
+  local model; model=$(cars_field model)
+  [ -n "$model" ] || die "no swept car to look for"
   local page found=""
   for page in / /queue "/cars/$CAR_ID"; do
     curl -fsS "http://127.0.0.1:$port$page" >"$LOGS/web-page.html" || die "GET $page failed"
