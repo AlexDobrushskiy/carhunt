@@ -40,7 +40,7 @@ search:                       # buyer profile: cardb (queue, ranking) + discover
   exclude_places: []          # extra city words to exclude
   price:
     max_eur: 40000            # example; the only queue price filter (0 = none)
-    min_eur: 1500             # write-time floor: below = monthly rate / deposit, refused
+    min_eur: 1500             # the one price floor: discover drops below it, cardb refuses it (monthly rate / deposit)
     cap_eur: 2000000          # write-time ceiling: catches ×100 prices
     gross: true               # always compare gross (incl. VAT); net asks are converted
     currency: EUR
@@ -120,8 +120,10 @@ accounts:
 sites:
   enabled: [autoscout24, mobile.de, standvirtual.com, olx.pt, kleinanzeigen.de, leboncoin.fr, coches.net, wallapop.com, subito.it, marktplaats.nl]   # `carhunt site list`
   overrides: {}               # per-site tweaks on top of carhunt/sites/<pkg>/site.yaml:
-  #   mobile.de: {pace: {min_gap_s: 30}, country_ip: DE}
-  # keys: country_ip, route, tab_home, accept_language, proxy.sticky_minutes, pace.*, caps.*, liveness.*, account.*, geo
+  #   mobile.de: {pace: {min_gap_s: 30, max_loads_per_hour: 40}, caps: {phone_per_day: 3}, country_ip: DE}
+  # keys (names as in carhunt/sites/site.schema.json): country_ip, route, tab_home, accept_language, proxy.sticky_minutes,
+  #   pace.{min_gap_s, max_loads_per_run|hour|day, fresh_profile_every, api_min_gap_s, max_api_per_hour},
+  #   caps.<load|api|phone|send|login>_<per_day|per_hour|min_gap_s>, liveness.*, account.{verification, mail_from}, geo
 
 discover:
   windows: {morning: "07:00-09:00", afternoon: "14:00-16:00"}   # may not cross midnight; morning = sites without pace.read_after
@@ -130,7 +132,7 @@ discover:
   detail_tiers: [1, 2]        # tiers that get detail reads + gallery (null = all)
   max_photos: 40
   cursor: {coches.net: full}  # per-site strategy override: newest_id | first_seen | full
-  price_sanity: {min_eur: 1000, max_eur: 250000}
+  price_sanity: {max_eur: 250000}   # parse-error ceiling (×100 prices); the floor is search.price.min_eur
   thin: {min_photos: 8, min_info: 3}
   heuristics: [vag_meb]       # example; plug-ins in carhunt/discover/heuristics/ (null = all)
   distance: {geocoder: nominatim, router: null, user_agent: "carhunt/1.0 (you@example.com)"}   # geocoder none = offline

@@ -25,13 +25,18 @@ NONE = "—"
 _PACE = {  # key -> (prefix, suffix)
     "min_gap_s": ("≥", " s gap"),
     "max_loads_per_run": ("≤", "/run"),
-    "per_hour": ("≤", "/h"),
+    "max_loads_per_hour": ("≤", "/h"),
+    "max_loads_per_day": ("≤", "/day"),
+    "api_min_gap_s": ("api ≥", " s gap"),
+    "max_api_per_hour": ("api ≤", "/h"),
+    "fresh_profile_every": ("fresh profile per ", " loads"),
+    "read_after": ("reads after ", ""),
 }
 _CAPS = {
     "phone_per_day": ("phone ≤", "/day"),
+    "phone_per_session": ("phone ≤", "/session"),
     "send_per_day": ("send ≤", "/day"),
     "login_per_day": ("login ≤", "/day"),
-    "load_per_day": ("load ≤", "/day"),
 }
 
 
@@ -42,9 +47,12 @@ def sites_dir(root: Path | str | None = None) -> Path:
     return Path(env).expanduser() if env else DEFAULT_SITES_DIR
 
 
+SYNTHETIC = {"fake"}  # test-only plugins: not a site an agent can visit
+
+
 def discover(root: Path | str | None = None) -> list[Path]:
     """`<root>/*/site.yaml`, sorted. root: arg, else $CARHUNT_SITES_DIR, else carhunt/sites."""
-    return sorted(sites_dir(root).glob("*/site.yaml"))
+    return sorted(p for p in sites_dir(root).glob("*/site.yaml") if p.parent.name not in SYNTHETIC)
 
 
 def load(path: Path) -> dict:
@@ -54,8 +62,8 @@ def load(path: Path) -> dict:
     if not isinstance(data, Mapping):
         raise ValueError(f"{path}: site.yaml must be a mapping, got {type(data).__name__}")
     data = dict(data)
-    # display name: same lookup order as pace.site_yaml (name, domain), else the plugin dir
-    data["site"] = data.get("name") or data.get("domain") or data.get("site") or Path(path).parent.name
+    # row key = the ledger key (pace.canonical): site.yaml `site` id, else the plugin dir
+    data["site"] = data.get("site") or Path(path).parent.name
     return data
 
 
@@ -89,6 +97,8 @@ def _keyed(d, known: dict[str, tuple[str, str]]) -> str:
         if k in known:
             pre, suf = known[k]
             parts.append(f"{pre}{v}{suf}")
+        elif k == "why":
+            parts.append(f"(why: {_cell(v)})")
         else:
             parts.append(f"{k} {_cell(v)}")
     return _cell(" · ".join(parts))
@@ -108,13 +118,15 @@ def _account(a) -> str:
     need = a.get("needed_for") or []
     if isinstance(need, str):
         need = [need]
-    ver = a.get("verification")
+    ver, note = a.get("verification"), a.get("note")
     parts = []
     if need:
         parts.append("for " + ", ".join(str(x) for x in need))
     if ver:
-        parts.append(_cell(ver))
-    extra = {k: v for k, v in a.items() if k not in ("needed_for", "verification")}
+        parts.append(_cell(ver) + (f" ({_cell(note)})" if note else ""))
+    elif note:
+        parts.append(_cell(note))
+    extra = {k: v for k, v in a.items() if k not in ("needed_for", "verification", "note", "mail_from")}
     if extra:
         parts.append(_cell(extra))
     return _cell(" · ".join(parts)) if parts else NONE
@@ -131,7 +143,7 @@ def row(site: Mapping) -> list[str]:
         _account(site.get("account")),
         _cell(site.get("messaging")),
         _cell(site.get("measured")),
-        _cell(site.get("notes")),
+        _cell("; ".join(map(str, site["notes"])) if isinstance(site.get("notes"), list) else site.get("notes")),
     ]
 
 

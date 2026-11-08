@@ -35,7 +35,7 @@ def test_render_two_fixtures():
     header = next(ln for ln in text.splitlines() if ln.startswith("| site "))
     assert header == "| " + " | ".join(sitetable.COLUMNS) + " |"
     rows = _rows(text)
-    assert [r[0] for r in rows] == ["tablefix-alpha.example.invalid", "tablefix-beta"]  # sorted; beta named by dir
+    assert [r[0] for r in rows] == ["tablefix-alpha", "tablefix-beta"]  # sorted by site id
     a, b = rows
     assert all(len(r) == len(sitetable.COLUMNS) for r in rows)
     assert a[1] == "DataDome"
@@ -43,7 +43,7 @@ def test_render_two_fixtures():
     assert a[3] == "FR"
     assert a[4] == "≥12 s gap · ≤60/run"
     assert a[5] == "phone ≤40/day · send ≤10/day"
-    assert a[6] == "for phone, message · email + SMS (domestic mobile)"
+    assert a[6] == "for phone, message · sms-once (domestic mobile)"
     assert a[8] == "2026-11-06"
     assert a[9] == "stop at first 403/429/challenge; 404\\|410 = ad gone; never warm up on /"  # pipe escaped, multi-line notes joined
     assert b[2] == "http" and b[4] == "≥6 s gap · ≤2/h"
@@ -95,9 +95,17 @@ def test_cli_write_then_check(tmp_path, capsys):
 def test_cli_stdout_and_main(capsys, monkeypatch):
     monkeypatch.setenv("CARHUNT_SITES_DIR", str(FIX))
     assert sitetable.main([]) == 0
-    assert "tablefix-alpha.example.invalid" in capsys.readouterr().out
+    assert "tablefix-alpha" in capsys.readouterr().out
 
 
 def test_write_and_check_are_exclusive():
     with pytest.raises(SystemExit):
         _cli("--write", "a", "--check", "b")
+
+
+def test_shipped_table_matches_site_yaml(monkeypatch):
+    """Drift test: the skill's table is the render of carhunt/sites/*/site.yaml (CI fails until regenerated)."""
+    monkeypatch.delenv("CARHUNT_SITES_DIR", raising=False)
+    table = sitetable.REPO / "skills" / "carhunt-browsers" / "references" / "site-table.md"
+    assert _cli("--check", str(table)) == 0, f"run: carhunt browser site-table --write {table.relative_to(sitetable.REPO)}"
+    assert "Placeholder" not in table.read_text() and "| fake |" not in table.read_text()

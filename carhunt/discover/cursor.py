@@ -1,6 +1,6 @@
 """Where the last sweep stopped, per site and query. State: `$CARHUNT_HOME/discover/cursors.json`.
 
-Strategies (site.yaml `cursor.strategy`, else config `discover.cursor.<site>`, else `first_seen`):
+Strategies (config `discover.cursor.<site>`, else site.yaml `cursor`, else `first_seen`):
 - `newest_id`: numeric ids, newest first. A card is new iff id > the stored max for its id width; paging stops at the
   first organic card at/below it. Widths are tracked separately (mobile.de has two id widths: 14-digit mirrors).
 - `first_seen`: newest-first lists with opaque ids (AS24 UUIDs). Per query: the first organic in-filter id of the last
@@ -30,8 +30,9 @@ STRATEGIES = ("newest_id", "first_seen", "full")
 
 
 def strategy_for(site_meta: dict, disc_cfg: dict) -> str:
-    s = (site_meta.get("cursor") or {}).get("strategy") or ((disc_cfg.get("cursor") or {}).get(site_meta.get("site"))
-                                                             or "first_seen")
+    """Config `discover.cursor.<site>` (override) > site.yaml `cursor.strategy` > `first_seen`."""
+    s = (disc_cfg.get("cursor") or {}).get(site_meta.get("site"))
+    s = s or (site_meta.get("cursor") or {}).get("strategy") or "first_seen"
     if s not in STRATEGIES:
         raise ValueError(f"unknown cursor strategy {s!r} (known: {', '.join(STRATEGIES)})")
     return s

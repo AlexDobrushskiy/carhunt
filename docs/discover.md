@@ -30,8 +30,8 @@ Site states: `ok`, `blocked` (signature), `pace`, `budget`, `deferred` (read_aft
 | file | what |
 |---|---|
 | `cursors.json` | `{site: {"<country>\|<make>\|<model>\|<seller>": cursor}}` |
-| `seen.json` | url → the site's own ask at the last sweep (price-change detection) |
-| `dispositions.jsonl` | every dropped ad: site, url, reason |
+| `seen.json` | `<site>:<site_ref>` → the site's own ask at the last sweep (price-change detection) |
+| `dispositions.jsonl` | every dropped ad + every cardb refusal / held price: site, url, reason |
 | `runs/<ts>.json` | run report (per-site counters + every write) |
 | `geocode.json` | place → lat/lon cache |
 
@@ -60,7 +60,7 @@ discover:
   max_pages: 5                    # per query
   detail_tiers: [1, 2]            # tiers that get detail reads + gallery; others card-only (default: all)
   max_photos: 40
-  cursor: {coches.net: full}      # per-site strategy override (else site.yaml cursor.strategy, else first_seen)
+  cursor: {coches.net: full}      # per-site override: newest_id | first_seen | full (else site.yaml cursor, else first_seen)
   price_sanity: {min_eur: 1000, max_eur: 250000}
   thin: {min_photos: 8, min_info: 3}
   heuristics: [vag_meb]           # plug-ins to load (default: all in carhunt/discover/heuristics/)
@@ -74,11 +74,15 @@ Flags discover sets: `lease_transfer` (always dropped), `damaged`, `reseller`, `
 - **Budget ≤ 60 loads/site/run.** Home IP got a 403 on mobile.de after 41 sweep loads (2026-11-06).
 - **Stop a site at the first block; gone ≠ blocked.** Two runs stopped on a 410 and left 200 ads undone (2026-11-04/05).
 - **Cursors only from organic, in-filter cards; checked before the cardb lookup; committed per query after a clean finish; merged, never replaced.** Promoted rows violate filters; a replaced cursor dict lost models with no eligible head.
+- **Cursor strategy:** config `discover.cursor.<site>` > site.yaml `cursor.strategy` (`newest_id` \| `first_seen` \| `full`) > `first_seen`.
 - **Newest-first cursors don't see price drops on older ads.** Price tracking of known listings = full-coverage sites + liveness/price checks (sites module).
 - **Upsert without photos, then photos by resolved URL; later writes resolve by URL.** Dealer stock galleries auto-merged 4 cars, then a write hit the wrong car (2026-11-03).
 - **No scoring, no merging here.** Ranking and dedupe are cardb's (one answer for web, CLI, agents); discover sends identity keys (VIN, plate, phone, `dealer_stock_ref`).
 - **Prices gross.** Net asks + country VAT (`data/vat.yaml`); ES "precio al contado" beats a finance headline; IT "IVA esclusa" asks → gross. Net asks passed the price filter on day 1 (2026-11-03).
-- **Price sanity before storing.** 10 prices were stored ×100 (2026-11-03); cardb also refuses ×100/lease/net prices (422 → `rejected`).
+- **Price sanity before storing.** 10 prices were stored ×100 (2026-11-03). cardb refuses too (422 `{reason}`): `price_lease` → dropped (a rate/deposit, not a sale); `price_x100`/`price_range`/`price_net` → car stored **without price**, the ask in `price_note`, counted `price_held` + a disposition line. Agent: check the ad, then `cardb listing set ID --price N [--price-vat gross|net|margin]` (`--force` only after checking). Why: newest-first cursors move past the ad, so a dropped car is never seen again.
+- **One bad ad never stops the run:** a 400/422 rejects that ad; cardb down / 5xx stops the sweep (exit 1).
+- **Look up by URL, dedupe by `site_ref`.** cardb derives its own ref from the URL; standvirtual/olx.pt data ids (`Card.site_ref`) differ from that URL token, so cardb lookups go by URL and in-run dedupe + `seen.json` go by `site:site_ref`.
+- **No `--if-version` here:** discover only upserts (fill-empty, never overwrite) and appends photos/facts; none of these take a version. Agents editing a car after a sweep use `cardb set … --if-version N` (docs/db.md).
 - **Regions by postcode first.** A Tenerife car slipped through on the city name (2026-11-04); a street name never excludes.
 - **Drive: site field → AWD words in the title → description words → plug-in variant rules; conflicts become a fact.** 49 % unknown until backfilled; a "Pro" was 4MOTION in its title (2026-11-03/04).
 - **Power from title with checks:** skip charging kW ("DC 135 kW"); kW and hp must agree; a kW < 100 against an hp figure is a battery typo.
@@ -94,9 +98,8 @@ Flags discover sets: `lease_transfer` (always dropped), `damaged`, `reseller`, `
 `vat.yaml` · `regions.yaml` · `phone.yaml` · `keywords.yaml` (lease, damage, reseller, net wording, cash price, facts, fuel and drive vocab) · `options.yaml` (multi-language option cues, `present`/`absent`/`unless`). Languages: en de fr es it pt nl.
 
 ## Tests
-`pytest carhunt/discover` — offline, synthetic. `test_e2e.py` runs a real `cardb serve` on temp data when `CARDB_BIN` (or `cardb` on PATH) is set: `--sites fake --max 5` → 5 cars, re-run → no writes.
+`pytest carhunt/discover` — offline, synthetic. `test_e2e.py` runs a real `cardb serve` on temp data when `CARDB_BIN` (or `cardb` on PATH) is set: `--sites fake --max 5` → 5 cars, re-run → no writes. Cross-module round trip (sweep → vet ask → `carhunt asks close` → vet next ask): `carhunt/vet/tests/test_flow_e2e.py`.
 
 ## Gaps
-- `site.yaml` has no `cursor:` key yet (requested from sites); until then `discover.cursor.<site>` or the `first_seen` default.
 - Detail reads for walled routes depend on the sites plugins + `carhunt.access.session` (browsers).
 - Dedupe review (merge proofs, pHash) is an agent step (brief) on cardb's proposals.

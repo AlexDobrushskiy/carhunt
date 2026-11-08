@@ -148,6 +148,10 @@
         },
         "label": {
           "type": "string"
+        },
+        "exclude": {
+          "const": true,
+          "description": "deprecated: only discover's current flag rules need it (they ignore a flag without it); cardb warns on it. Drop once discover excludes on flag alone"
         }
       },
       "oneOf": [
@@ -178,6 +182,11 @@
                 "required": [
                   "mentions_country"
                 ]
+              },
+              {
+                "required": [
+                  "exclude"
+                ]
               }
             ]
           }
@@ -194,7 +203,16 @@
                 "facts"
               ]
             }
-          ]
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "exclude"
+                ]
+              }
+            ]
+          }
         },
         {
           "required": [
@@ -349,13 +367,10 @@
         "pace": {
           "type": "object",
           "additionalProperties": false,
+          "description": "names as in site.schema.json; dicts merge one level over site.yaml",
           "properties": {
             "min_gap_s": {
               "$ref": "#/$defs/nonNeg"
-            },
-            "per_hour": {
-              "type": "integer",
-              "minimum": 1
             },
             "max_loads_per_run": {
               "type": "integer",
@@ -373,6 +388,13 @@
               "type": "integer",
               "minimum": 1
             },
+            "api_min_gap_s": {
+              "$ref": "#/$defs/nonNeg"
+            },
+            "max_api_per_hour": {
+              "type": "integer",
+              "minimum": 1
+            },
             "read_after": {
               "$ref": "#/$defs/hhmm"
             },
@@ -384,42 +406,18 @@
         "caps": {
           "type": "object",
           "additionalProperties": false,
+          "description": "per-kind limits read by access.pace (<kind>_per_day/_per_hour/_min_gap_s); _per_session by the site's flow",
           "properties": {
-            "load_per_day": {
-              "$ref": "#/$defs/nonNegInt"
-            },
-            "phone_per_day": {
-              "$ref": "#/$defs/nonNegInt"
-            },
-            "phone_per_session": {
-              "$ref": "#/$defs/nonNegInt"
-            },
-            "phone_per_hour": {
-              "$ref": "#/$defs/nonNegInt"
-            },
-            "phone_min_gap_s": {
-              "$ref": "#/$defs/nonNeg"
-            },
-            "send_per_day": {
-              "$ref": "#/$defs/nonNegInt"
-            },
-            "send_per_hour": {
-              "$ref": "#/$defs/nonNegInt"
-            },
-            "send_min_gap_s": {
-              "$ref": "#/$defs/nonNeg"
-            },
-            "login_per_day": {
-              "$ref": "#/$defs/nonNegInt"
-            },
-            "login_per_hour": {
-              "$ref": "#/$defs/nonNegInt"
-            },
-            "login_min_gap_s": {
-              "$ref": "#/$defs/nonNeg"
-            },
             "why": {
               "type": "string"
+            }
+          },
+          "patternProperties": {
+            "^(load|api|phone|send|login)_(per_day|per_hour|per_session)$": {
+              "$ref": "#/$defs/nonNegInt"
+            },
+            "^(load|api|phone|send|login)_min_gap_s$": {
+              "$ref": "#/$defs/nonNeg"
             }
           }
         },
@@ -473,11 +471,24 @@
               }
             },
             "verification": {
+              "enum": [
+                "none",
+                "email",
+                "email-link",
+                "email-code",
+                "google",
+                "sms-once",
+                "sms-own",
+                "sms-every-login"
+              ],
+              "description": "only sms-once allows a rented number"
+            },
+            "note": {
               "type": "string"
             },
             "mail_from": {
               "type": "string",
-              "description": "Gmail query for the site's code mails (default from:<site>)"
+              "description": "Gmail query for the site's code/link mails (default from:<site>)"
             }
           }
         },
@@ -725,7 +736,8 @@
               "$ref": "#/$defs/nonNegInt"
             },
             "min_eur": {
-              "$ref": "#/$defs/nonNegInt"
+              "$ref": "#/$defs/nonNegInt",
+              "description": "one price floor: discover drops below it, cardb refuses below it (price_lease); default 1500"
             },
             "cap_eur": {
               "$ref": "#/$defs/nonNegInt"
@@ -1472,10 +1484,8 @@
         "price_sanity": {
           "type": "object",
           "additionalProperties": false,
+          "description": "discover-only parse-error ceiling; the floor is search.price.min_eur (shared with cardb)",
           "properties": {
-            "min_eur": {
-              "$ref": "#/$defs/nonNeg"
-            },
             "max_eur": {
               "$ref": "#/$defs/nonNeg"
             }

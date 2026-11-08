@@ -78,7 +78,7 @@ func cmdUpsert(e *env, args []string) error {
 		return usageErrorf("upsert: --url is required (or --from-json FILE)")
 	}
 	in := api.ListingUpsert{URL: strings.TrimSpace(*lurl), Site: *site, Title: *title, PriceNote: *priceNote,
-		Car: *car, Slug: *slug, Summary: *summary, Overwrite: *overwrite, Aliases: aliases, Force: *force}
+		Car: api.CarRef(*car), Slug: *slug, Summary: *summary, Overwrite: *overwrite, Aliases: aliases, Force: *force}
 	if in.PriceVat, err = parsePriceVat(*priceVat); err != nil {
 		return err
 	}

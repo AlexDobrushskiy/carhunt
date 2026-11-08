@@ -39,16 +39,19 @@ accounts.email accounts.sms.provider accounts.sms.api_key accounts.gmail.oauth_c
 accounts.gmail.plus_address
 sites.enabled sites.overrides.*.country_ip sites.overrides.*.route sites.overrides.*.tab_home
 sites.overrides.*.accept_language sites.overrides.*.proxy.sticky_minutes
-sites.overrides.*.pace.min_gap_s sites.overrides.*.pace.per_hour sites.overrides.*.pace.max_loads_per_run
-sites.overrides.*.pace.max_loads_per_hour sites.overrides.*.pace.fresh_profile_every
-sites.overrides.*.caps.load_per_day sites.overrides.*.caps.phone_per_day sites.overrides.*.caps.send_per_day
-sites.overrides.*.caps.login_per_day sites.overrides.*.caps.phone_per_hour sites.overrides.*.caps.send_min_gap_s
+sites.overrides.*.pace.min_gap_s sites.overrides.*.pace.max_loads_per_run sites.overrides.*.pace.max_loads_per_hour
+sites.overrides.*.pace.max_loads_per_day sites.overrides.*.pace.fresh_profile_every
+sites.overrides.*.pace.api_min_gap_s sites.overrides.*.pace.max_api_per_hour
 sites.overrides.*.liveness.supported sites.overrides.*.liveness.mode sites.overrides.*.liveness.gone_redirect
 sites.overrides.*.liveness.gone_text sites.overrides.*.liveness.gone_title sites.overrides.*.liveness.sold_text
 sites.overrides.*.liveness.proxy_country sites.overrides.*.account.verification sites.overrides.*.account.mail_from
+sites.overrides.*.account.note
+sites.overrides.*.caps.load_per_day sites.overrides.*.caps.api_per_day sites.overrides.*.caps.phone_per_day
+sites.overrides.*.caps.phone_per_session sites.overrides.*.caps.send_per_day sites.overrides.*.caps.login_per_day
+sites.overrides.*.caps.phone_per_hour sites.overrides.*.caps.send_min_gap_s
 sites.overrides.*.geo
 discover.windows.* discover.max_loads_per_site discover.max_pages discover.detail_tiers discover.max_photos
-discover.cursor.* discover.price_sanity.min_eur discover.price_sanity.max_eur discover.thin.min_photos
+discover.cursor.* discover.price_sanity.max_eur discover.thin.min_photos
 discover.thin.min_info discover.heuristics discover.distance.geocoder discover.distance.router
 discover.distance.user_agent
 contact.variant contact.quiet_hours contact.opener_window contact.seller_hours.*.* contact.blocked_statuses
@@ -100,6 +103,8 @@ def _find(root: dict, node: dict, segs: list[str]) -> bool:
     if seg == "*":
         return isinstance(node.get("additionalProperties"), dict) and _find(root, node["additionalProperties"], rest)
     child = node.get("properties", {}).get(seg)
+    if child is None:
+        child = next((v for rx, v in node.get("patternProperties", {}).items() if re.search(rx, seg)), None)
     if child is None and isinstance(node.get("additionalProperties"), dict):
         child = node["additionalProperties"]  # a concrete key of a free-form map (discover.windows.morning)
     return child is not None and _find(root, child, rest)

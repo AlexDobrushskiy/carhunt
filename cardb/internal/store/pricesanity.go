@@ -256,7 +256,7 @@ func (s *Store) checkUpsertPrice(tx *sql.Tx, l *listingRow, in *api.ListingUpser
 			return priceVerdict{}, err
 		}
 	case in.Car != "":
-		cid, err := resolveCar(tx, in.Car)
+		cid, err := resolveCar(tx, string(in.Car))
 		if err != nil {
 			return priceVerdict{}, err
 		}

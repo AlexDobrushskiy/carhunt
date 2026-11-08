@@ -101,7 +101,7 @@ func cmdMsg(e *env, args []string) error {
 	if text == "" && len(attach) == 0 {
 		return usageErrorf("msg: TEXT is empty (pass it as an argument, --text-file F or - for stdin)")
 	}
-	in := api.MessageInput{Car: *car, ListingURL: *lurl, Counterpart: *to, Channel: strings.ToLower(*channel),
+	in := api.MessageInput{Car: api.CarRef(*car), ListingURL: *lurl, Counterpart: *to, Channel: strings.ToLower(*channel),
 		Sender: *sender, Text: text, ExternalID: *externalID, DedupeKey: *dedupeKey, Delivery: *delivery, Error: *errMsg,
 		AllowDuplicate: *allowDup}
 	if in.Direction, err = normalizeDirection(*dir); err != nil {

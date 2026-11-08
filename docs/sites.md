@@ -8,21 +8,21 @@ Rendered from every `site.yaml` (`python -m carhunt.sites.matrix --write docs/si
 <!-- site-matrix:begin -->
 | site | countries | wall | read route | country IP | account needed for | phone | cursor | messaging | measured |
 |---|---|---|---|---|---|---|---|---|---|
-| autoscout24 | DE, AT, IT, ES, FR, NL, BE, LU | none (CloudFront, no challenge seen) | http | — | none | page | newest_first | guest 'E-Mail senden' form (no login); .de/.nl form unreliable 11-05 → dealer's own email | 2026-11-06 |
+| autoscout24 | DE, AT, IT, ES, FR, NL, BE, LU | none (CloudFront, no challenge seen) | http | — | none | page | first_seen | guest 'E-Mail senden' form (no login); .de/.nl form unreliable 11-05 → dealer's own email | 2026-11-06 |
 | carsbat.com | DE | Cloudflare | plain-chrome | — | vin | none | full | none: auction archive, no sellers to contact | 2026-11-01 |
 | coches.net | ES | Imperva ABP (reese84) via CloudFront | http | — | message | reveal | full | logged in, Spanish residential IP, non-Playwright browser: 'Contactar' once → contact-mail 2xx; never Enter in the box (resets the form) | 2026-11-07 |
-| custojusto.pt | PT | client-fingerprint 403 (plain HTTP clients blocked; the same IP passes in a real browser) | lane | — | message | none | newest_first | 'Enviar mensagem' = contact form (one-way); the seller's reply opens a thread in the CJ inbox (11-05) | 2026-11-07 |
-| kleinanzeigen.de | DE | Akamai Bot Manager (reads not challenged) | http | — | message | text-only | newest_first | site chat, logged in (inbox /m-nachrichten.html); sender lives in contact | 2026-11-01 |
+| custojusto.pt | PT | client-fingerprint 403 (plain HTTP clients blocked; the same IP passes in a real browser) | lane | — | message | none | newest_id | 'Enviar mensagem' = contact form (one-way); the seller's reply opens a thread in the CJ inbox (11-05) | 2026-11-07 |
+| kleinanzeigen.de | DE | Akamai Bot Manager (reads not challenged) | http | — | message | text-only | newest_id | site chat, logged in (inbox /m-nachrichten.html); sender lives in contact | 2026-11-01 |
 | lacentrale.fr | FR | DataDome | plain-chrome | — | none | none | full | site's message-seller form on the ad page (not measured here; sender lives in contact) | 2026-10-30 |
-| leboncoin.fr | FR | DataDome | http | — | phone, message | reveal-login | newest_first | logged in, French IP only: 'Envoyer un message' → /reply/<id> (2500 chars); from a foreign IP silently dropped | 2026-11-06 |
+| leboncoin.fr | FR | DataDome | http | — | phone, message | reveal-login | newest_id | logged in, French IP only: 'Envoyer un message' → /reply/<id> (2500 chars); from a foreign IP silently dropped | 2026-11-06 |
 | leparking.fr | FR | Cloudflare | lane | — | none | none | full | none: an aggregator — contact the seller on the source site | 2026-11-02 |
-| marktplaats.nl | NL, BE | CloudFront WAF (home page / is 403 to scripts; data URLs pass) | http | — | message, phone | none | newest_first | site chat ('asq' in seller.contactOptions) needs a logged-in account → unusable (SMS 2FA); dealers' own phone/website are on the ad page | 2026-11-07 |
-| milanuncios.com | ES | Imperva ABP (reese84) | plain-chrome | — | phone, message | reveal-login | newest_first | logged in + Spanish IP, media on: 'Mensaje' → 'Escribir otro mensaje' → 'Enviar' once → chat/contact 200 (11-03) | 2026-11-07 |
-| mobile.de | DE | Akamai | plain-chrome | — | message | page | newest_first | 'E-Mail schreiben' form (/checkout/core/<id>), logged in only; sender lives in contact | 2026-11-06 |
+| marktplaats.nl | NL, BE | CloudFront WAF (home page / is 403 to scripts; data URLs pass) | http | — | message, phone | none | newest_id | site chat ('asq' in seller.contactOptions) needs a logged-in account → unusable (SMS 2FA); dealers' own phone/website are on the ad page | 2026-11-07 |
+| milanuncios.com | ES | Imperva ABP (reese84) | plain-chrome | — | phone, message | reveal-login | newest_id | logged in + Spanish IP, media on: 'Mensaje' → 'Escribir otro mensaje' → 'Enviar' once → chat/contact 200 (11-03) | 2026-11-07 |
+| mobile.de | DE | Akamai | plain-chrome | — | message | page | newest_id | 'E-Mail schreiben' form (/checkout/core/<id>), logged in only; sender lives in contact | 2026-11-06 |
 | olx.pt | PT | CloudFront WAF (403 to every plain HTTP client, even with full browser headers) | plain-chrome | — | phone, message | reveal-login | full | site chat, logged in; ads with contact.phone=false are chat-only | 2026-11-07 |
-| standvirtual.com | PT | none (CloudFront, no challenge on reads; reCAPTCHA v3 only on the site's VIN reveal button) | http | — | message | decode | newest_first | site chat, logged in (OLX Group account); sender lives in contact | 2026-11-07 |
-| subito.it | IT | Akamai + DataDome (not triggered by plain HTTP) | http | — | message | reveal | newest_first | site chat 'Contatta', logged in (inbox areariservata.subito.it/messaggi); a thread survives the ad's removal | 2026-11-01 |
-| wallapop.com | ES | none (public JSON API on CloudFront) | http | — | message | page | newest_first | logged-in site chat es.wallapop.com/app/chat?itemId=<hash id>; ≤300 chars per message (longer text is cut silently) | 2026-11-06 |
+| standvirtual.com | PT | none (CloudFront, no challenge on reads; reCAPTCHA v3 only on the site's VIN reveal button) | http | — | message | decode | newest_id | site chat, logged in (OLX Group account); sender lives in contact | 2026-11-07 |
+| subito.it | IT | Akamai + DataDome (not triggered by plain HTTP) | http | — | message | reveal | newest_id | site chat 'Contatta', logged in (inbox areariservata.subito.it/messaggi); a thread survives the ad's removal | 2026-11-01 |
+| wallapop.com | ES | none (public JSON API on CloudFront) | http | — | message | page | newest_id | logged-in site chat es.wallapop.com/app/chat?itemId=<hash id>; ≤300 chars per message (longer text is cut silently) | 2026-11-06 |
 <!-- site-matrix:end -->
 
 Per-site walls, pace numbers with their why, quirks: `carhunt/sites/<pkg>/README.md` + `site.yaml`.
@@ -48,13 +48,13 @@ Per-site walls, pace numbers with their why, quirks: `carhunt/sites/<pkg>/README
 - Tests: `carhunt.sites.testing.FakeNet` (canned answers, no network); `CARHUNT_FAKE_SITES=1` registers the synthetic `fake` site (`CARHUNT_FAKE_SITES_FIXTURES=<ads.json>`, `CARHUNT_FAKE_SITES_BLOCK=search,ad,live`).
 
 ## Cursors and price changes
-- `site.yaml cursor.strategy`: `newest_first` = discover stops at the last seen ad (key `site_ref` = monotonic id, or `created` + first organic id where ids are unordered, AS24); `full` = page the whole filtered set every run (coches.net relevance order, olx.pt ignores sort, unmeasured sites).
+- `site.yaml cursor.strategy` (read by discover, `carhunt/discover/cursor.py`): `newest_id` = newest first, numeric `site_ref` grows → stop at the stored max; `first_seen` = newest first with opaque ids (AS24 UUIDs) → stop at last run's first organic id / its created time; `full` = page the whole filtered set every run (coches.net relevance order, olx.pt ignores sort, unmeasured sites).
 - Newest-first sweeps never revisit known ads, so **price changes on known listings are caught by liveness**: a live page also yields the current price (parsed from the same page, no extra load); a change is written as a minimal upsert `{url, price}` → cardb price history + `price_change` event. Net (ex-VAT) page prices are skipped (cardb stores gross). Decision from discover, 2026-11-08; the EV run did this as a weekly price re-check of liked cars.
 - Price from the liveness page: autoscout24, standvirtual.com, kleinanzeigen.de, subito.it, marktplaats.nl, custojusto.pt, milanuncios.com, mobile.de, coches.net (page route), leboncoin.fr. Not available (ad data comes from a separate API): olx.pt, wallapop.com — their liveness reports state only.
 
 ## Rules (why)
 - Page's own data first (`__NEXT_DATA__`, RSC flight, `__INITIAL_PROPS__`, site JSON API): 1 request instead of ~50 browser requests → fewer loads, fewer bans.
-- Every load passes the pace gate (`access.pace`, shared by all agents on the IP; site.yaml `pace`) — parallel agents on one IP got sites banned (coches.net 11-03, leboncoin 10-30).
+- Every request takes a slot in the shared ledger first (`access.pace.acquire(site, kind, via=<exit CC>)`; kinds `load` page, `api` JSON read, `phone` reveal; limits from site.yaml `pace`/`caps`, see docs/browsers.md) — parallel agents on one IP got sites banned (coches.net 11-03, leboncoin 10-30). A proxied request is paced on its exit (own rate budget, same day caps). The transport waits ≤180 s for a gap slot, else `PaceExceeded` (stop the site).
 - Stop a site at the first block (401/403/429/5xx/bot page → `Blocked`); 404/410/site marker = that ad is gone → `Gone`, keep going — two runs stopped leboncoin on a 410 and left ~200 ads undone (11-04/05).
 - Missing page data = `Blocked`, never `Gone`: a changed page or a wall says nothing about the ad.
 - Phone reveal slots are taken before the call (a 403 still counts); day caps in site.yaml `caps`.
@@ -77,10 +77,9 @@ State + logs (never in the repo): `$CARHUNT_HOME/sites/liveness.db`, `$CARHUNT_H
 3. `plugin.py` — `class Plugin(BaseSite)`, `pkg = "<pkg>"`; copy `autoscout24/plugin.py`. Transport only via `self.net.get/json` (HTTP) or `self.net.browser_get(url, mode=fetch|goto)` (browser routes); parse functions pure (text in, model out).
 4. `README.md` — wall, route, pace, phone, messaging, rules with why, gaps. No account names, phones, ad ids.
 5. `carhunt/sites/tests/test_<pkg>.py` + `tests/fixtures/<pkg>/` — **hand-made synthetic** pages in the site's real shape (VIN `SYN…`, phones `+cc 555…`, `example.invalid` hosts): query builder, search + ad parsers, Blocked/Gone, liveness rules.
-6. Measure with ≤3 read-only public loads (`carhunt site <id> search --max 5`), then `python -m carhunt.sites.matrix --write docs/sites.md`.
+6. Measure with ≤3 read-only public loads (`carhunt site <id> search --max 5`), then `python -m carhunt.sites.matrix --write docs/sites.md` and `carhunt browser site-table --write skills/carhunt-browsers/references/site-table.md` (both have drift tests).
 
 ## Gaps
 - olx.pt / wallapop.com liveness gives no price (API-only ad data); liked cars there need a periodic `carhunt site <id> ad` re-read for prices.
 - lacentrale.fr, leparking.fr, carsbat.com: URL builders only (no captured page shape yet) — search/ad/live raise `Unsupported`.
-- Browser-route sites (mobile.de, olx.pt, custojusto.pt, milanuncios.com, lacentrale.fr, leparking.fr, carsbat.com) need `carhunt.access.session.tab`; without the browsers module they raise on first read (doctor warns).
-- Without `carhunt.access.pace` pacing is in-process only (one agent); the shared ledger comes with the browsers module.
+- Browser-route sites (mobile.de, olx.pt, custojusto.pt, milanuncios.com, lacentrale.fr, leparking.fr, carsbat.com) open one `access.session.tab(route, site=, country=, fresh=)` per run; the tab blocks on walls but the transport paces (`goto(..., paced=False)`). Needs Chrome + playwright (doctor checks).

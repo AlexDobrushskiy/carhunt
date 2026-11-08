@@ -4,8 +4,9 @@ Plugins never open sockets or tabs themselves: they call `net.get` / `net.json` 
 in `carhunt.sites.testing.FakeNet` and the pacing rules live in one place.
 
 Rules (each from the EV run):
-- Every load goes through the pace gate (`access.pace.acquire(site, kind)`, shared ledger across agents) — parallel
-  agents on one IP got sites banned (coches.net 11-03, leboncoin 10-30).
+- Every request goes through the shared pace ledger (`access.pace.acquire(site, kind, via=<exit country>)`) before it
+  is sent — parallel agents on one IP got sites banned (coches.net 11-03, leboncoin 10-30). Limits come from
+  site.yaml `pace`/`caps` (+ config overrides) inside the ledger; kinds: `load` page, `api` JSON read, `phone`.
 - Stop on a block signal: 401/403/429/5xx or a bot page → `Blocked`; 404/410 → `Gone` (skip that ad, keep going) —
   two runs stopped leboncoin on a 410 and left 200 ads undone (11-04/05).
 - A country route (site.yaml `country_ip`) goes through `access.proxy`, fail-closed: no proxy → no request.
@@ -16,13 +17,13 @@ import contextlib
 import gzip
 import json
 import re
-import time
 import urllib.error
 import urllib.request
 import zlib
 from dataclasses import dataclass, field
 from typing import Any
 
+from carhunt.access import pace as shared_pace
 from carhunt.access.errors import Blocked, PaceExceeded, ProxyUnavailable
 
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -144,12 +145,8 @@ class Net:
     def __init__(self, site: str, meta: dict):
         self.site, self.meta = site, meta
         pace = meta.get("pace") or {}
-        self.min_gap_s = float(pace.get("min_gap_s") or 6)
         self.max_loads = pace.get("max_loads_per_run")
-        self.per_hour = pace.get("max_loads_per_hour")
-        self._hour: list[float] = []
         self.loads = 0
-        self._last = 0.0
         self._stack: contextlib.ExitStack | None = None
         self._page: Any = None
         self.fresh_every = pace.get("fresh_profile_every")   # Akamai counts bursts per browser profile (mobile.de)
@@ -157,51 +154,20 @@ class Net:
 
     # --- pacing ------------------------------------------------------------
     def gate(self, kind: str = "load", *, country: str | None = None) -> None:
-        """Take a slot before the request (a 403 still costs the slot: the site counted it).
-        A country route has its own exit IP, so it is paced on its own ledger key (`<site>@<CC>`)."""
-        home = country is None or country == self.meta.get("country_ip")   # the site's normal read route
-        key = self.site if home else f"{self.site}@{country}"
+        """Take a ledger slot before the request (a 403 still costs the slot: the site counted it); wait up to
+        MAX_PACE_WAIT_S for a gap/hourly slot. A proxied request is paced on its exit (`via`): own rate budget,
+        same day caps. This run's `max_loads_per_run` counts the site's normal read route only."""
+        home = country is None or country == self.meta.get("country_ip")
         if kind == "load" and home and self.max_loads and self.loads >= int(self.max_loads):
             raise PaceExceeded(self.site, kind, reason=f"max_loads_per_run={self.max_loads}")
-        try:
-            from carhunt.access import pace as shared
-        except ImportError:
-            shared = None
-        if shared is not None:
-            deadline = time.monotonic() + MAX_PACE_WAIT_S
-            while True:
-                try:
-                    shared.acquire(key, kind)
-                    break
-                except PaceExceeded as e:
-                    if e.retry_at is None:
-                        raise
-                    from carhunt.access import _core
-                    wait = (e.retry_at - _core.now()).total_seconds()
-                    if time.monotonic() + wait > deadline:
-                        raise
-                    time.sleep(max(wait, 0.5))
-        else:   # browsers' pace ledger not installed: in-process gap + hourly cap only
-            if kind == "load" and home and self.per_hour:
-                t = time.monotonic()
-                self._hour = [x for x in self._hour if t - x < 3600]
-                if len(self._hour) >= int(self.per_hour):
-                    raise PaceExceeded(self.site, kind, reason=f"max_loads_per_hour={self.per_hour} (in-process)")
-                self._hour.append(t)
-            wait = self._last + self.min_gap_s - time.monotonic()
-            if wait > 0:
-                time.sleep(wait)
-        self._last = time.monotonic()
+        shared_pace.acquire(self.site, kind, via=country, wait=True, max_wait_s=MAX_PACE_WAIT_S)
         if kind == "load" and home:
             self.loads += 1
 
     def _proxy(self, country: str | None) -> str | None:
         if not country:
             return None
-        try:
-            from carhunt.access import proxy
-        except ImportError as e:
-            raise ProxyUnavailable(f"{self.site}: {country} route needs carhunt.access.proxy") from e
+        from carhunt.access import proxy
         return proxy.get(country, sticky_minutes=int((self.meta.get("proxy") or {}).get("sticky_minutes", 10)))
 
     # --- HTTP route --------------------------------------------------------
@@ -223,17 +189,18 @@ class Net:
     # --- browser route -----------------------------------------------------
     def _tab(self) -> Any:
         if self._page is None:
-            from carhunt.access import session  # browsers module: agent Chrome lanes / plain-chrome
+            from carhunt.access import session
             self._stack = contextlib.ExitStack()
             route = self.meta.get("route", "plain-chrome")
             kw = {"fresh": True} if self.fresh_every else {}   # throwaway profile per batch
+            # the tab blocks on walls (site given) but never paces: gate() took the slot (kind api/load)
             self._page = self._stack.enter_context(
                 session.tab(route, site=self.site, country=self.meta.get("country_ip"), **kw))
             self._tab_loads = 0
             home = self.meta.get("tab_home")
             if home:
                 self.gate("load")
-                self._page.goto(home, wait_until="domcontentloaded")
+                self._page.goto(home, wait_until="domcontentloaded", paced=False)
         return self._page
 
     def browser_get(self, url: str, *, mode: str = "fetch", kind: str = "load", ad_id: str | None = None,
@@ -247,10 +214,11 @@ class Net:
         self._tab_loads += 1
         if mode == "goto":
             try:
-                resp = page.goto(url, wait_until="domcontentloaded")
+                status = page.goto(url, wait_until="domcontentloaded", paced=False)
                 page.wait_for_timeout(1500)
-                r = Response(resp.status if resp else 0, url, page.content(),
-                             final_url=page.url if page.url != url else None)
+                r = Response(int(status or 0), url, page.content(), final_url=page.url if page.url != url else None)
+            except (Blocked, PaceExceeded):
+                raise
             except Exception as e:  # navigation error = unknown, never "gone"
                 r = Response(0, url, text=repr(e))
         else:

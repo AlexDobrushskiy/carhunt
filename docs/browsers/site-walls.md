@@ -1,6 +1,6 @@
 # Site walls (seed, measured Oct–Nov 2026)
 
-> **Seed input for the sites module.** Each row becomes that site's `carhunt/sites/<site>/site.yaml` (keys: `name, wall, route, country_ip, pace{min_gap_s, max_loads_per_run, per_hour}, caps{phone_per_day, send_per_day, login_per_day, load_per_day}, account{needed_for[], verification, mail_from}, messaging, measured, notes`). Once the site.yaml files exist, the agent-facing table is **generated** (`carhunt browser site-table --write skills/carhunt-browsers/references/site-table.md`) and this file is history.
+> **History (seed input).** The rows now live in `carhunt/sites/<site>/site.yaml` (schema `carhunt/sites/site.schema.json`); the agent-facing table is **generated** from them (`carhunt browser site-table --write skills/carhunt-browsers/references/site-table.md`, drift-tested). Edit site.yaml, not this file.
 >
 > Measured by one buyer on a residential home IP in Portugal, Agent Chrome, Oct 18 – Nov 6 2026. Limits are moving targets (mobile.de tightened three times in two weeks); re-measure anything older than ~3 months. "Home IP" = the buyer's residential IP; "Playwright" = lane, identity MCP or any Playwright-launched Chrome.
 
@@ -47,4 +47,4 @@
 | toyota.pt | lane + captcha | — | — | — | none | — |
 | leparking.fr | lane | — | — | — | none | — |
 
-Missing `pace`/`caps` in a site.yaml → `carhunt pace` applies its conservative default. `account.verification` drives `carhunt sms policy`: only `sms-once` allows a rented number, `sms-every-login` refuses, anything else refuses (fail closed) — so write free text like "SMS (owner's own number)" only where rental must stay off. Site name lookup (`pace`, site-table): `name`, `domain`/`domains`, else the plugin dir.
+Key names and defaults: docs/browsers.md (Pace ledger). `account.verification` is an enum (`sms-once` is the only value that allows a rented number).

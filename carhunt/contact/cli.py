@@ -83,9 +83,17 @@ def _ledger(a: argparse.Namespace) -> int:
 def _asks(a: argparse.Namespace) -> int:
     from . import asks, deps
 
+    if a.asks_cmd == "close" and not (a.car and (a.ask_id or a.topic)):
+        print("asks close needs --car and --ask-id or --topic", file=sys.stderr)
+        return 2
     db = deps.Cardb.from_config(deps.load_config())
     if a.asks_cmd == "close":
-        print(json.dumps(asks.close(db, a.car, a.ask_id, a.answer), ensure_ascii=False))
+        try:
+            ev = asks.close(db, a.car, ask_id=a.ask_id, topic=a.topic, answer=a.answer, record_fact=not a.no_fact)
+        except LookupError as e:
+            print(str(e), file=sys.stderr)
+            return 1
+        print(json.dumps(ev, ensure_ascii=False))
         return 0
     rows = asks.open_asks(db, a.car) if a.car else asks.open_asks_all(db)
     for r in rows:
@@ -139,8 +147,10 @@ def register(sub: Any) -> None:
     p = sub.add_parser("asks", help="open vet asks (cardb ask events) / close one")
     p.add_argument("asks_cmd", nargs="?", choices=["list", "close"], default="list")
     p.add_argument("--car")
-    p.add_argument("--ask-id")
-    p.add_argument("--answer", default="")
+    p.add_argument("--ask-id", help="close this ask event")
+    p.add_argument("--topic", help="close the oldest open ask of this topic (vet's data.topic)")
+    p.add_argument("--answer", default="", help="the seller's answer, short (or 'refused: …'); fills the ask's fact")
+    p.add_argument("--no-fact", action="store_true", help="close without writing the ask's fact")
     p.set_defaults(func=_asks, _parser=p)
 
 
