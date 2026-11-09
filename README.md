@@ -83,3 +83,7 @@ How the parts talk: [docs/design.md](docs/design.md#interfaces). Agents: `sweep`
 | skills | `skills/carhunt-*` | agent rules: browsers, outreach, vet | [skills](skills/README.md) |
 
 All docs: [docs/index.md](docs/index.md) · design and interfaces: [docs/design.md](docs/design.md).
+
+## License
+
+MIT, see [LICENSE](LICENSE). Screenshot `docs/img/web-overview.png` contains CC BY-SA 4.0 photos ([credits](docs/img/CREDITS.md)).
